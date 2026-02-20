@@ -1,0 +1,77 @@
+// ignore_for_file: deprecated_member_use
+
+import 'package:flutter/material.dart';
+
+import '../constants/app_colors.dart';
+
+class SearchTextfield extends StatelessWidget {
+  const SearchTextfield({
+    super.key,
+    required this.hintText,
+    required this.controller,
+    this.onChange,
+    this.onFilterPressed,
+  });
+
+  final String hintText;
+  final TextEditingController controller;
+  final ValueChanged<String>? onChange;
+  final VoidCallback? onFilterPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      onChanged: onChange,
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: TextStyle(
+          color: AppColors.textPrimary.withOpacity(0.4),
+          fontWeight: FontWeight.w400,
+        ),
+        prefixIcon: Icon(
+          Icons.search,
+          color: AppColors.textPrimary.withOpacity(0.4),
+        ),
+        suffixIcon: onFilterPressed == null
+            ? (controller.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear, size: 20),
+                    onPressed: () {
+                      controller.clear();
+                      onChange?.call('');
+                    },
+                  )
+                : Icon(
+                    Icons.circle_outlined,
+                    color: AppColors.primary.withOpacity(0.5),
+                  ))
+            : IconButton(
+                onPressed: onFilterPressed,
+                icon: Icon(
+                  Icons.filter_list,
+                  color: AppColors.textPrimary.withOpacity(0.6),
+                ),
+              ),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.lightBorder),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.lightBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+      ),
+    );
+  }
+}
