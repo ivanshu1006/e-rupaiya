@@ -31,6 +31,7 @@ class ProfileRepository {
   Future<ProfileModel> updateProfile({
     required String name,
     required String email,
+    required String address,
   }) async {
     try {
       final response = await _dio.put(
@@ -38,6 +39,7 @@ class ProfileRepository {
         data: {
           'name': name,
           'email': email,
+          'address': address,
         },
       );
       final payload = response.data as Map<String, dynamic>?;

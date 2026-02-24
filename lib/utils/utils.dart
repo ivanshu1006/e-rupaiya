@@ -19,6 +19,11 @@ class Utils {
     return secureStorage.read(key: 'tokenType');
   }
 
+  static Future<String?> getUserId() {
+    const FlutterSecureStorage secureStorage = FlutterSecureStorage();
+    return secureStorage.read(key: 'userId');
+  }
+
   static Future<DateTime?> getAccessTokenExpiry() async {
     const FlutterSecureStorage secureStorage = FlutterSecureStorage();
     final expiryValue = await secureStorage.read(key: 'tokenExpiresAt');

@@ -6,6 +6,7 @@ class PlanItem {
     this.data = '',
     this.planName = '',
     this.eCoins = 0,
+    this.benefitImages = const [],
   });
 
   final int amount;
@@ -14,6 +15,7 @@ class PlanItem {
   final String data;
   final String planName;
   final int eCoins;
+  final List<String> benefitImages;
 
   factory PlanItem.fromJson(Map<String, dynamic> json) {
     final rsValue = json['rs'];
@@ -23,6 +25,10 @@ class PlanItem {
     final eCoins = eCoinsValue is num
         ? eCoinsValue.toInt()
         : int.tryParse('$eCoinsValue') ?? 0;
+    final rawImages = json['benefit_images'];
+    final benefitImages = rawImages is List
+        ? rawImages.map((e) => e.toString()).toList()
+        : <String>[];
     return PlanItem(
       amount: amount,
       validity: (json['validity'] ?? '').toString(),
@@ -30,6 +36,7 @@ class PlanItem {
       data: (json['data'] ?? '').toString(),
       planName: (json['planname'] ?? json['plan_name'] ?? '').toString(),
       eCoins: eCoins,
+      benefitImages: benefitImages,
     );
   }
 }

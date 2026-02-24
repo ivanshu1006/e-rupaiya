@@ -1,7 +1,10 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../constants/app_colors.dart';
 import '../constants/file_constants.dart';
@@ -11,10 +14,12 @@ class PaymentDetailItem {
   const PaymentDetailItem({
     required this.label,
     required this.value,
+    this.copyable = false,
   });
 
   final String label;
   final String value;
+  final bool copyable;
 }
 
 class PaymentThankYouScreen extends StatefulWidget {
@@ -135,10 +140,13 @@ class PaymentResultScreen extends StatefulWidget {
     this.viewHistoryText = 'View Transaction History',
     this.onContinue,
     this.continueText = 'Continue to Home',
+    this.showFailureActions = false,
     this.statusIcon = Icons.check,
     this.statusIconColor = Colors.white,
     this.statusIconBorderColor = Colors.white,
     this.headerGradientColors = const [Color(0xFF0D5C32), Color(0xFF0E7340)],
+    this.headerImageAsset = '',
+    this.emphasizeSubtitle = false,
     this.poweredByText = 'Powered by',
     this.poweredByLogo = '',
     this.playSound = true,
@@ -154,10 +162,13 @@ class PaymentResultScreen extends StatefulWidget {
   final String viewHistoryText;
   final FutureOr<void> Function(BuildContext context)? onContinue;
   final String continueText;
+  final bool showFailureActions;
   final IconData statusIcon;
   final Color statusIconColor;
   final Color statusIconBorderColor;
   final List<Color> headerGradientColors;
+  final String headerImageAsset;
+  final bool emphasizeSubtitle;
   final String poweredByText;
   final String poweredByLogo;
   final bool playSound;
@@ -193,7 +204,7 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
         builder: (context, constraints) {
           final height = constraints.maxHeight;
           final headerHeight = height * 0.4;
-          final cardTop = headerHeight * 0.75;
+          final cardTop = headerHeight * 0.82;
 
           return Stack(
             children: [
@@ -201,15 +212,35 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
                 children: [
                   Container(
                     height: headerHeight,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: widget.headerGradientColors,
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
+                    decoration: const BoxDecoration(
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(28),
+                        bottomRight: Radius.circular(28),
                       ),
+                    ),
+                    child: ClipRRect(
                       borderRadius: const BorderRadius.only(
                         bottomLeft: Radius.circular(28),
                         bottomRight: Radius.circular(28),
+                      ),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: widget.headerGradientColors,
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                              ),
+                            ),
+                          ),
+                          if (widget.headerImageAsset.isNotEmpty)
+                            Image.asset(
+                              widget.headerImageAsset,
+                              fit: BoxFit.cover,
+                            ),
+                        ],
                       ),
                     ),
                   ),
@@ -227,10 +258,59 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
                   details: widget.details,
                 ),
               ),
+              if (widget.showFailureActions)
+                Positioned(
+                  left: 24,
+                  right: 24,
+                  top: cardTop + 170,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {},
+                          icon: const Icon(Icons.support_agent),
+                          label: const Text('Contact Support'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.textPrimary,
+                            side: BorderSide(
+                              color: AppColors.lightBorder.withOpacity(0.8),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {},
+                          icon: const Icon(Icons.share_outlined),
+                          label: const Text('Share'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.textPrimary,
+                            side: BorderSide(
+                              color: AppColors.lightBorder.withOpacity(0.8),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               Positioned(
                 left: 24,
                 right: 24,
-                top: MediaQuery.of(context).padding.top + 28,
+                top: MediaQuery.of(context).padding.top + 20,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -261,14 +341,34 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
                               ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      widget.subtitle,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withOpacity(0.9),
-                            height: 1.4,
-                          ),
-                    ),
+                    if (widget.emphasizeSubtitle)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4F0B0B).withOpacity(0.7),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          widget.subtitle,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.white.withOpacity(0.95),
+                                height: 1.4,
+                              ),
+                        ),
+                      )
+                    else
+                      Text(
+                        widget.subtitle,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.white.withOpacity(0.9),
+                              height: 1.4,
+                            ),
+                      ),
                   ],
                 ),
               ),
@@ -372,7 +472,7 @@ class _TransactionDetailsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -389,10 +489,14 @@ class _TransactionDetailsCard extends StatelessWidget {
         children: [
           Text(
             title,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                ),
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w700,
+              shadows: const [],
+            ),
           ),
           const SizedBox(height: 8),
           Divider(color: AppColors.lightBorder.withOpacity(0.6)),
@@ -416,16 +520,51 @@ class _TransactionDetailsCard extends StatelessWidget {
                   const SizedBox(width: 12),
                   Flexible(
                     flex: 2,
-                    child: Text(
-                      item.value,
-                      textAlign: TextAlign.right,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            item.value,
+                            textAlign: TextAlign.right,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
                           ),
+                        ),
+                        if (item.copyable) ...[
+                          const SizedBox(width: 6),
+                          InkWell(
+                            onTap: () async {
+                              await Clipboard.setData(
+                                ClipboardData(text: item.value),
+                              );
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Transaction ID copied.'),
+                                ),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(8),
+                            child: const Padding(
+                              padding: EdgeInsets.all(4),
+                              child: Icon(
+                                Icons.copy_rounded,
+                                size: 16,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ],

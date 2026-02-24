@@ -25,13 +25,26 @@ class BillerListingView extends HookConsumerWidget {
     final searchController = useTextEditingController();
 
     useEffect(() {
-      Future.microtask(
-        () => ref
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        ref.read(billerListingControllerProvider.notifier).updateSearch('');
+        searchController.clear();
+        ref
             .read(billerListingControllerProvider.notifier)
-            .fetchBillers(categoryName: categoryName),
-      );
+            .fetchBillers(categoryName: categoryName);
+      });
       return null;
     }, [categoryName]);
+
+    useEffect(() {
+      searchController.text = listingState.searchQuery;
+      if (listingState.searchQuery.isNotEmpty) {
+        searchController.selection = TextSelection.fromPosition(
+          TextPosition(offset: listingState.searchQuery.length),
+        );
+      }
+      return null;
+    }, [listingState.searchQuery]);
 
     final billers = listingState.filteredBillers;
 

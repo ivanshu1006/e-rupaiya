@@ -78,6 +78,7 @@ class MobilePrepaidRepository {
     required String mobile,
     required int amount,
     required String operatorName,
+    String? referenceId,
   }) async {
     try {
       final response = await _dio.post(
@@ -86,6 +87,8 @@ class MobilePrepaidRepository {
           'mobile': mobile,
           'amount': amount.toString(),
           'operator': operatorName,
+          if (referenceId != null && referenceId.isNotEmpty)
+            'reference_id': referenceId,
         },
         options: Options(
           contentType: Headers.formUrlEncodedContentType,

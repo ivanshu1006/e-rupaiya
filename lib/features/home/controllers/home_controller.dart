@@ -1,3 +1,4 @@
+import 'package:frappe_flutter_app/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../services/logger_service.dart';
@@ -33,6 +34,29 @@ class HomeController extends StateNotifier<HomeState> {
     } catch (e, stackTrace) {
       logger.error(
         'Failed to fetch quick actions',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      state = state.copyWith(
+        isFetching: false,
+        errorMessage: 'Failed to fetch services. Please try again.',
+      );
+    }
+  }
+
+  Future<void> fetchAllQuickActions() async {
+    state = state.copyWith(isFetching: true, errorMessage: null);
+    try {
+      final userId = await Utils.getUserId() ?? '';
+      final data = await _repository.fetchAllQuickAction(userId);
+      state = state.copyWith(
+        isFetching: false,
+        allQuickActions: data.data,
+        errorMessage: null,
+      );
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to fetch all quick actions',
         error: e,
         stackTrace: stackTrace,
       );

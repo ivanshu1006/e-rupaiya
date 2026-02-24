@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:frappe_flutter_app/constants/app_colors.dart';
+import 'package:frappe_flutter_app/core/barrel_file.dart';
 
 class OtpDigitBox extends StatelessWidget {
   const OtpDigitBox({
@@ -26,8 +26,8 @@ class OtpDigitBox extends StatelessWidget {
             : const Color(0xFFD9D9D9);
 
     return SizedBox(
-      width: 44,
-      height: 48,
+      width: 40.w,
+      height: 40.h,
       child: TextField(
         controller: controller,
         focusNode: focusNode,
@@ -49,8 +49,8 @@ class OtpDigitBox extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide:
-                BorderSide(color: isError ? Colors.red : AppColors.primary, width: 1.6),
+            borderSide: BorderSide(
+                color: isError ? Colors.red : AppColors.primary, width: 1.6),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),

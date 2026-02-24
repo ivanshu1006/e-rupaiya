@@ -1,8 +1,10 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../widgets/custom_elevated_button.dart';
 import '../models/plan_item.dart';
 
 class PlanCard extends StatelessWidget {
@@ -11,11 +13,15 @@ class PlanCard extends StatelessWidget {
     required this.plan,
     required this.isSelected,
     required this.onTap,
+    this.onViewDetails,
+    this.onPayNow,
   });
 
   final PlanItem plan;
   final bool isSelected;
   final VoidCallback onTap;
+  final VoidCallback? onViewDetails;
+  final VoidCallback? onPayNow;
 
   @override
   Widget build(BuildContext context) {
@@ -38,236 +44,83 @@ class PlanCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
-          children: [
-            // Main content area
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Left content: price, badges, dashed line, description
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Price + orange badge row
-                        Row(
-                          children: [
-                            Text(
-                              '₹ ${plan.amount}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.textPrimary,
-                                    fontSize: 20,
-                                  ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(child: _buildBadgeRow(context)),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        // Dashed line
-                        _buildDashedLine(),
-                        const SizedBox(height: 8),
-                        // Description
-                        Text(
-                          plan.description.isEmpty
-                              ? 'No description available.'
-                              : plan.description,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppColors.textPrimary.withOpacity(0.7),
-                                    height: 1.35,
-                                  ),
-                        ),
-                      ],
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Row 1: Price + E-Coins badge
+              _PlanPriceRow(plan: plan),
+              const SizedBox(height: 14),
+              // Row 2: Validity | Data | Benefit images
+              _PlanInfoRow(plan: plan),
+              const SizedBox(height: 14),
+              // Description
+              Text(
+                plan.description.isEmpty
+                    ? 'No description available.'
+                    : plan.description,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textPrimary.withOpacity(0.7),
+                      height: 1.4,
+                      fontSize: 13,
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Orange circle arrow
-                  _buildArrowCircle(),
-                ],
               ),
-            ),
-            // Blue bottom bar
-            if (plan.planName.isNotEmpty || plan.eCoins > 0)
-              _buildBlueBar(context),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBadgeRow(BuildContext context) {
-    final hasValidity = plan.validity.isNotEmpty;
-    final hasData = plan.data.isNotEmpty;
-
-    if (!hasValidity && !hasData) return const SizedBox.shrink();
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (hasValidity) ...[
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: 'Validity - ',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w400,
-                          fontSize: 11,
-                        ),
-                  ),
-                  TextSpan(
-                    text: plan.validity,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 11,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          if (hasValidity && hasData) ...[
-            Container(
-              width: 1,
-              height: 14,
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-              color: Colors.white.withOpacity(0.5),
-            ),
-          ],
-          if (hasData) ...[
-            Flexible(
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'Data - ',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w400,
-                            fontSize: 11,
-                          ),
-                    ),
-                    TextSpan(
-                      text: plan.data,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 11,
-                          ),
-                    ),
-                  ],
+              const SizedBox(height: 12),
+              // View Details
+              GestureDetector(
+                onTap: onViewDetails ?? onTap,
+                child: Text(
+                  'View Details',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDashedLine() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const dashWidth = 5.0;
-        const dashSpace = 3.0;
-        final dashCount =
-            (constraints.maxWidth / (dashWidth + dashSpace)).floor();
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(dashCount, (_) {
-            return SizedBox(
-              width: dashWidth,
-              height: 1,
-              child: DecoratedBox(
-                decoration: BoxDecoration(color: Colors.grey.shade300),
+              const SizedBox(height: 14),
+              // Pay Now button
+              _PlanPayNowButton(
+                onTap: onPayNow ?? onTap,
               ),
-            );
-          }),
-        );
-      },
-    );
-  }
-
-  Widget _buildArrowCircle() {
-    return Container(
-      width: 52,
-      height: 52,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.25),
-          width: 2.5,
-        ),
-      ),
-      child: Center(
-        child: Container(
-          width: 42,
-          height: 42,
-          decoration: const BoxDecoration(
-            color: AppColors.primary,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.chevron_right,
-            color: Colors.white,
-            size: 26,
+            ],
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildBlueBar(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1B3554),
-      ),
-      child: Row(
-        children: [
-          if (plan.planName.isNotEmpty) ...[
-            Expanded(
-              child: Text(
-                plan.planName,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+class _PlanPriceRow extends StatelessWidget {
+  const _PlanPriceRow({required this.plan});
+
+  final PlanItem plan;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '₹ ${plan.amount}',
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+                color: AppColors.textPrimary,
+                fontSize: 28,
               ),
+        ),
+        const Spacer(),
+        if (plan.eCoins > 0)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1B3554),
+              borderRadius: BorderRadius.circular(8),
             ),
-          ],
-          if (plan.planName.isNotEmpty && plan.eCoins > 0)
-            const SizedBox(width: 8),
-          if (plan.eCoins > 0) ...[
-            Icon(
-              Icons.local_offer,
-              color: Colors.white.withOpacity(0.85),
-              size: 14,
-            ),
-            const SizedBox(width: 6),
-            Text(
+            child: Text(
               'Get Assured ${plan.eCoins} E-Coins',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: Colors.white,
@@ -275,9 +128,164 @@ class PlanCard extends StatelessWidget {
                     fontSize: 12,
                   ),
             ),
-          ],
-        ],
-      ),
+          ),
+      ],
+    );
+  }
+}
+
+class _PlanInfoRow extends StatelessWidget {
+  const _PlanInfoRow({required this.plan});
+
+  final PlanItem plan;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasValidity = plan.validity.isNotEmpty;
+    final hasData = plan.data.isNotEmpty;
+    final hasBenefitImages = plan.benefitImages.isNotEmpty;
+
+    return Row(
+      children: [
+        if (hasValidity)
+          _PlanInfoColumn(
+            label: 'Validity',
+            value: plan.validity,
+          ),
+        if (hasValidity && hasData)
+          Container(
+            width: 1,
+            height: 32,
+            margin: const EdgeInsets.symmetric(horizontal: 12),
+            color: Colors.grey.shade300,
+          ),
+        if (hasData)
+          _PlanInfoColumn(
+            label: 'Data',
+            value: plan.data,
+          ),
+        if ((hasValidity || hasData) && hasBenefitImages) const Spacer(),
+        if (hasBenefitImages) _PlanBenefitImages(images: plan.benefitImages),
+      ],
+    );
+  }
+}
+
+class _PlanInfoColumn extends StatelessWidget {
+  const _PlanInfoColumn({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.textPrimary.withOpacity(0.5),
+                fontSize: 12,
+              ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+                fontSize: 14,
+              ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PlanBenefitImages extends StatelessWidget {
+  const _PlanBenefitImages({required this.images});
+
+  final List<String> images;
+
+  @override
+  Widget build(BuildContext context) {
+    const maxVisible = 3;
+    final visibleImages = images.take(maxVisible).toList();
+    final remaining = images.length - maxVisible;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: (visibleImages.length * 26.0) + 10,
+          height: 36,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              for (int i = 0; i < visibleImages.length; i++)
+                Positioned(
+                  left: i * 26.0,
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Image.network(
+                        visibleImages[i],
+                        width: 36,
+                        height: 36,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: Colors.grey.shade200,
+                          child: const Icon(Icons.image, size: 16),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (remaining > 0)
+          Text(
+            '+$remaining',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                  fontSize: 13,
+                ),
+          ),
+      ],
+    );
+  }
+}
+
+class _PlanPayNowButton extends StatelessWidget {
+  const _PlanPayNowButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomElevatedButton(
+      height: 38.h,
+      width: double.infinity,
+      onPressed: onTap,
+      label: 'Pay Now',
+      uppercaseLabel: false,
     );
   }
 }

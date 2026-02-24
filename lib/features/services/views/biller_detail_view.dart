@@ -241,57 +241,64 @@ class BillerDetailView extends HookConsumerWidget {
                     !detailState.isFetchingBill)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                    child: CustomElevatedButton(
-                      onPressed: () {
-                        if (bill == null) {
-                          // Fetch bill
-                          final visibleParams = detail.customerParams
-                              .where((p) => p.visibility)
-                              .toList();
-                          if (visibleParams.isEmpty) return;
+                    child: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: billAmountController,
+                      builder: (context, value, _) {
+                        final payLabel = bill != null
+                            ? 'Pay \u20B9${_resolvedPayAmount(billAmountController, bill).toStringAsFixed(0)}'
+                            : 'Proceed';
+                        return CustomElevatedButton(
+                          onPressed: () {
+                            if (bill == null) {
+                              // Fetch bill
+                              final visibleParams = detail.customerParams
+                                  .where((p) => p.visibility)
+                                  .toList();
+                              if (visibleParams.isEmpty) return;
 
-                          final values = <String, String>{};
-                          for (final param in visibleParams) {
-                            final value = inputControllers[param.paramName]
-                                    ?.text
-                                    .trim() ??
-                                '';
-                            if (!param.optional && value.isEmpty) {
-                              AppSnackbar.show(
-                                'Please enter ${param.paramName}.',
-                                backgroundColor: Colors.red,
-                                textColor: Colors.white,
+                              final values = <String, String>{};
+                              for (final param in visibleParams) {
+                                final value = inputControllers[param.paramName]
+                                        ?.text
+                                        .trim() ??
+                                    '';
+                                if (!param.optional && value.isEmpty) {
+                                  AppSnackbar.show(
+                                    'Please enter ${param.paramName}.',
+                                    backgroundColor: Colors.red,
+                                    textColor: Colors.white,
+                                  );
+                                  return;
+                                }
+                                if (value.isNotEmpty) {
+                                  values[param.paramName] = value;
+                                }
+                              }
+
+                              if (values.isNotEmpty) {
+                                controller.fetchBill(customerParams: values);
+                              }
+                            } else if (!detailState.showFullDetails) {
+                              // Show full details
+                              controller.toggleFullDetails();
+                            } else {
+                              // Open payment bottom sheet
+                              final enteredAmount = _parseEnteredAmount(
+                                billAmountController.text,
                               );
-                              return;
+                              final amountToPay =
+                                  enteredAmount ?? bill.amountInRupees;
+                              _showPaymentSheet(
+                                context,
+                                amountToPay,
+                              );
                             }
-                            if (value.isNotEmpty) {
-                              values[param.paramName] = value;
-                            }
-                          }
-
-                          if (values.isNotEmpty) {
-                            controller.fetchBill(customerParams: values);
-                          }
-                        } else if (!detailState.showFullDetails) {
-                          // Show full details
-                          controller.toggleFullDetails();
-                        } else {
-                          // Open payment bottom sheet
-                          final enteredAmount =
-                              _parseEnteredAmount(billAmountController.text);
-                          final amountToPay =
-                              enteredAmount ?? bill.amountInRupees;
-                          _showPaymentSheet(
-                            context,
-                            amountToPay,
-                          );
-                        }
+                          },
+                          label: payLabel,
+                          showArrow: false,
+                          uppercaseLabel: false,
+                        );
                       },
-                      label: bill != null
-                          ? 'Pay \u20B9${(_parseEnteredAmount(billAmountController.text) ?? bill.amountInRupees).toStringAsFixed(0)}'
-                          : 'Proceed',
-                      showArrow: false,
-                      uppercaseLabel: false,
                     ),
                   ),
               ],
@@ -311,6 +318,15 @@ class BillerDetailView extends HookConsumerWidget {
     }
     return '';
   }
+}
+
+double _resolvedPayAmount(
+  TextEditingController controller,
+  BillResponse bill,
+) {
+  final entered = _parseEnteredAmount(controller.text);
+  if (entered != null && entered > 0) return entered;
+  return bill.amountInRupees;
 }
 
 double? _parseEnteredAmount(String raw) {
@@ -500,6 +516,14 @@ class _CompactBillSection extends StatelessWidget {
           controller: billAmountController,
           keyboardType: TextInputType.number,
           onChanged: (value) {
+            if (selectedAmountType != _PaymentAmountType.custom) {
+              onAmountTypeChanged(_PaymentAmountType.custom);
+            }
+            if (billAmountController.text != value) {
+              billAmountController.text = value;
+            }
+          },
+          onEditingComplete: () {
             if (selectedAmountType != _PaymentAmountType.custom) {
               onAmountTypeChanged(_PaymentAmountType.custom);
             }
@@ -877,15 +901,14 @@ class _AmountTypeSelector extends StatelessWidget {
           groupValue: selected,
           onChanged: onChanged,
         ),
-        _AmountChoiceTile(
-          title: 'Minimum amount due',
-          subtitle: resolvedMinimum == null
-              ? 'Not available'
-              : '\u20B9 ${resolvedMinimum.toStringAsFixed(2)}',
-          value: _PaymentAmountType.minimumDue,
-          groupValue: selected,
-          onChanged: resolvedMinimum == null ? null : onChanged,
-        ),
+        if (resolvedMinimum != null)
+          _AmountChoiceTile(
+            title: 'Minimum amount due',
+            subtitle: '\u20B9 ${resolvedMinimum.toStringAsFixed(2)}',
+            value: _PaymentAmountType.minimumDue,
+            groupValue: selected,
+            onChanged: onChanged,
+          ),
         _AmountChoiceTile(
           title: 'Custom amount',
           subtitle: 'Enter any amount',
@@ -1030,26 +1053,4 @@ double? _parseAmountMaybe(String? raw) {
   if (raw.contains('.')) return value;
   if (cleaned.length > 4) return value / 100;
   return value;
-}
-
-// ─── Error Section ───────────────────────────────────────────────────────────
-
-class _ErrorSection extends StatelessWidget {
-  const _ErrorSection({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32),
-      child: Center(
-        child: Text(
-          message,
-          style: TextStyle(color: Colors.red.shade700),
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
-  }
 }

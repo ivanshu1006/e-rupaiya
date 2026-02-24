@@ -9,6 +9,7 @@ class CustomElevatedButton extends StatelessWidget {
     required this.onPressed,
     required this.label,
     this.width = double.infinity,
+    this.height,
     this.showArrow = false,
     this.uppercaseLabel = true,
   });
@@ -16,6 +17,7 @@ class CustomElevatedButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final String label;
   final double? width;
+  final double? height;
   final bool showArrow;
   final bool uppercaseLabel;
 
@@ -37,6 +39,7 @@ class CustomElevatedButton extends StatelessWidget {
 
     return SizedBox(
       width: width,
+      height: height,
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: background,
@@ -53,7 +56,7 @@ class CustomElevatedButton extends StatelessWidget {
         child: ElevatedButton(
           onPressed: onPressed,
           style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
             backgroundColor: Colors.transparent,
             shadowColor: Colors.transparent,
             foregroundColor: Colors.white,

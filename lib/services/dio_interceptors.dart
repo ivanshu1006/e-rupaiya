@@ -1,9 +1,14 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../constants/routes_constant.dart';
+import '../features/auth/controllers/auth_controller.dart';
 import '../utils/utils.dart';
 import '../widgets/app_snackbar.dart';
+import '../widgets/k_dialog.dart';
 import 'logger_service.dart';
 
 class DioInterceptors extends InterceptorsWrapper {
@@ -16,6 +21,7 @@ class DioInterceptors extends InterceptorsWrapper {
     await secureStorage.delete(key: 'tokenExpiresAt');
     await secureStorage.delete(key: 'userId');
   }
+
   @override
   void onRequest(
     RequestOptions options,
@@ -80,10 +86,26 @@ class DioInterceptors extends InterceptorsWrapper {
       }
     } else if (err.response?.statusCode == 404) {
       AppSnackbar.show(
-        'Page not found',
+        'Session Expired. Please login again.',
         textColor: Colors.white,
         backgroundColor: Colors.red,
       );
+      final context = navigatorKey.currentContext;
+      if (context != null) {
+        try {
+          await ProviderScope.containerOf(context)
+              .read(authControllerProvider.notifier)
+              .logout();
+        } catch (_) {
+          await _clearSession();
+        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!context.mounted) return;
+          context.go(RouteConstants.login);
+        });
+      } else {
+        await _clearSession();
+      }
     } else if (err.type == DioExceptionType.connectionTimeout) {
       AppSnackbar.show(
         'Connection timeout',

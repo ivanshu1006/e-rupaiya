@@ -98,7 +98,7 @@ class MobilePrepaidController extends StateNotifier<MobilePrepaidState> {
     }
   }
 
-  Future<void> recharge() async {
+  Future<void> recharge({String? referenceId}) async {
     if (state.operatorInfo == null ||
         state.selectedPlan == null ||
         state.mobile.isEmpty) {
@@ -118,6 +118,7 @@ class MobilePrepaidController extends StateNotifier<MobilePrepaidState> {
         mobile: state.mobile,
         amount: state.selectedPlan!.amount,
         operatorName: state.operatorInfo!.operatorName,
+        referenceId: referenceId,
       );
       state = state.copyWith(
         isRecharging: false,

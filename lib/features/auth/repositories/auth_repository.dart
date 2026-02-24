@@ -37,7 +37,7 @@ class AuthRepository {
       }
 
       final data = payload?['data'] as Map<String, dynamic>? ?? {};
-      final userId = data['user_id'];
+      final userId = data['user_id'] ?? data['id'];
       if (userId == null) {
         throw Exception('Invalid response');
       }
@@ -139,6 +139,7 @@ class AuthRepository {
       final refreshToken = data['refresh_token'] as String?;
       final tokenType = data['token_type'] as String?;
       final expiresIn = data['expires_in'] as int?;
+      final userId = (data['user_id'] ?? data['id'])?.toString();
 
       if (accessToken == null || refreshToken == null || expiresIn == null) {
         throw Exception('Invalid login response');
@@ -154,7 +155,9 @@ class AuthRepository {
         value: tokenType ?? 'Bearer',
       );
       await _secureStorage.write(key: 'tokenExpiresAt', value: expiresAt);
-      await _secureStorage.write(key: 'userId', value: mobile);
+      if (userId != null && userId.isNotEmpty) {
+        await _secureStorage.write(key: 'userId', value: userId);
+      }
     } catch (e) {
       logger.error(
         'Login failed: ${e.toString()}',

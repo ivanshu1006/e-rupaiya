@@ -17,7 +17,13 @@ class QuickActionCategory {
   });
 
   factory QuickActionCategory.fromJson(Map<String, dynamic> json) {
-    final servicesList = json['services'] as List<dynamic>? ?? [];
+    final rawServices = json['services'];
+    List<dynamic> servicesList = const [];
+    if (rawServices is List) {
+      servicesList = rawServices;
+    } else if (rawServices is Map) {
+      servicesList = rawServices.values.toList();
+    }
     return QuickActionCategory(
       category: json['category'] as String? ?? '',
       services: servicesList

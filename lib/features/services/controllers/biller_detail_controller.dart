@@ -97,7 +97,10 @@ class BillerDetailController extends StateNotifier<BillerDetailState> {
     }
   }
 
-  Future<bool> payBill({required double amount}) async {
+  Future<bool> payBill({
+    required double amount,
+    String? refIdOverride,
+  }) async {
     final biller = state.selectedBiller;
     final detail = state.billerDetail;
     final bill = state.billResponse;
@@ -114,7 +117,7 @@ class BillerDetailController extends StateNotifier<BillerDetailState> {
         billerId: biller.billerId,
         customerParams: customerParams,
         amount: amount.toStringAsFixed(2),
-        refId: bill.refId,
+        refId: refIdOverride ?? bill.refId,
         paymentModes: detail.paymentModes
             .map((mode) => mode.paymentMode)
             .where((mode) => mode.trim().isNotEmpty)

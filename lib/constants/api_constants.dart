@@ -7,6 +7,8 @@ class ApiConstants {
   static const String registerEndpoint = '$baseUrl/api/auth/register';
   static const String setPinEndpoint = '$baseUrl/api/auth/set-pin';
   static const String quickActionsEndpoint = '$baseUrl/api/quick-actions';
+  static const String quickActionsDueEndpoint =
+      '$baseUrl/api/quick-actions/due';
   static const String profileEndpoint = '$baseUrl/api/user/profile';
   static const String profileUpdateEndpoint =
       '$baseUrl/api/user/profile/update';
@@ -20,6 +22,7 @@ class ApiConstants {
       '$baseUrl/api/prepaid/checkOprators';
   static const String prepaidFetchPlansEndpoint =
       '$baseUrl/api/prepaid/fetchPlans';
-  static const String prepaidRechargeEndpoint =
-      '$baseUrl/api/prepaid/recharge';
+  static const String prepaidRechargeEndpoint = '$baseUrl/api/prepaid/recharge';
+  static const String spinEndpoint = '$baseUrl/api/spin';
+  static const String spinOptionsEndpoint = '$baseUrl/api/spin/options';
 }

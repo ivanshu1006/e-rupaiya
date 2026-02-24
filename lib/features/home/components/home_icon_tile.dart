@@ -11,7 +11,7 @@ class HomeIconTile extends StatelessWidget {
     super.key,
     required this.label,
     this.onTap,
-    this.iconSize = 24,
+    this.iconSize = 30,
     this.asset,
   });
 

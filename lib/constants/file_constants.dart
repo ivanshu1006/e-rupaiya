@@ -15,17 +15,23 @@ class FileConstants {
   static String upi = 'assets/images/png/upi.png';
 
   //home icons
-  static String mobile = 'assets/images/png/home_icon/mobile_light.png';
-  static String landline = 'assets/images/png/home_icon/landline_postpaid.png';
-  static String broadband = 'assets/images/png/home_icon/broadband.png';
-  static String dth = 'assets/images/png/home_icon/dth.png';
-  static String water = 'assets/images/png/home_icon/water.png';
-  static String electricity = 'assets/images/png/home_icon/electricity.png';
+  static String mobile = 'assets/images/png/home_icon/mobile.png';
+  static String postpaid = 'assets/images/png/home_icon/postpaid_icon.png';
+  static String landline = 'assets/images/png/home_icon/land_line.png';
+  static String broadband = 'assets/images/png/home_icon/broad_band.png';
+  static String dth = 'assets/images/png/home_icon/dth_icon.png';
+  static String cable = 'assets/images/png/home_icon/cable_tv.png';
+  static String water = 'assets/images/png/home_icon/water_icon.png';
+  static String pipegas = 'assets/images/png/home_icon/pipe_gas.png';
+  static String electricity =
+      'assets/images/png/home_icon/electricity_icon.png';
   static String iphone = 'assets/images/png/home_icon/iphone.png';
-  static String credit = 'assets/images/png/home_icon/creditcard.png';
+  static String gasCylinder = 'assets/images/png/home_icon/gas_cylinder.png';
+  static String credit = 'assets/images/png/home_icon/credit_icon.png';
   static String repayment = 'assets/images/png/home_icon/repayment.png';
+  static String depositIcon = 'assets/images/png/home_icon/deposit_icon.png';
   static String recurring = 'assets/images/png/home_icon/recurring.png';
-  static String insurance = 'assets/images/png/home_icon/insurance.png';
+  static String insurance = 'assets/images/png/home_icon/insurance_icon.png';
   static String lifeInsurance =
       'assets/images/png/home_icon/life_insurance.png';
   static String prepaidMeter = 'assets/images/png/home_icon/prepaid_meter.png';
@@ -37,9 +43,15 @@ class FileConstants {
   static String mahavitaran = 'assets/images/png/home_icon/mahavitran.png';
   static String quickAction = 'assets/images/png/home_icon/quick_action.png';
   static String curve = 'assets/images/png/home_icon/curve.png';
-  static String creditcard = 'assets/images/png/credit_card.png';
+  static String creditcard = 'assets/images/png/credit_icon.png';
   static String spin = 'assets/images/png/spin.png';
   static String wallet = 'assets/images/png/home_icon/wallet.png';
+  static String preCard = 'assets/images/png/home_icon/pre_card.png';
+  static String homeBanner1 = 'assets/images/png/home_icon/home_banner1.png';
+  static String spincoin = 'assets/images/png/home_icon/spincoin.png';
+  static String digitalGold = 'assets/images/png/home_icon/digitalgold.png';
+  static String homeBanner2 = 'assets/images/png/home_icon/home_banner2.png';
+  static String errorBanner = 'assets/images/png/home_icon/error_banner.png';
 
   //profile
   static String qr = 'assets/images/png/qr.png';

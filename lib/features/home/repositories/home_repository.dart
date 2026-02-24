@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
+import 'package:frappe_flutter_app/features/home/models/quick_actions_model.dart';
 
 import '../../../constants/api_constants.dart';
 import '../../../services/dio_service.dart';
@@ -10,9 +13,13 @@ class HomeRepository {
 
   final Dio _dio;
 
-  Future<List<QuickActionCategory>> fetchQuickActions() async {
+  Future<List<QuickActionCategory>> fetchQuickActions({String? search}) async {
     try {
-      final response = await _dio.get(ApiConstants.quickActionsEndpoint);
+      final response = await _dio.get(
+        ApiConstants.quickActionsEndpoint,
+        queryParameters:
+            (search == null || search.isEmpty) ? null : {'search': search},
+      );
       final payload = response.data as Map<String, dynamic>?;
       final success = payload?['success'] == true;
       if (!success) {
@@ -26,6 +33,29 @@ class HomeRepository {
           .toList();
     } catch (e) {
       logger.error('Failed to fetch quick actions: $e', error: e);
+      rethrow;
+    }
+  }
+
+  Future<QuickActionModel> fetchAllQuickAction(String userId) async {
+    try {
+      final response = await _dio.get(
+        ApiConstants.quickActionsDueEndpoint,
+        queryParameters: {'user_id': userId},
+      );
+
+      final payload = response.data;
+      Map<String, dynamic> json;
+      if (payload is String) {
+        json = jsonDecode(payload) as Map<String, dynamic>;
+      } else if (payload is Map<String, dynamic>) {
+        json = payload;
+      } else {
+        json = Map<String, dynamic>.from(payload as Map);
+      }
+      return QuickActionModel.fromJson(json);
+    } catch (e) {
+      logger.error('Failed to fetch all quick actions: $e', error: e);
       rethrow;
     }
   }

@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:frappe_flutter_app/features/mobile_prepaid/models/mobile_prepaid_state.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -89,6 +90,10 @@ class MobilePrepaidView extends HookConsumerWidget {
     useEffect(() {
       if (state.errorMessage != null && state.errorMessage != lastError.value) {
         lastError.value = state.errorMessage;
+        final message = state.errorMessage?.trim().toLowerCase() ?? '';
+        if (message == 'unable to process recharge') {
+          return null;
+        }
         WidgetsBinding.instance.addPostFrameCallback((_) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -155,6 +160,7 @@ class MobilePrepaidView extends HookConsumerWidget {
                     mobileNumber: state.mobile,
                     operatorName: state.operatorInfo?.operatorName,
                     circleName: state.operatorInfo?.circle,
+                    operatorIconUrl: state.operatorInfo?.iconUrl,
                     onChange: handleChange,
                   ),
                 ),
@@ -422,95 +428,113 @@ class _PayNowSection extends StatelessWidget {
               // Plan details card
               Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFF8F4),
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: AppColors.lightBorder),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: AppColors.cardShadow,
+                      blurRadius: 12,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Row 1: Price + E-Coins badge
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Price + badges row
-                          Row(
-                            children: [
-                              Text(
-                                '₹ ${plan.amount}',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                      color: AppColors.textPrimary,
-                                      fontSize: 24,
-                                    ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(child: _buildBadgeRow(context, plan)),
-                            ],
-                          ),
-                          const SizedBox(height: 18),
-                          // Description
                           Text(
-                            plan.description.isEmpty
-                                ? 'No description available.'
-                                : plan.description,
+                            '₹ ${plan.amount}',
                             style: Theme.of(context)
                                 .textTheme
-                                .bodySmall
+                                .headlineMedium
                                 ?.copyWith(
-                                  color: AppColors.textPrimary.withOpacity(0.7),
-                                  height: 1.5,
-                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.textPrimary,
+                                  fontSize: 28,
                                 ),
                           ),
-                          const SizedBox(height: 18),
-                          // Details + Change Plan row
-                          Row(
-                            children: [
-                              GestureDetector(
-                                onTap: () {
-                                  // TODO: show plan details
-                                },
-                                child: Text(
-                                  'Details',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.textPrimary,
-                                        decoration: TextDecoration.underline,
-                                      ),
-                                ),
+                          const Spacer(),
+                          if (plan.eCoins > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1B3554),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              const Spacer(),
-                              OutlinedButton.icon(
-                                onPressed: () => controller.deselectPlan(),
-                                icon: const Icon(Icons.sync, size: 18),
-                                label: const Text('Change Plan'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppColors.primary,
-                                  side: const BorderSide(
-                                      color: AppColors.primary),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 10,
-                                  ),
-                                ),
+                              child: Text(
+                                'Get Assured ${plan.eCoins} E-Coins',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
                               ),
-                            ],
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      // Row 2: Validity | Data | Benefit images
+                      _buildInfoRow(context, plan),
+                      const SizedBox(height: 14),
+                      // Description
+                      Text(
+                        plan.description.isEmpty
+                            ? 'No description available.'
+                            : plan.description,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.textPrimary.withOpacity(0.7),
+                              height: 1.4,
+                              fontSize: 13,
+                            ),
+                      ),
+                      const SizedBox(height: 18),
+                      // Category name + Change Plan row
+                      Row(
+                        children: [
+                          if (state.selectedCategory.isNotEmpty)
+                            Text(
+                              state.selectedCategory,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.primary,
+                                    fontSize: 14,
+                                  ),
+                            ),
+                          const Spacer(),
+                          ElevatedButton.icon(
+                            onPressed: () => controller.deselectPlan(),
+                            icon: const Icon(Icons.sync, size: 18),
+                            label: const Text('Change Plan'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1B3554),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              elevation: 0,
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -565,79 +589,132 @@ class _PayNowSection extends StatelessWidget {
     );
   }
 
-  Widget _buildBadgeRow(BuildContext context, PlanItem plan) {
+  Widget _buildInfoRow(BuildContext context, PlanItem plan) {
     final hasValidity = plan.validity.isNotEmpty;
     final hasData = plan.data.isNotEmpty;
+    final hasBenefitImages = plan.benefitImages.isNotEmpty;
 
-    if (!hasValidity && !hasData) return const SizedBox.shrink();
+    if (!hasValidity && !hasData && !hasBenefitImages) {
+      return const SizedBox.shrink();
+    }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (hasValidity)
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: 'Validity - ',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w400,
-                          fontSize: 12,
-                        ),
-                  ),
-                  TextSpan(
-                    text: plan.validity,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
-                        ),
-                  ),
-                ],
+    return Row(
+      children: [
+        if (hasValidity)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Validity',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textPrimary.withOpacity(0.5),
+                      fontSize: 12,
+                    ),
               ),
-            ),
-          if (hasValidity && hasData)
-            Container(
-              width: 1,
-              height: 14,
-              margin: const EdgeInsets.symmetric(horizontal: 10),
-              color: Colors.white.withOpacity(0.5),
-            ),
-          if (hasData)
-            Flexible(
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'Data - ',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w400,
-                            fontSize: 12,
-                          ),
+              const SizedBox(height: 2),
+              Text(
+                plan.validity,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
                     ),
-                    TextSpan(
-                      text: plan.data,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                          ),
+              ),
+            ],
+          ),
+        if (hasValidity && hasData)
+          Container(
+            width: 1,
+            height: 32,
+            margin: const EdgeInsets.symmetric(horizontal: 12),
+            color: Colors.grey.shade300,
+          ),
+        if (hasData)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Data',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textPrimary.withOpacity(0.5),
+                      fontSize: 12,
                     ),
-                  ],
+              ),
+              const SizedBox(height: 2),
+              Text(
+                plan.data,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                    ),
+              ),
+            ],
+          ),
+        if ((hasValidity || hasData) && hasBenefitImages) const Spacer(),
+        if (hasBenefitImages) _buildBenefitImages(context, plan),
+      ],
+    );
+  }
+
+  Widget _buildBenefitImages(BuildContext context, PlanItem plan) {
+    const maxVisible = 3;
+    final images = plan.benefitImages;
+    final visibleImages = images.take(maxVisible).toList();
+    final remaining = images.length - maxVisible;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: (visibleImages.length * 26.0) + 10,
+          height: 36,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              for (int i = 0; i < visibleImages.length; i++)
+                Positioned(
+                  left: i * 26.0,
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
+                      child: Image.network(
+                        visibleImages[i],
+                        width: 36,
+                        height: 36,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: Colors.grey.shade200,
+                          child: const Icon(Icons.image, size: 16),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-        ],
-      ),
+            ],
+          ),
+        ),
+        if (remaining > 0)
+          Text(
+            '+$remaining',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                  fontSize: 13,
+                ),
+          ),
+      ],
     );
   }
 }
@@ -647,18 +724,21 @@ class _QuickActionHeaderCard extends StatelessWidget {
     required this.mobileNumber,
     required this.operatorName,
     required this.circleName,
+    required this.operatorIconUrl,
     required this.onChange,
   });
 
   final String mobileNumber;
   final String? operatorName;
   final String? circleName;
+  final String? operatorIconUrl;
   final VoidCallback onChange;
 
   @override
   Widget build(BuildContext context) {
     final operator = operatorName ?? 'Operator';
     final circle = circleName ?? 'Circle';
+    final iconUrl = (operatorIconUrl ?? '').trim();
 
     return Container(
       decoration: BoxDecoration(
@@ -677,15 +757,17 @@ class _QuickActionHeaderCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(left: 14, top: 14, bottom: 14),
             child: CircleAvatar(
-              radius: 26,
+              radius: 34,
               backgroundColor: AppColors.primary.withOpacity(0.12),
-              child: Text(
-                operator.isNotEmpty ? operator[0].toUpperCase() : 'S',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
+              child: iconUrl.isNotEmpty
+                  ? _OperatorIcon(url: iconUrl)
+                  : Text(
+                      operator.isNotEmpty ? operator[0].toUpperCase() : 'S',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
                     ),
-              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -750,6 +832,58 @@ class _QuickActionHeaderCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _OperatorIcon extends StatelessWidget {
+  const _OperatorIcon({required this.url, this.size = 34});
+
+  final String url;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final isSvg = url.toLowerCase().endsWith('.svg');
+    if (isSvg) {
+      return SvgPicture.network(
+        url,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        colorFilter: null,
+        placeholderBuilder: (_) => _fallbackPlaceholder(context),
+      );
+    }
+    return Image.network(
+      url,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => _fallbackPlaceholder(context),
+    );
+  }
+
+  Widget _rasterFallback(BuildContext context) {
+    return Image.network(
+      url,
+      width: size,
+      height: size,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => _fallbackPlaceholder(context),
+    );
+  }
+
+  Widget _fallbackPlaceholder(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      color: AppColors.primary.withOpacity(0.08),
+      child: Icon(
+        Icons.wifi_calling_3_outlined,
+        color: AppColors.primary.withOpacity(0.6),
+        size: 24,
       ),
     );
   }

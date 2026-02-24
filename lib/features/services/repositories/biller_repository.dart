@@ -101,6 +101,8 @@ class BillerRepository {
         }
       }
 
+      logger.info('Bill payment request payload: $data');
+
       log(data.toString(), name: 'Bill Payment Request Data');
 
       final response = await _dio.post(

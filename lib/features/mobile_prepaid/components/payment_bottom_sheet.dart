@@ -5,9 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../constants/file_constants.dart';
+import '../../../constants/routes_constant.dart';
 import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/custom_elevated_button.dart';
+import '../../../widgets/k_dialog.dart';
 import '../../../widgets/payment_success_flow.dart';
+import '../../paymentgateway/razorpay_service.dart';
 import '../../profile/controllers/profile_controller.dart';
 import '../../services/controllers/biller_detail_controller.dart';
 import '../../services/models/bill_pay_response_model.dart';
@@ -123,6 +127,19 @@ void _openPaymentResultFlow(
   required String billerName,
   required String txId,
 }) {
+  void goHome(BuildContext localContext) {
+    // Refresh wallet balance when returning home after any payment
+    try {
+      ProviderScope.containerOf(localContext)
+          .read(profileControllerProvider.notifier)
+          .fetchProfile();
+    } catch (_) {}
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!localContext.mounted) return;
+      navigatorKey.currentContext?.go(RouteConstants.home);
+    });
+  }
+
   final details = [
     PaymentDetailItem(
       label: 'Amount',
@@ -136,8 +153,16 @@ void _openPaymentResultFlow(
       PaymentDetailItem(
         label: 'Transaction ID',
         value: '#$txId',
+        copyable: true,
       ),
   ];
+  final isFailure = outcome == _PaymentOutcome.failure ||
+      outcome == _PaymentOutcome.insufficient;
+  void Function(BuildContext) onContinue = isFailure
+      ? (screenContext) {
+          Navigator.of(screenContext).pop();
+        }
+      : goHome;
 
   if (outcome == _PaymentOutcome.success) {
     Navigator.of(context).push(
@@ -158,8 +183,17 @@ void _openPaymentResultFlow(
                   statusIconColor: _paymentStatusColor(outcome),
                   statusIconBorderColor: _paymentStatusColor(outcome),
                   headerGradientColors: _paymentHeaderGradient(outcome),
+                  headerImageAsset: outcome == _PaymentOutcome.failure ||
+                          outcome == _PaymentOutcome.insufficient
+                      ? FileConstants.errorBanner
+                      : '',
+                  emphasizeSubtitle: outcome == _PaymentOutcome.failure ||
+                      outcome == _PaymentOutcome.insufficient,
+                  showFailureActions: isFailure,
+                  continueText:
+                      isFailure ? 'Retry Payment' : 'Continue to Home',
                   playSound: outcome == _PaymentOutcome.success,
-                  onContinue: (resultContext) => resultContext.go('/'),
+                  onContinue: onContinue,
                 ),
               ),
             );
@@ -178,8 +212,16 @@ void _openPaymentResultFlow(
           statusIconColor: _paymentStatusColor(outcome),
           statusIconBorderColor: _paymentStatusColor(outcome),
           headerGradientColors: _paymentHeaderGradient(outcome),
+          headerImageAsset: outcome == _PaymentOutcome.failure ||
+                  outcome == _PaymentOutcome.insufficient
+              ? FileConstants.errorBanner
+              : '',
+          emphasizeSubtitle: outcome == _PaymentOutcome.failure ||
+              outcome == _PaymentOutcome.insufficient,
+          showFailureActions: isFailure,
+          continueText: isFailure ? 'Retry Payment' : 'Continue to Home',
           playSound: false,
-          onContinue: (resultContext) => resultContext.go('/'),
+          onContinue: onContinue,
         ),
       ),
     );
@@ -197,7 +239,6 @@ class PaymentBottomSheet extends ConsumerStatefulWidget {
 
 class _PaymentBottomSheetState extends ConsumerState<PaymentBottomSheet> {
   bool _useECoins = false;
-  String _selectedUpi = 'google_pay';
 
   double _availableECoins() {
     final balance =
@@ -205,12 +246,95 @@ class _PaymentBottomSheetState extends ConsumerState<PaymentBottomSheet> {
     return balance.toDouble();
   }
 
-  double _computeECoinsDiscount(double available) {
-    return 0.0;
+  double _eCoinsApplied(double available) {
+    if (!_useECoins) return 0.0;
+    return available >= widget.amount ? widget.amount : available;
   }
 
-  double _finalAmount(double discount) {
-    return widget.amount;
+  double _remainingAmount(double applied) {
+    final remaining = widget.amount - applied;
+    return remaining < 0 ? 0 : remaining;
+  }
+
+  Future<void> _startRazorpay({
+    required double amount,
+    required String billerName,
+  }) async {
+    await RazorpayService.instance.openCheckout(
+      amount: amount,
+      name: billerName,
+      description: 'Bill payment',
+      onSuccess: (paymentId) {
+        _completeBillPaymentWithRazorpay(
+          paymentId: paymentId,
+          amount: amount,
+          billerName: billerName,
+        );
+      },
+      onFailure: (message) {
+        if (!mounted) return;
+        AppSnackbar.show(
+          message,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+        _openPaymentResultFlow(
+          context,
+          outcome: _PaymentOutcome.failure,
+          amount: amount,
+          billerName: billerName,
+          txId: '',
+        );
+      },
+    );
+  }
+
+  Future<void> _completeBillPaymentWithRazorpay({
+    required String paymentId,
+    required double amount,
+    required String billerName,
+  }) async {
+    if (paymentId.isEmpty) {
+      AppSnackbar.show(
+        'Payment succeeded but transaction ID is missing.',
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+      _openPaymentResultFlow(
+        context,
+        outcome: _PaymentOutcome.failure,
+        amount: amount,
+        billerName: billerName,
+        txId: '',
+      );
+      return;
+    }
+
+    final controller = ref.read(billerDetailControllerProvider.notifier);
+    final ok = await controller.payBill(
+      amount: amount,
+      refIdOverride: paymentId,
+    );
+    if (!mounted) return;
+    final latestState = ref.read(billerDetailControllerProvider);
+    final outcome = _resolvePaymentOutcome(
+      latestState.payResponse,
+      latestState.payErrorMessage,
+    );
+    _openPaymentResultFlow(
+      context,
+      outcome: outcome,
+      amount: amount,
+      billerName: billerName,
+      txId: paymentId,
+    );
+    if (!ok && latestState.payResponse == null) {
+      AppSnackbar.show(
+        latestState.payErrorMessage ?? 'Payment failed. Please try again.',
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    }
   }
 
   @override
@@ -219,10 +343,10 @@ class _PaymentBottomSheetState extends ConsumerState<PaymentBottomSheet> {
     final controller = ref.read(billerDetailControllerProvider.notifier);
     final isPaying = detailState.isPayingBill;
     final availableECoins = _availableECoins();
-    final maxPossibleDiscount = _computeECoinsDiscount(availableECoins);
-    final eCoinsDiscount = _useECoins ? maxPossibleDiscount : 0.0;
-    final finalAmount = _finalAmount(eCoinsDiscount);
-    final insufficientECoins = _useECoins && availableECoins < widget.amount;
+    final canUseECoins = availableECoins > 0;
+    final eCoinsApplied = _eCoinsApplied(availableECoins);
+    final remainingAmount = _remainingAmount(eCoinsApplied);
+    final buttonLabel = remainingAmount == 0 ? 'Pay Now' : 'Proceed';
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Column(
@@ -265,84 +389,26 @@ class _PaymentBottomSheetState extends ConsumerState<PaymentBottomSheet> {
             icon: Icons.monetization_on_outlined,
             iconColor: AppColors.primary,
             title: 'E-Coins (${availableECoins.toStringAsFixed(0)})',
-            subtitle: 'Use E-Coins for recharge',
+            subtitle: _useECoins
+                ? 'Using \u20B9${eCoinsApplied.toStringAsFixed(0)}'
+                : 'Use E-Coins for payment',
+            enabled: canUseECoins,
             trailing: Checkbox(
               value: _useECoins,
               activeColor: AppColors.primary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(4),
               ),
-              onChanged: availableECoins <= 0
-                  ? null
-                  : (v) => setState(() => _useECoins = v ?? false),
+              onChanged: canUseECoins
+                  ? (v) => setState(() => _useECoins = v ?? false)
+                  : null,
             ),
-            onTap: availableECoins <= 0
-                ? null
-                : () => setState(() => _useECoins = !_useECoins),
+            onTap: canUseECoins
+                ? () => setState(() => _useECoins = !_useECoins)
+                : null,
           ),
 
           const SizedBox(height: 20),
-
-          // UPI heading
-          Text(
-            'UPI',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-          ),
-          const SizedBox(height: 8),
-
-          // UPI options
-          _PaymentOptionTile(
-            icon: Icons.g_mobiledata,
-            iconColor: Colors.blue,
-            title: 'Google Pay',
-            trailing: Radio<String>(
-              value: 'google_pay',
-              groupValue: _selectedUpi,
-              activeColor: AppColors.primary,
-              onChanged: (v) => setState(() => _selectedUpi = v!),
-            ),
-            onTap: () => setState(() => _selectedUpi = 'google_pay'),
-          ),
-          _PaymentOptionTile(
-            icon: Icons.account_balance_wallet,
-            iconColor: Colors.deepPurple,
-            title: 'Phone Pe',
-            trailing: Radio<String>(
-              value: 'phonepe',
-              groupValue: _selectedUpi,
-              activeColor: AppColors.primary,
-              onChanged: (v) => setState(() => _selectedUpi = v!),
-            ),
-            onTap: () => setState(() => _selectedUpi = 'phonepe'),
-          ),
-          _PaymentOptionTile(
-            icon: Icons.currency_rupee,
-            iconColor: Colors.green,
-            title: 'Bhim UPI',
-            trailing: Radio<String>(
-              value: 'bhim',
-              groupValue: _selectedUpi,
-              activeColor: AppColors.primary,
-              onChanged: (v) => setState(() => _selectedUpi = v!),
-            ),
-            onTap: () => setState(() => _selectedUpi = 'bhim'),
-          ),
-          _PaymentOptionTile(
-            icon: Icons.grid_view_rounded,
-            iconColor: AppColors.textPrimary,
-            title: 'More UPI Options',
-            trailing: Radio<String>(
-              value: 'more',
-              groupValue: _selectedUpi,
-              activeColor: AppColors.primary,
-              onChanged: (v) => setState(() => _selectedUpi = v!),
-            ),
-            onTap: () => setState(() => _selectedUpi = 'more'),
-          ),
-
           const SizedBox(height: 16),
 
           // Bottom bar: amount + PAY NOW
@@ -353,29 +419,20 @@ class _PaymentBottomSheetState extends ConsumerState<PaymentBottomSheet> {
               child: Row(
                 children: [
                   Text(
-                    '\u20B9 ${finalAmount.toStringAsFixed(0)}',
+                    '\u20B9 ${remainingAmount.toStringAsFixed(0)}',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: AppColors.textPrimary,
                         ),
                   ),
                   const Spacer(),
-                  GestureDetector(
-                    onTap: insufficientECoins
-                        ? () {
-                            AppSnackbar.show(
-                              "You don't have enough E-Coins for this payment.",
-                              backgroundColor: Colors.red,
-                              textColor: Colors.white,
-                            );
-                          }
-                        : null,
-                    child: CustomElevatedButton(
-                      onPressed: (isPaying || insufficientECoins)
-                          ? null
-                          : () async {
+                  CustomElevatedButton(
+                    onPressed: isPaying
+                        ? null
+                        : () async {
+                            if (_useECoins && remainingAmount == 0) {
                               final ok = await controller.payBill(
-                                amount: finalAmount,
+                                amount: widget.amount,
                               );
                               if (!context.mounted) return;
                               final latestState =
@@ -393,7 +450,7 @@ class _PaymentBottomSheetState extends ConsumerState<PaymentBottomSheet> {
                               _openPaymentResultFlow(
                                 context,
                                 outcome: outcome,
-                                amount: finalAmount,
+                                amount: widget.amount,
                                 billerName: billerName,
                                 txId: txId,
                               );
@@ -405,12 +462,23 @@ class _PaymentBottomSheetState extends ConsumerState<PaymentBottomSheet> {
                                   textColor: Colors.white,
                                 );
                               }
-                            },
-                      label: isPaying ? 'Processing' : 'Pay Now',
-                      showArrow: false,
-                      uppercaseLabel: true,
-                      width: null,
-                    ),
+                              return;
+                            }
+
+                            final amountToPay =
+                                _useECoins ? remainingAmount : widget.amount;
+                            final billerName =
+                                detailState.selectedBiller?.billerName ??
+                                    'Biller';
+                            await _startRazorpay(
+                              amount: amountToPay,
+                              billerName: billerName,
+                            );
+                          },
+                    label: isPaying ? 'Processing' : buttonLabel,
+                    showArrow: false,
+                    uppercaseLabel: true,
+                    width: null,
                   ),
                 ],
               ),
@@ -435,7 +503,6 @@ class PrepaidPaymentBottomSheet extends ConsumerStatefulWidget {
 class _PrepaidPaymentBottomSheetState
     extends ConsumerState<PrepaidPaymentBottomSheet> {
   bool _useECoins = false;
-  String _selectedUpi = 'google_pay';
 
   double _availableECoins() {
     final balance =
@@ -443,12 +510,66 @@ class _PrepaidPaymentBottomSheetState
     return balance.toDouble();
   }
 
-  double _computeECoinsDiscount(double available) {
-    return 0.0;
+  double _eCoinsApplied(double available) {
+    if (!_useECoins) return 0.0;
+    return available >= widget.amount ? widget.amount.toDouble() : available;
   }
 
-  double _finalAmount(double discount) {
-    return widget.amount.toDouble();
+  double _remainingAmount(double applied) {
+    final remaining = widget.amount - applied;
+    return remaining < 0 ? 0 : remaining.toDouble();
+  }
+
+  Future<void> _startRazorpay({
+    required double amount,
+    required String billerName,
+  }) async {
+    await RazorpayService.instance.openCheckout(
+      amount: amount,
+      name: billerName,
+      description: 'Recharge',
+      onSuccess: (paymentId) async {
+        if (!mounted) return;
+        final controller = ref.read(mobilePrepaidControllerProvider.notifier);
+        await controller.recharge(referenceId: paymentId);
+        if (!mounted) return;
+        final latestState = ref.read(mobilePrepaidControllerProvider);
+        final outcome = latestState.errorMessage != null
+            ? _resolvePaymentOutcome(null, latestState.errorMessage)
+            : _PaymentOutcome.success;
+        _openPaymentResultFlow(
+          context,
+          outcome: outcome,
+          amount: amount,
+          billerName: billerName,
+          txId: paymentId,
+        );
+        final message = latestState.errorMessage?.trim().toLowerCase();
+        if (latestState.errorMessage != null &&
+            message != 'unable to process recharge') {
+          AppSnackbar.show(
+            latestState.errorMessage!,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+          );
+        }
+      },
+      onFailure: (message) {
+        if (!mounted) return;
+        AppSnackbar.show(
+          message,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
+        _openPaymentResultFlow(
+          context,
+          outcome: _PaymentOutcome.failure,
+          amount: amount,
+          billerName: billerName,
+          txId: '',
+        );
+      },
+    );
   }
 
   @override
@@ -457,10 +578,10 @@ class _PrepaidPaymentBottomSheetState
     final controller = ref.read(mobilePrepaidControllerProvider.notifier);
     final isPaying = state.isRecharging;
     final availableECoins = _availableECoins();
-    final maxPossibleDiscount = _computeECoinsDiscount(availableECoins);
-    final eCoinsDiscount = _useECoins ? maxPossibleDiscount : 0.0;
-    final finalAmount = _finalAmount(eCoinsDiscount);
-    final insufficientECoins = _useECoins && availableECoins < widget.amount;
+    final canUseECoins = availableECoins > 0;
+    final eCoinsApplied = _eCoinsApplied(availableECoins);
+    final remainingAmount = _remainingAmount(eCoinsApplied);
+    final buttonLabel = remainingAmount == 0 ? 'Pay Now' : 'Proceed';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -505,84 +626,26 @@ class _PrepaidPaymentBottomSheetState
             icon: Icons.monetization_on_outlined,
             iconColor: AppColors.primary,
             title: 'E-Coins (${availableECoins.toStringAsFixed(0)})',
-            subtitle: 'Use E-Coins for recharge',
+            subtitle: _useECoins
+                ? 'Using \u20B9${eCoinsApplied.toStringAsFixed(0)}'
+                : 'Use E-Coins for payment',
+            enabled: canUseECoins,
             trailing: Checkbox(
               value: _useECoins,
               activeColor: AppColors.primary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(4),
               ),
-              onChanged: availableECoins <= 0
-                  ? null
-                  : (v) => setState(() => _useECoins = v ?? false),
+              onChanged: canUseECoins
+                  ? (v) => setState(() => _useECoins = v ?? false)
+                  : null,
             ),
-            onTap: availableECoins <= 0
-                ? null
-                : () => setState(() => _useECoins = !_useECoins),
+            onTap: canUseECoins
+                ? () => setState(() => _useECoins = !_useECoins)
+                : null,
           ),
 
           const SizedBox(height: 20),
-
-          // UPI heading
-          Text(
-            'UPI',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-          ),
-          const SizedBox(height: 8),
-
-          // UPI options
-          _PaymentOptionTile(
-            icon: Icons.g_mobiledata,
-            iconColor: Colors.blue,
-            title: 'Google Pay',
-            trailing: Radio<String>(
-              value: 'google_pay',
-              groupValue: _selectedUpi,
-              activeColor: AppColors.primary,
-              onChanged: (v) => setState(() => _selectedUpi = v!),
-            ),
-            onTap: () => setState(() => _selectedUpi = 'google_pay'),
-          ),
-          _PaymentOptionTile(
-            icon: Icons.account_balance_wallet,
-            iconColor: Colors.deepPurple,
-            title: 'Phone Pe',
-            trailing: Radio<String>(
-              value: 'phonepe',
-              groupValue: _selectedUpi,
-              activeColor: AppColors.primary,
-              onChanged: (v) => setState(() => _selectedUpi = v!),
-            ),
-            onTap: () => setState(() => _selectedUpi = 'phonepe'),
-          ),
-          _PaymentOptionTile(
-            icon: Icons.currency_rupee,
-            iconColor: Colors.green,
-            title: 'Bhim UPI',
-            trailing: Radio<String>(
-              value: 'bhim',
-              groupValue: _selectedUpi,
-              activeColor: AppColors.primary,
-              onChanged: (v) => setState(() => _selectedUpi = v!),
-            ),
-            onTap: () => setState(() => _selectedUpi = 'bhim'),
-          ),
-          _PaymentOptionTile(
-            icon: Icons.grid_view_rounded,
-            iconColor: AppColors.textPrimary,
-            title: 'More UPI Options',
-            trailing: Radio<String>(
-              value: 'more',
-              groupValue: _selectedUpi,
-              activeColor: AppColors.primary,
-              onChanged: (v) => setState(() => _selectedUpi = v!),
-            ),
-            onTap: () => setState(() => _selectedUpi = 'more'),
-          ),
-
           const SizedBox(height: 16),
 
           // Bottom bar: amount + PAY NOW
@@ -593,27 +656,18 @@ class _PrepaidPaymentBottomSheetState
               child: Row(
                 children: [
                   Text(
-                    '\u20B9 ${finalAmount.toStringAsFixed(0)}',
+                    '\u20B9 ${remainingAmount.toStringAsFixed(0)}',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w800,
                           color: AppColors.textPrimary,
                         ),
                   ),
                   const Spacer(),
-                  GestureDetector(
-                    onTap: insufficientECoins
-                        ? () {
-                            AppSnackbar.show(
-                              "You don't have enough E-Coins for this payment.",
-                              backgroundColor: Colors.red,
-                              textColor: Colors.white,
-                            );
-                          }
-                        : null,
-                    child: CustomElevatedButton(
-                      onPressed: (isPaying || insufficientECoins)
-                          ? null
-                          : () async {
+                  CustomElevatedButton(
+                    onPressed: isPaying
+                        ? null
+                        : () async {
+                            if (_useECoins && remainingAmount == 0) {
                               controller.recharge();
                               // Listen for state changes
                               ref.listenManual(
@@ -627,7 +681,7 @@ class _PrepaidPaymentBottomSheetState
                                     _openPaymentResultFlow(
                                       context,
                                       outcome: _PaymentOutcome.success,
-                                      amount: finalAmount,
+                                      amount: widget.amount.toDouble(),
                                       billerName: 'Mobile Prepaid',
                                       txId: '',
                                     );
@@ -643,19 +697,28 @@ class _PrepaidPaymentBottomSheetState
                                     _openPaymentResultFlow(
                                       context,
                                       outcome: outcome,
-                                      amount: finalAmount,
+                                      amount: widget.amount.toDouble(),
                                       billerName: 'Mobile Prepaid',
                                       txId: '',
                                     );
                                   }
                                 },
                               );
-                            },
-                      label: isPaying ? 'Processing' : 'Pay Now',
-                      showArrow: false,
-                      uppercaseLabel: true,
-                      width: null,
-                    ),
+                              return;
+                            }
+
+                            final amountToPay = _useECoins
+                                ? remainingAmount
+                                : widget.amount.toDouble();
+                            await _startRazorpay(
+                              amount: amountToPay,
+                              billerName: 'Mobile Prepaid',
+                            );
+                          },
+                    label: isPaying ? 'Processing' : buttonLabel,
+                    showArrow: false,
+                    uppercaseLabel: true,
+                    width: null,
                   ),
                 ],
               ),
@@ -675,6 +738,7 @@ class _PaymentOptionTile extends StatelessWidget {
     required this.trailing,
     this.subtitle,
     this.onTap,
+    this.enabled = true,
   });
 
   final IconData icon;
@@ -683,11 +747,21 @@ class _PaymentOptionTile extends StatelessWidget {
   final String? subtitle;
   final Widget trailing;
   final VoidCallback? onTap;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
+    final effectiveIconColor =
+        enabled ? iconColor : AppColors.textPrimary.withOpacity(0.35);
+    final titleColor = enabled
+        ? AppColors.textPrimary
+        : AppColors.textPrimary.withOpacity(0.45);
+    final subtitleColor = enabled
+        ? AppColors.textPrimary.withOpacity(0.5)
+        : AppColors.textPrimary.withOpacity(0.35);
+
     return InkWell(
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -697,10 +771,10 @@ class _PaymentOptionTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: effectiveIconColor.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: iconColor, size: 24),
+              child: Icon(icon, color: effectiveIconColor, size: 24),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -710,7 +784,7 @@ class _PaymentOptionTile extends StatelessWidget {
                   Text(
                     title,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textPrimary,
+                          color: titleColor,
                           fontWeight: FontWeight.w600,
                         ),
                   ),
@@ -718,7 +792,7 @@ class _PaymentOptionTile extends StatelessWidget {
                     Text(
                       subtitle!,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textPrimary.withOpacity(0.5),
+                            color: subtitleColor,
                           ),
                     ),
                 ],

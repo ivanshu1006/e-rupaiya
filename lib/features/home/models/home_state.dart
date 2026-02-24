@@ -1,16 +1,17 @@
 import 'quick_action_model.dart';
+import 'quick_actions_model.dart';
 
 class HomeState {
   const HomeState({
     this.isFetching = false,
     this.errorMessage,
-    this.latestPayload,
+    this.allQuickActions,
     this.quickActions,
   });
 
   final bool isFetching;
   final String? errorMessage;
-  final List<dynamic>? latestPayload;
+  final List<Data>? allQuickActions;
   final List<QuickActionCategory>? quickActions;
 
   static const _sentinel = Object();
@@ -18,7 +19,7 @@ class HomeState {
   HomeState copyWith({
     bool? isFetching,
     Object? errorMessage = _sentinel,
-    List<dynamic>? latestPayload,
+    List<Data>? allQuickActions,
     Object? quickActions = _sentinel,
   }) {
     return HomeState(
@@ -26,7 +27,7 @@ class HomeState {
       errorMessage: errorMessage == _sentinel
           ? this.errorMessage
           : errorMessage as String?,
-      latestPayload: latestPayload ?? this.latestPayload,
+      allQuickActions: allQuickActions ?? this.allQuickActions,
       quickActions: quickActions == _sentinel
           ? this.quickActions
           : quickActions as List<QuickActionCategory>?,

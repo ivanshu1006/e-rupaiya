@@ -47,12 +47,14 @@ class ProfileController extends StateNotifier<ProfileState> {
   Future<bool> updateProfile({
     required String name,
     required String email,
+    required String address,
   }) async {
     state = state.copyWith(isUpdating: true, updateErrorMessage: null);
     try {
       final updated = await _repository.updateProfile(
         name: name,
         email: email,
+        address: address,
       );
       state = state.copyWith(
         isUpdating: false,

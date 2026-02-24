@@ -14,6 +14,7 @@ import '../../../widgets/custom_elevated_button.dart';
 import '../../../widgets/k_dialog.dart';
 import '../../auth/controllers/auth_controller.dart';
 import '../../home/components/quick_action_card.dart';
+import '../components/profile_field.dart';
 import '../components/profile_shimmer.dart';
 import '../controllers/profile_controller.dart';
 import '../models/profile_model.dart';
@@ -340,7 +341,9 @@ class UpdateProfileView extends HookConsumerWidget {
       text: profile.email ?? '',
     );
     final mobileController = useTextEditingController(text: profile.mobile);
-    final addressController = useTextEditingController();
+    final addressController = useTextEditingController(
+      text: profile.address ?? '',
+    );
 
     useEffect(() {
       final parts = profile.name.trim().split(RegExp(r'\s+'));
@@ -385,11 +388,10 @@ class UpdateProfileView extends HookConsumerWidget {
                       backgroundColor: AppColors.primary,
                       child: Text(
                         profile.initials,
-                        style:
-                            Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
                       ),
                     ),
                     Positioned(
@@ -420,17 +422,17 @@ class UpdateProfileView extends HookConsumerWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              _ProfileField(
+              ProfileField(
                 label: 'First Name',
                 controller: firstNameController,
               ),
               const SizedBox(height: 16),
-              _ProfileField(
+              ProfileField(
                 label: 'Last Name',
                 controller: lastNameController,
               ),
               const SizedBox(height: 16),
-              _ProfileField(
+              ProfileField(
                 label: 'Mobile Number',
                 controller: mobileController,
                 enabled: false,
@@ -442,7 +444,7 @@ class UpdateProfileView extends HookConsumerWidget {
                 },
               ),
               const SizedBox(height: 16),
-              _ProfileField(
+              ProfileField(
                 label: 'Email ID',
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -452,7 +454,7 @@ class UpdateProfileView extends HookConsumerWidget {
                 },
               ),
               const SizedBox(height: 16),
-              _ProfileField(
+              ProfileField(
                 label: 'Address (Optional)',
                 controller: addressController,
                 maxLines: 2,
@@ -475,9 +477,11 @@ class UpdateProfileView extends HookConsumerWidget {
                         }
                         final name =
                             last.isEmpty ? first : '$first $last'.trim();
+                        final address = addressController.text.trim();
                         final ok = await controller.updateProfile(
                           name: name,
                           email: email,
+                          address: address,
                         );
                         if (!context.mounted) return;
                         if (ok) {
@@ -500,94 +504,6 @@ class UpdateProfileView extends HookConsumerWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _ProfileField extends StatelessWidget {
-  const _ProfileField({
-    required this.label,
-    required this.controller,
-    this.enabled = true,
-    this.trailingText,
-    this.onTrailingTap,
-    this.keyboardType,
-    this.maxLines = 1,
-  });
-
-  final String label;
-  final TextEditingController controller;
-  final bool enabled;
-  final String? trailingText;
-  final VoidCallback? onTrailingTap;
-  final TextInputType? keyboardType;
-  final int maxLines;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-        const SizedBox(height: 8),
-        Stack(
-          alignment: Alignment.centerRight,
-          children: [
-            TextField(
-              controller: controller,
-              enabled: enabled,
-              keyboardType: keyboardType,
-              maxLines: maxLines,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                disabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade300),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.primary),
-                ),
-              ),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            if (trailingText != null)
-              Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: GestureDetector(
-                  onTap: onTrailingTap,
-                  child: Text(
-                    trailingText!,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ],
     );
   }
 }
