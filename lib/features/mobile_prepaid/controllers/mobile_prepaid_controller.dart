@@ -117,8 +117,9 @@ class MobilePrepaidController extends StateNotifier<MobilePrepaidState> {
       final message = await _repository.recharge(
         mobile: state.mobile,
         amount: state.selectedPlan!.amount,
+        desc: state.selectedPlan!.description,
         operatorName: state.operatorInfo!.operatorName,
-        referenceId: referenceId,
+        referenceId: referenceId ?? '',
       );
       state = state.copyWith(
         isRecharging: false,

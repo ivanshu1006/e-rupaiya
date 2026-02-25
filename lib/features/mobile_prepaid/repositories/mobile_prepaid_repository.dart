@@ -9,7 +9,8 @@ import '../models/operator_info.dart';
 import '../models/plan_item.dart';
 
 class MobilePrepaidRepository {
-  MobilePrepaidRepository({Dio? dio}) : _dio = dio ?? DioService.instance.client;
+  MobilePrepaidRepository({Dio? dio})
+      : _dio = dio ?? DioService.instance.client;
 
   final Dio _dio;
 
@@ -78,6 +79,7 @@ class MobilePrepaidRepository {
     required String mobile,
     required int amount,
     required String operatorName,
+    required String desc,
     String? referenceId,
   }) async {
     try {
@@ -87,8 +89,9 @@ class MobilePrepaidRepository {
           'mobile': mobile,
           'amount': amount.toString(),
           'operator': operatorName,
-          if (referenceId != null && referenceId.isNotEmpty)
-            'reference_id': referenceId,
+          'desc': desc,
+          // if (referenceId != null && referenceId.isNotEmpty)
+          'reference_id': referenceId,
         },
         options: Options(
           contentType: Headers.formUrlEncodedContentType,
@@ -96,7 +99,8 @@ class MobilePrepaidRepository {
         ),
       );
       final payload = response.data as Map<String, dynamic>? ?? {};
-      final statusValue = payload['status'] ?? payload['code'] ?? payload['error'];
+      final statusValue =
+          payload['status'] ?? payload['code'] ?? payload['error'];
       final statusText = statusValue?.toString() ?? '';
       final message = _extractRechargeMessage(payload);
       final isSuccess = _isRechargeSuccess(statusValue, statusText);

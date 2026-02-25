@@ -31,10 +31,10 @@ class PlanCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.lightBorder,
-            width: isSelected ? 1.5 : 1,
+            width: isSelected ? 1.5.w : 1.w,
           ),
           boxShadow: const [
             BoxShadow(
@@ -45,16 +45,16 @@ class PlanCard extends StatelessWidget {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(10.w),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Row 1: Price + E-Coins badge
               _PlanPriceRow(plan: plan),
-              const SizedBox(height: 14),
+              SizedBox(height: 14.h),
               // Row 2: Validity | Data | Benefit images
               _PlanInfoRow(plan: plan),
-              const SizedBox(height: 14),
+              SizedBox(height: 14.h),
               // Description
               Text(
                 plan.description.isEmpty
@@ -65,10 +65,10 @@ class PlanCard extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppColors.textPrimary.withOpacity(0.7),
                       height: 1.4,
-                      fontSize: 13,
+                      fontSize: 10.sp,
                     ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12.h),
               // View Details
               GestureDetector(
                 onTap: onViewDetails ?? onTap,
@@ -77,11 +77,11 @@ class PlanCard extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w700,
-                        fontSize: 14,
+                        fontSize: 10.sp,
                       ),
                 ),
               ),
-              const SizedBox(height: 14),
+              SizedBox(height: 14.h),
               // Pay Now button
               _PlanPayNowButton(
                 onTap: onPayNow ?? onTap,
@@ -109,23 +109,23 @@ class _PlanPriceRow extends StatelessWidget {
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w900,
                 color: AppColors.textPrimary,
-                fontSize: 28,
+                fontSize: 28.sp,
               ),
         ),
         const Spacer(),
         if (plan.eCoins > 0)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
             decoration: BoxDecoration(
               color: const Color(0xFF1B3554),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(8.r),
             ),
             child: Text(
               'Get Assured ${plan.eCoins} E-Coins',
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
-                    fontSize: 12,
+                    fontSize: 10.sp,
                   ),
             ),
           ),
@@ -154,9 +154,9 @@ class _PlanInfoRow extends StatelessWidget {
           ),
         if (hasValidity && hasData)
           Container(
-            width: 1,
-            height: 32,
-            margin: const EdgeInsets.symmetric(horizontal: 12),
+            width: 1.w,
+            height: 32.h,
+            margin: EdgeInsets.symmetric(horizontal: 12.w),
             color: Colors.grey.shade300,
           ),
         if (hasData)
@@ -189,16 +189,16 @@ class _PlanInfoColumn extends StatelessWidget {
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: AppColors.textPrimary.withOpacity(0.5),
-                fontSize: 12,
+                fontSize: 12.sp,
               ),
         ),
-        const SizedBox(height: 2),
+        SizedBox(height: 2.h),
         Text(
           value,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
-                fontSize: 14,
+                fontSize: 14.sp,
               ),
         ),
       ],
@@ -221,20 +221,20 @@ class _PlanBenefitImages extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          width: (visibleImages.length * 26.0) + 10,
-          height: 36,
+          width: (visibleImages.length * 26.0).w + 10.w,
+          height: 36.h,
           child: Stack(
             clipBehavior: Clip.none,
             children: [
               for (int i = 0; i < visibleImages.length; i++)
                 Positioned(
-                  left: i * 26.0,
+                  left: (i * 26.0).w,
                   child: Container(
-                    width: 36,
-                    height: 36,
+                    width: 36.w,
+                    height: 36.w,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+                      border: Border.all(color: Colors.white, width: 2.w),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.08),
@@ -245,12 +245,12 @@ class _PlanBenefitImages extends StatelessWidget {
                     child: ClipOval(
                       child: Image.network(
                         visibleImages[i],
-                        width: 36,
-                        height: 36,
+                        width: 36.w,
+                        height: 36.w,
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Container(
                           color: Colors.grey.shade200,
-                          child: const Icon(Icons.image, size: 16),
+                          child: Icon(Icons.image, size: 16.sp),
                         ),
                       ),
                     ),
@@ -265,7 +265,7 @@ class _PlanBenefitImages extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,
-                  fontSize: 13,
+                  fontSize: 13.sp,
                 ),
           ),
       ],

@@ -12,6 +12,8 @@ class ApiConstants {
   static const String profileEndpoint = '$baseUrl/api/user/profile';
   static const String profileUpdateEndpoint =
       '$baseUrl/api/user/profile/update';
+  static const String profileVerifyContactUpdateEndpoint =
+      '$baseUrl/api/user/profile/verify-contact-update';
   static const String logoutEndpoint = '$baseUrl/api/auth/logout';
   static const String billersEndpoint = '$baseUrl/api/billers';
   static const String billerDetailsEndpoint = '$baseUrl/api/biller/details';

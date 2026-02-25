@@ -11,11 +11,15 @@ import 'features/auth/views/pin_setup_view.dart';
 import 'features/auth/views/splash_view.dart';
 import 'features/home/views/home_view.dart';
 import 'features/mobile_prepaid/views/mobile_prepaid_view.dart';
+import 'features/mobile_prepaid/models/recharge_quick_action_payload.dart';
 import 'features/onboarding/views/aadhaar_verification_view.dart';
 import 'features/onboarding/views/kyc_overview_view.dart';
 import 'features/onboarding/views/language_selection_view.dart';
 import 'features/onboarding/views/pan_verification_view.dart';
 import 'features/onboarding/views/verification_result_view.dart';
+import 'features/home/views/quick_actions_view.dart';
+import 'features/profile/views/about_us_screen.dart';
+import 'features/profile/views/offers_view.dart';
 import 'features/services/views/biller_detail_view.dart';
 import 'features/services/views/biller_listing_view.dart';
 import 'features/services/views/credit_card_intro_view.dart';
@@ -141,7 +145,21 @@ final routerProvider = Provider<GoRouter>(
         ),
         GoRoute(
           path: RouteConstants.mobilePrepaid,
-          builder: (context, state) => const MobilePrepaidView(),
+          builder: (context, state) => MobilePrepaidView(
+            quickAction: state.extra as RechargeQuickActionPayload?,
+          ),
+        ),
+        GoRoute(
+          path: RouteConstants.aboutUs,
+          builder: (context, state) => const AboutUsScreen(),
+        ),
+        GoRoute(
+          path: RouteConstants.quickActions,
+          builder: (context, state) => const QuickActionsView(),
+        ),
+        GoRoute(
+          path: RouteConstants.offers,
+          builder: (context, state) => const OffersView(),
         ),
       ],
     );

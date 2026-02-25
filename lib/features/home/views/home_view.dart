@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -11,8 +12,11 @@ import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
+import '../../mobile_prepaid/models/recharge_quick_action_payload.dart';
 import '../../profile/controllers/profile_controller.dart';
 import '../../profile/views/profile_view.dart';
+import '../../services/controllers/biller_detail_controller.dart';
+import '../../services/models/biller_model.dart';
 import '../../spinandear/controllers/spin_options_controller.dart';
 import '../components/home_icon_tile.dart';
 import '../components/home_section_header.dart';
@@ -150,7 +154,8 @@ SliverPadding _buildIconSection({
         children: [
           HomeSectionHeader(
             title: title,
-            actionLabel: showViewAll ? (expanded ? 'View Less' : 'View More') : null,
+            actionLabel:
+                showViewAll ? (expanded ? 'View Less' : 'View More') : null,
             onAction: showViewAll ? onViewAll : null,
             padding: EdgeInsets.zero,
           ),
@@ -589,7 +594,7 @@ class _HomeContent extends HookConsumerWidget {
                         ),
                         const SizedBox(height: 16),
                         SizedBox(
-                          height: 160,
+                          height: 120.h,
                           child: PageView.builder(
                             controller: bannerController,
                             onPageChanged: (page) => bannerPage.value = page,
@@ -625,7 +630,8 @@ class _HomeContent extends HookConsumerWidget {
                           HomeSectionHeader(
                             title: 'Quick Actions',
                             actionLabel: 'View All',
-                            onAction: () {},
+                            onAction: () =>
+                                context.push(RouteConstants.quickActions),
                             padding: EdgeInsets.zero,
                           ),
                           const SizedBox(height: 12),
@@ -648,20 +654,63 @@ class _HomeContent extends HookConsumerWidget {
                                 final due = (item.nextDue ?? '').trim();
                                 final subtitle = due.isEmpty
                                     ? (item.paymentType ?? '')
-                                    : '${item.paymentType ?? ''}    Due : $due'
+                                    : '${item.paymentType ?? ''} Due : $due'
                                         .trim();
                                 final amount =
                                     item.amount?.trim().isNotEmpty == true
                                         ? '\u20B9 ${item.amount}'
                                         : '';
+                                final rawAmount = item.amount ?? '';
+                                final amountValue =
+                                    (double.tryParse(rawAmount) ?? 0).round();
+                                final billerId = item.billerId ?? '';
+                                final billerName =
+                                    item.billerName?.trim().isNotEmpty == true
+                                        ? item.billerName!.trim()
+                                        : 'Biller';
                                 return SizedBox(
-                                  width: 320,
+                                  width: 320.w,
                                   child: QuickActionCard(
                                     title: title,
                                     subtitle: subtitle,
                                     amount: amount,
                                     buttonLabel:
                                         amount.isEmpty ? '' : 'PAY NOW',
+                                    onTap: () {
+                                      final type =
+                                          item.paymentType?.toLowerCase() ?? '';
+                                      if (type.contains('recharge')) {
+                                        if (billerId.isEmpty) return;
+                                        context.push(
+                                          RouteConstants.mobilePrepaid,
+                                          extra: RechargeQuickActionPayload(
+                                            phone: billerId,
+                                            amount: amountValue,
+                                            desc: item.desc,
+                                            operatorName: billerName,
+                                            iconUrl: item.icon,
+                                          ),
+                                        );
+                                      } else {
+                                        if (billerId.isEmpty) return;
+                                        ref
+                                            .read(billerDetailControllerProvider
+                                                .notifier)
+                                            .selectBiller(
+                                              Biller(
+                                                billerId: billerId,
+                                                billerName: billerName,
+                                              ),
+                                            );
+                                        context.push(
+                                          RouteConstants.billerDetail,
+                                          extra: Biller(
+                                            billerId: billerId,
+                                            billerName: billerName,
+                                          ),
+                                        );
+                                      }
+                                    },
                                   ),
                                 );
                               },

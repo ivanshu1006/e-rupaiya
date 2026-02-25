@@ -89,7 +89,7 @@ class _PaymentThankYouScreenState extends State<PaymentThankYouScreen> {
             Text(
               widget.title,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,
                   ),
@@ -203,7 +203,7 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final height = constraints.maxHeight;
-          final headerHeight = height * 0.4;
+          final headerHeight = height * 0.5;
           final cardTop = headerHeight * 0.82;
 
           return Stack(
@@ -354,10 +354,11 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
                         child: Text(
                           widget.subtitle,
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.white.withOpacity(0.95),
-                                height: 1.4,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.white.withOpacity(0.95),
+                                    height: 1.4,
+                                  ),
                         ),
                       )
                     else

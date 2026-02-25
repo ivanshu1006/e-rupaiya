@@ -1,4 +1,4 @@
-package com.example.frappe_flutter_app
+package com.innoplix.erupaiya
 
 import io.flutter.embedding.android.FlutterActivity
 

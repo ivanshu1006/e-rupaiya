@@ -30,10 +30,17 @@ class GreyTextFormField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fieldHeight = height ?? 48.h;
+    final fontSize = (fieldHeight * 0.42).clamp(12.0, 20.0);
+    final verticalPadding =
+        ((fieldHeight - fontSize) / 2).clamp(0.0, fieldHeight);
     final resolvedPadding = contentPadding ??
-        EdgeInsets.symmetric(vertical: (height ?? 40.h) * 0.2);
+        EdgeInsets.symmetric(
+          vertical: verticalPadding,
+          horizontal: 12.w,
+        );
     return Container(
-      height: height ?? 40.h,
+      height: fieldHeight,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
@@ -65,11 +72,14 @@ class GreyTextFormField extends StatelessWidget {
             : null,
         textAlign: TextAlign.center,
         textAlignVertical: TextAlignVertical.center,
+        cursorHeight: fontSize + 2,
+        cursorWidth: 1.6,
+        cursorRadius: const Radius.circular(2),
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: hintText ?? (isNumber ? '1234567890' : labelText),
           hintStyle: TextStyle(
-            fontSize: 14.sp,
+            fontSize: fontSize,
             color: AppColors.textPrimary.withOpacity(0.5),
             letterSpacing: 2,
           ),
@@ -81,6 +91,8 @@ class GreyTextFormField extends StatelessWidget {
               letterSpacing: 2,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
+              fontSize: fontSize,
+              height: 1.0,
             ),
         validator: validator,
       ),

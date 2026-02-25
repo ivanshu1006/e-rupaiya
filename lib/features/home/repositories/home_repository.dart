@@ -41,7 +41,7 @@ class HomeRepository {
     try {
       final response = await _dio.get(
         ApiConstants.quickActionsDueEndpoint,
-        queryParameters: {'user_id': userId},
+        queryParameters: {'user_id': 1},
       );
 
       final payload = response.data;

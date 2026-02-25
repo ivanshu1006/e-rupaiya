@@ -75,4 +75,92 @@ class ProfileController extends StateNotifier<ProfileState> {
       return false;
     }
   }
+
+  Future<bool> updateMobile(String mobileNo) async {
+    try {
+      final response = await _repository.updateMobile(mobileNo);
+      if (response.success) {
+        state = state.copyWith(updateErrorMessage: null);
+        return true;
+      } else {
+        state = state.copyWith(
+          updateErrorMessage: response.message,
+        );
+        return false;
+      }
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to update mobile number',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  Future<bool> verifyMobileOtp(String otp) async {
+    try {
+      final response = await _repository.verifyMobileOtp(otp);
+      if (response.success) {
+        state = state.copyWith(updateErrorMessage: null);
+        return true;
+      } else {
+        state = state.copyWith(
+          updateErrorMessage: response.message,
+        );
+        return false;
+      }
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to verify mobile OTP',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  Future<bool> updateEmail(String email) async {
+    try {
+      final response = await _repository.updateEmail(email);
+      if (response.success) {
+        state = state.copyWith(updateErrorMessage: null);
+        return true;
+      } else {
+        state = state.copyWith(
+          updateErrorMessage: response.message,
+        );
+        return false;
+      }
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to update email',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  Future<bool> verifyEmailOtp(String otp) async {
+    try {
+      final response = await _repository.verifyEmailOtp(otp);
+      if (response.success) {
+        state = state.copyWith(updateErrorMessage: null);
+        return true;
+      } else {
+        state = state.copyWith(
+          updateErrorMessage: response.message,
+        );
+        return false;
+      }
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to verify email OTP',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
 }

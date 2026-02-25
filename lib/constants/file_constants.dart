@@ -33,8 +33,8 @@ class FileConstants {
   static String recurring = 'assets/images/png/home_icon/recurring.png';
   static String insurance = 'assets/images/png/home_icon/insurance_icon.png';
   static String lifeInsurance =
-      'assets/images/png/home_icon/life_insurance.png';
-  static String prepaidMeter = 'assets/images/png/home_icon/prepaid_meter.png';
+      'assets/images/png/home_icon/life_insurance_icon.png';
+  static String prepaidMeter = 'assets/images/png/home_icon/prepaid_icon.png';
   static String erupaiya_3d = 'assets/images/png/home_icon/erupaiya_3d.png';
   static String flight = 'assets/images/png/home_icon/flight.png';
   static String train = 'assets/images/png/home_icon/train.png';
@@ -45,7 +45,15 @@ class FileConstants {
   static String curve = 'assets/images/png/home_icon/curve.png';
   static String creditcard = 'assets/images/png/credit_icon.png';
   static String spin = 'assets/images/png/spin.png';
+  static String subscriptions = 'assets/images/png/home_icon/subscriptions.png';
+  static String agentCollection =
+      'assets/images/png/home_icon/agent_collection.png';
+  static String eChalan = 'assets/images/png/home_icon/e-chalan.png';
+  static String nps = 'assets/images/png/home_icon/nps.png';
+  static String donation = 'assets/images/png/home_icon/donation.png';
+  static String education = 'assets/images/png/home_icon/education.png';
   static String wallet = 'assets/images/png/home_icon/wallet.png';
+  static String metro = 'assets/images/png/home_icon/metro.png';
   static String preCard = 'assets/images/png/home_icon/pre_card.png';
   static String homeBanner1 = 'assets/images/png/home_icon/home_banner1.png';
   static String spincoin = 'assets/images/png/home_icon/spincoin.png';
@@ -55,6 +63,8 @@ class FileConstants {
 
   //profile
   static String qr = 'assets/images/png/qr.png';
+  static String frame213 = 'assets/images/png/home_icon/Frame 213.png';
+  static String ellipse8 = 'assets/images/png/home_icon/Ellipse8.png';
 
   //bottom bar
   static String paybills = 'assets/images/png/home_icon/paybills.png';

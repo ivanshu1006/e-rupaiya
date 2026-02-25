@@ -19,14 +19,18 @@ import '../components/payment_bottom_sheet.dart';
 import '../components/plan_card.dart';
 import '../controllers/mobile_prepaid_controller.dart';
 import '../models/plan_item.dart';
+import '../models/recharge_quick_action_payload.dart';
 
 class MobilePrepaidView extends HookConsumerWidget {
-  const MobilePrepaidView({super.key});
+  const MobilePrepaidView({super.key, this.quickAction});
+
+  final RechargeQuickActionPayload? quickAction;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(mobilePrepaidControllerProvider);
     final controller = ref.read(mobilePrepaidControllerProvider.notifier);
+    final quickActionPayload = quickAction;
 
     final permissionService = useMemoized(() => const PermissionService());
     final hasPermission = useState(false);
@@ -61,6 +65,22 @@ class MobilePrepaidView extends HookConsumerWidget {
       });
       return null;
     }, const []);
+
+    useEffect(() {
+      if (quickActionPayload == null) return null;
+      Future.microtask(() async {
+        final phone = quickActionPayload.phone.trim();
+        if (phone.isEmpty) return;
+        manualMobileController.text = phone;
+        await controller.fetchOperatorAndPlans(phone);
+        if (quickActionPayload.amount > 0) {
+          controller.updatePlanSearch(
+            quickActionPayload.amount.toString(),
+          );
+        }
+      });
+      return null;
+    }, [quickActionPayload]);
 
     Future<void> handleRequestPermission() async {
       final granted = await permissionService.requestContacts();
@@ -516,7 +536,11 @@ class _PayNowSection extends StatelessWidget {
                           const Spacer(),
                           ElevatedButton.icon(
                             onPressed: () => controller.deselectPlan(),
-                            icon: const Icon(Icons.sync, size: 18),
+                            icon: const Icon(
+                              Icons.sync,
+                              size: 18,
+                              color: Colors.white,
+                            ),
                             label: const Text('Change Plan'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF1B3554),

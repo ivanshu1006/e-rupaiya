@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class CustomTextField extends StatelessWidget {
   final String? labelText;
@@ -11,6 +12,7 @@ class CustomTextField extends StatelessWidget {
   final Widget? suffixIcon;
   final bool? obscureText;
   final String? Function(String?)? validator;
+  final List<TextInputFormatter>? inputFormatters;
   final bool isMandatory;
   final int? maxLines;
   final int? minLines;
@@ -27,6 +29,7 @@ class CustomTextField extends StatelessWidget {
     this.suffixIcon,
     this.obscureText,
     this.validator,
+    this.inputFormatters,
     this.isMandatory = false,
     this.maxLines = 1,
     this.minLines = 1,
@@ -44,6 +47,7 @@ class CustomTextField extends StatelessWidget {
       onChanged: onChanged,
       obscureText: obscureText ?? false,
       validator: validator,
+      inputFormatters: inputFormatters,
       maxLines: maxLines,
       minLines: minLines,
     );

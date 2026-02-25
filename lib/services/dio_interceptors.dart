@@ -35,6 +35,10 @@ class DioInterceptors extends InterceptorsWrapper {
     }
 
     logger.info('Request: ${options.method} ${options.headers}');
+    logger.info('Request payload: ${options.data}');
+    if (options.queryParameters.isNotEmpty) {
+      logger.info('Request query: ${options.queryParameters}');
+    }
     super.onRequest(options, handler);
   }
 

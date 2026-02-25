@@ -65,8 +65,8 @@ String _paymentSubtitle(_PaymentOutcome outcome) {
       return 'Your payment has been received but is currently being processed.\n'
           "Please wait a few moments - we'll notify you once the transaction is confirmed.";
     case _PaymentOutcome.failure:
-      return 'Unfortunately, your transaction could not be completed.\n'
-          'Please check your payment details or try again later.\n'
+      return 'Unfortunately, your transaction could not be completed.'
+          'Please check your payment details or try again later.'
           'If the amount has been deducted, it will be refunded automatically within a few business days.';
     case _PaymentOutcome.insufficient:
       return 'You do not have enough balance to complete this payment.';
@@ -296,7 +296,7 @@ class _PaymentBottomSheetState extends ConsumerState<PaymentBottomSheet> {
   }) async {
     if (paymentId.isEmpty) {
       AppSnackbar.show(
-        'Payment succeeded but transaction ID is missing.',
+        'Somehing went wrong with the payment. Please try again.',
         backgroundColor: Colors.red,
         textColor: Colors.white,
       );

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:frappe_flutter_app/features/profile/models/api_response_model.dart';
 
 import '../../../constants/api_constants.dart';
 import '../../../services/dio_service.dart';
@@ -58,5 +59,52 @@ class ProfileRepository {
       logger.error('Failed to update profile: $e', error: e);
       rethrow;
     }
+  }
+
+  Future<ApiResponse> updateMobile(String mobileNo) async {
+    final response = await _dio.post(
+        '${ApiConstants.baseUrl}/api/user/profile/request-contact-update',
+        data: {
+          'type': 'mobile',
+          'value': mobileNo,
+        });
+
+    return ApiResponse.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<ApiResponse> verifyMobileOtp(String otp) async {
+    final response = await _dio.post(
+      ApiConstants.profileVerifyContactUpdateEndpoint,
+      data: {
+        'type': 'mobile',
+        'otp': otp,
+      },
+    );
+
+    return ApiResponse.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<ApiResponse> updateEmail(String email) async {
+    final response = await _dio.post(
+      '${ApiConstants.baseUrl}/api/user/profile/request-contact-update',
+      data: {
+        'type': 'email',
+        'value': email,
+      },
+    );
+
+    return ApiResponse.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<ApiResponse> verifyEmailOtp(String otp) async {
+    final response = await _dio.post(
+      ApiConstants.profileVerifyContactUpdateEndpoint,
+      data: {
+        'type': 'email',
+        'otp': otp,
+      },
+    );
+
+    return ApiResponse.fromJson(response.data as Map<String, dynamic>);
   }
 }
