@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../services/logger_service.dart';
 import '../models/mobile_prepaid_state.dart';
 import '../models/plan_item.dart';
+import '../models/operator_info.dart';
 import '../repositories/mobile_prepaid_repository.dart';
 
 final mobilePrepaidRepositoryProvider = Provider<MobilePrepaidRepository>(
@@ -82,6 +83,61 @@ class MobilePrepaidController extends StateNotifier<MobilePrepaidState> {
       state = state.copyWith(
         isFetching: false,
         operatorInfo: operatorInfo,
+        plansByCategory: plans,
+        selectedCategory: categories.isNotEmpty ? categories.first : '',
+      );
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to load operator/plans',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      state = state.copyWith(
+        isFetching: false,
+        errorMessage: 'Failed to fetch plans. Please try again.',
+      );
+    }
+  }
+
+  Future<void> fetchPlansForSelection({
+    required String mobileInput,
+    required String operatorName,
+    required String circleName,
+    required String circleCode,
+    String? iconUrl,
+  }) async {
+    final mobile = _sanitizeMobile(mobileInput);
+    if (mobile.length < 10) {
+      state = state.copyWith(
+        errorMessage: 'Please enter a valid 10 digit mobile number.',
+      );
+      return;
+    }
+    state = state.copyWith(
+      isFetching: true,
+      errorMessage: null,
+      rechargeMessage: null,
+      mobile: mobile,
+      operatorInfo: OperatorInfo.fromSelection(
+        operatorName: operatorName,
+        circle: circleName,
+        circleCode: circleCode,
+        iconUrl: iconUrl,
+      ),
+      plansByCategory: const {},
+      selectedCategory: '',
+      selectedPlan: null,
+      planSearchQuery: '',
+    );
+    try {
+      final plans = await _repository.fetchPlans(
+        mobile: mobile,
+        operatorName: operatorName,
+        circleCode: circleCode,
+      );
+      final categories = plans.keys.toList();
+      state = state.copyWith(
+        isFetching: false,
         plansByCategory: plans,
         selectedCategory: categories.isNotEmpty ? categories.first : '',
       );

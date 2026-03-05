@@ -1,0 +1,172 @@
+// ignore_for_file: deprecated_member_use
+
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
+import '../constants/app_colors.dart';
+
+class AppNetworkImage extends StatelessWidget {
+  const AppNetworkImage({
+    super.key,
+    required this.url,
+    this.width,
+    this.height,
+    this.fit = BoxFit.cover,
+    this.borderRadius,
+    this.placeholder,
+    this.errorWidget,
+    this.showShimmer = true,
+  });
+
+  final String? url;
+  final double? width;
+  final double? height;
+  final BoxFit fit;
+  final BorderRadius? borderRadius;
+  final Widget? placeholder;
+  final Widget? errorWidget;
+  final bool showShimmer;
+
+  @override
+  Widget build(BuildContext context) {
+    final trimmed = url?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return _wrap(_buildPlaceholder());
+    }
+
+    final isSvg = trimmed.toLowerCase().endsWith('.svg');
+    if (isSvg) {
+      return _wrap(
+        SvgPicture.network(
+          trimmed,
+          width: width,
+          height: height,
+          fit: fit,
+          placeholderBuilder: (_) => _buildPlaceholder(),
+        ),
+      );
+    }
+
+    return _wrap(
+      Image.network(
+        trimmed,
+        width: width,
+        height: height,
+        fit: fit,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return _buildPlaceholder();
+        },
+        errorBuilder: (_, __, ___) => errorWidget ?? _buildPlaceholder(),
+      ),
+    );
+  }
+
+  Widget _wrap(Widget child) {
+    final radius = borderRadius;
+    if (radius == null) return child;
+    return ClipRRect(
+      borderRadius: radius,
+      child: child,
+    );
+  }
+
+  Widget _buildPlaceholder() {
+    if (placeholder != null) return placeholder!;
+    if (!showShimmer) {
+      return _FallbackBox(width: width, height: height);
+    }
+    return _Shimmer(
+      child: _FallbackBox(width: width, height: height),
+    );
+  }
+}
+
+class _FallbackBox extends StatelessWidget {
+  const _FallbackBox({this.width, this.height});
+
+  final double? width;
+  final double? height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      color: AppColors.lightBorder.withOpacity(0.25),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.image_outlined,
+        size: 18,
+        color: AppColors.textPrimary.withOpacity(0.5),
+      ),
+    );
+  }
+}
+
+class _Shimmer extends StatefulWidget {
+  const _Shimmer({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_Shimmer> createState() => _ShimmerState();
+}
+
+class _ShimmerState extends State<_Shimmer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        final value = _controller.value * 3 - 1;
+        return ShaderMask(
+          shaderCallback: (rect) {
+            return LinearGradient(
+              colors: [
+                AppColors.lightBorder.withOpacity(0.2),
+                AppColors.lightBorder.withOpacity(0.6),
+                AppColors.lightBorder.withOpacity(0.2),
+              ],
+              stops: const [0.25, 0.5, 0.75],
+              begin: const Alignment(-1, -0.3),
+              end: const Alignment(1, 0.3),
+              transform: _SlidingGradientTransform(value),
+            ).createShader(rect);
+          },
+          blendMode: BlendMode.srcATop,
+          child: widget.child,
+        );
+      },
+    );
+  }
+}
+
+class _SlidingGradientTransform extends GradientTransform {
+  const _SlidingGradientTransform(this.slidePercent);
+
+  final double slidePercent;
+
+  @override
+  Matrix4 transform(Rect bounds, {TextDirection? textDirection}) {
+    return Matrix4.translationValues(bounds.width * slidePercent, 0, 0);
+  }
+}

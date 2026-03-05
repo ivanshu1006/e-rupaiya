@@ -1,0 +1,2 @@
+/Users/ivanshu/Downloads/flutterfoundation-main/android/app/.cxx/Debug/6ca3c2c3/x86/CMakeFiles/edit_cache.dir
+/Users/ivanshu/Downloads/flutterfoundation-main/android/app/.cxx/Debug/6ca3c2c3/x86/CMakeFiles/rebuild_cache.dir

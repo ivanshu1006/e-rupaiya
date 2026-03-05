@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -13,8 +15,8 @@ import '../../../widgets/custom_elevated_button.dart';
 import '../../../widgets/grey_text_form_field.dart';
 import '../components/auth_brand_header.dart';
 import '../components/otp_verification_card.dart';
-import '../components/pin_input_row.dart';
 import '../components/phone_number_input_card.dart';
+import '../components/pin_input_row.dart';
 import '../controllers/auth_controller.dart';
 import '../models/auth_flow.dart';
 

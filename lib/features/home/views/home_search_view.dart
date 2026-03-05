@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -108,7 +110,7 @@ class HomeSearchView extends HookConsumerWidget {
                     category: category,
                     onServiceTap: (serviceName) {
                       if (serviceName == 'Credit Card') {
-                        context.push(RouteConstants.creditCardListing);
+                        context.push(RouteConstants.creditCardMyCards);
                       } else if (serviceName == 'Mobile Prepaid') {
                         context.push(RouteConstants.mobilePrepaid);
                       } else {

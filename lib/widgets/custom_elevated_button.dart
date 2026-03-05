@@ -1,7 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
+import 'package:e_rupaiya/constants/app_colors.dart';
 import 'package:flutter/material.dart';
-import 'package:frappe_flutter_app/constants/app_colors.dart';
 
 class CustomElevatedButton extends StatelessWidget {
   const CustomElevatedButton({
@@ -12,6 +12,10 @@ class CustomElevatedButton extends StatelessWidget {
     this.height,
     this.showArrow = false,
     this.uppercaseLabel = true,
+    this.isBorder = false,
+    this.backgroundColor,
+    this.borderColor,
+    this.labelColor,
   });
 
   final VoidCallback? onPressed;
@@ -20,6 +24,10 @@ class CustomElevatedButton extends StatelessWidget {
   final double? height;
   final bool showArrow;
   final bool uppercaseLabel;
+  final bool isBorder;
+  final Color? backgroundColor;
+  final Color? borderColor;
+  final Color? labelColor;
 
   @override
   Widget build(BuildContext context) {
@@ -31,21 +39,33 @@ class CustomElevatedButton extends StatelessWidget {
               AppColors.primary.withOpacity(0.4),
             ],
           )
-        : const LinearGradient(
-            colors: [AppColors.primary, AppColors.primaryDark],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          );
+        : (backgroundColor != null
+            ? LinearGradient(
+                colors: [backgroundColor!, backgroundColor!],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              )
+            : const LinearGradient(
+                colors: [AppColors.primary, AppColors.primaryDark],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ));
 
     return SizedBox(
       width: width,
       height: height,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: background,
+          gradient: isBorder ? null : background,
+          color: isBorder ? (backgroundColor ?? Colors.transparent) : null,
           borderRadius: BorderRadius.circular(16),
+          border: isBorder
+              ? Border.all(
+                  color: borderColor ?? AppColors.primary,
+                )
+              : null,
           boxShadow: [
-            if (!isDisabled)
+            if (!isDisabled && !isBorder)
               BoxShadow(
                 color: AppColors.primary.withOpacity(0.35),
                 blurRadius: 14,
@@ -59,7 +79,7 @@ class CustomElevatedButton extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
             backgroundColor: Colors.transparent,
             shadowColor: Colors.transparent,
-            foregroundColor: Colors.white,
+            foregroundColor: labelColor ?? Colors.white,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
@@ -73,16 +93,16 @@ class CustomElevatedButton extends StatelessWidget {
               Text(
                 uppercaseLabel ? label.toUpperCase() : label,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: Colors.white,
+                      color: labelColor ?? Colors.white,
                       letterSpacing: 1.1,
                     ),
               ),
               if (showArrow) ...[
                 const SizedBox(width: 8),
-                const Icon(
+                Icon(
                   Icons.arrow_forward_rounded,
                   size: 20,
-                  color: AppColors.white,
+                  color: labelColor ?? AppColors.white,
                 ),
               ],
             ],

@@ -114,6 +114,7 @@ class PinLoginView extends HookConsumerWidget {
                           children: [
                             TextSpan(
                               text: 'Register',
+                              // ignore: prefer_const_constructors
                               style: TextStyle(
                                 color: AppColors.primary,
                                 decoration: TextDecoration.underline,

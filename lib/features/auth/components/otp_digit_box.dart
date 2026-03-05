@@ -1,5 +1,5 @@
-import 'package:frappe_flutter_app/constants/app_colors.dart';
-import 'package:frappe_flutter_app/core/barrel_file.dart';
+import 'package:e_rupaiya/constants/app_colors.dart';
+import 'package:e_rupaiya/core/barrel_file.dart';
 
 class OtpDigitBox extends StatelessWidget {
   const OtpDigitBox({

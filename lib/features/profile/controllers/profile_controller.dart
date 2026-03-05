@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../services/logger_service.dart';
@@ -68,9 +70,36 @@ class ProfileController extends StateNotifier<ProfileState> {
         error: e,
         stackTrace: stackTrace,
       );
+      final msg = e.toString().startsWith('Exception: ')
+          ? e.toString().substring('Exception: '.length)
+          : 'Failed to update profile. Please try again.';
       state = state.copyWith(
         isUpdating: false,
-        updateErrorMessage: 'Failed to update profile. Please try again.',
+        updateErrorMessage: msg,
+      );
+      return false;
+    }
+  }
+
+  Future<bool> updateProfileImage(File image) async {
+    state = state.copyWith(isUpdating: true, updateErrorMessage: null);
+    try {
+      final updated = await _repository.updateProfileImage(image);
+      state = state.copyWith(
+        isUpdating: false,
+        profile: updated,
+        updateErrorMessage: null,
+      );
+      return true;
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to update profile image',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      state = state.copyWith(
+        isUpdating: false,
+        updateErrorMessage: 'Failed to update profile image. Please try again.',
       );
       return false;
     }

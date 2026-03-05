@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 
 import '../../../constants/app_colors.dart';
@@ -21,27 +23,27 @@ class _ShimmerBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _Shimmer(
+    return const _Shimmer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 4),
-          const Padding(
+          SizedBox(height: 4),
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: _ShimmerLine(width: 140, height: 16),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.symmetric(horizontal: 16),
             child: _ShimmerBox(
               height: 76,
               radius: 16,
               child: Row(
                 children: [
-                  const SizedBox(width: 16),
-                  const _ShimmerCircle(size: 34),
-                  const SizedBox(width: 12),
-                  const Expanded(
+                  SizedBox(width: 16),
+                  _ShimmerCircle(size: 34),
+                  SizedBox(width: 12),
+                  Expanded(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,34 +54,34 @@ class _ShimmerBody extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   _ShimmerBox(
                     height: 48,
                     width: 90,
                     radius: 14,
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 10),
-          const _PagerDotsShimmer(),
-          const SizedBox(height: 16),
-          const Padding(
+          SizedBox(height: 10),
+          _PagerDotsShimmer(),
+          SizedBox(height: 16),
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: _ShimmerLine(width: 120, height: 14),
           ),
-          const SizedBox(height: 12),
-          const _IconGridShimmer(rows: 2, columns: 4),
-          const SizedBox(height: 18),
-          const Padding(
+          SizedBox(height: 12),
+          _IconGridShimmer(rows: 2, columns: 4),
+          SizedBox(height: 18),
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: _ShimmerLine(width: 150, height: 14),
           ),
-          const SizedBox(height: 12),
-          const _IconGridShimmer(rows: 2, columns: 4),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
+          _IconGridShimmer(rows: 2, columns: 4),
+          SizedBox(height: 12),
         ],
       ),
     );
@@ -233,9 +235,12 @@ class _IconGridShimmer extends StatelessWidget {
         runSpacing: 16,
         children: List.generate(items, (index) {
           return SizedBox(
-            width: (MediaQuery.of(context).size.width - 16 * 2 - 16 * (columns - 1)) / columns,
-            child: Column(
-              children: const [
+            width: (MediaQuery.of(context).size.width -
+                    16 * 2 -
+                    16 * (columns - 1)) /
+                columns,
+            child: const Column(
+              children: [
                 _ShimmerBox(height: 56, width: 56, radius: 16),
                 SizedBox(height: 8),
                 _ShimmerLine(width: 56, height: 10),
@@ -253,9 +258,9 @@ class _PagerDotsShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return const Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: const [
+      children: [
         _Dot(width: 24),
         SizedBox(width: 6),
         _Dot(width: 8),

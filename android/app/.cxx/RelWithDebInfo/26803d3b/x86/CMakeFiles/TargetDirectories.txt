@@ -1,0 +1,2 @@
+/Users/ivanshu/Downloads/flutterfoundation-main/android/app/.cxx/RelWithDebInfo/26803d3b/x86/CMakeFiles/edit_cache.dir
+/Users/ivanshu/Downloads/flutterfoundation-main/android/app/.cxx/RelWithDebInfo/26803d3b/x86/CMakeFiles/rebuild_cache.dir

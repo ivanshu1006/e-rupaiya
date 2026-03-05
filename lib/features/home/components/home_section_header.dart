@@ -35,7 +35,7 @@ class HomeSectionHeader extends StatelessWidget {
               onTap: onAction,
               child: Text(
                 actionLabel!,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.black,
                       fontWeight: FontWeight.w600,
                     ),

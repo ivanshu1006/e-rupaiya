@@ -158,6 +158,7 @@ class AuthRepository {
       if (userId != null && userId.isNotEmpty) {
         await _secureStorage.write(key: 'userId', value: userId);
       }
+      await _secureStorage.write(key: 'mobile', value: mobile);
     } catch (e) {
       logger.error(
         'Login failed: ${e.toString()}',
@@ -184,6 +185,62 @@ class AuthRepository {
       await _secureStorage.delete(key: 'tokenType');
       await _secureStorage.delete(key: 'tokenExpiresAt');
       await _secureStorage.delete(key: 'userId');
+      await _secureStorage.delete(key: 'mobile');
+    }
+  }
+
+  Future<bool> refreshSession() async {
+    try {
+      final refreshToken = await _secureStorage.read(key: 'refreshToken');
+      if (refreshToken == null || refreshToken.isEmpty) {
+        return false;
+      }
+
+      final dio = Dio(
+        BaseOptions(
+          baseUrl: ApiConstants.baseUrl,
+          connectTimeout: const Duration(seconds: 10),
+          receiveTimeout: const Duration(seconds: 10),
+        ),
+      );
+
+      final response = await dio.post(
+        ApiConstants.refreshTokenEndpoint,
+        data: {'refresh_token': refreshToken},
+      );
+
+      final payload = response.data as Map<String, dynamic>?;
+      final success = payload?['success'] == true;
+      if (!success) {
+        return false;
+      }
+
+      final data = payload?['data'] as Map<String, dynamic>? ?? {};
+      final accessToken = data['access_token'] as String?;
+      final tokenType = data['token_type'] as String?;
+      final expiresIn = data['expires_in'] as int?;
+
+      if (accessToken == null || expiresIn == null) {
+        return false;
+      }
+
+      final expiresAt =
+          DateTime.now().add(Duration(seconds: expiresIn)).toIso8601String();
+
+      await _secureStorage.write(key: 'accessToken', value: accessToken);
+      await _secureStorage.write(
+        key: 'tokenType',
+        value: tokenType ?? 'Bearer',
+      );
+      await _secureStorage.write(key: 'tokenExpiresAt', value: expiresAt);
+      return true;
+    } catch (e, stackTrace) {
+      logger.error(
+        'Refresh token failed: ${e.toString()}',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
     }
   }
 }

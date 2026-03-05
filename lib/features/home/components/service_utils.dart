@@ -1,8 +1,6 @@
 import '../../../constants/file_constants.dart';
 
 String displayServiceName(String name) {
-  if (name == 'LPG Gas') return 'Book Gas Cylinder';
-  if (name == 'Gas') return 'Pipe Gas';
   if (name == 'Landline Postpaid') return 'Landline';
   if (name == 'Broadband Postpaid') return 'Broadband';
   return name;
@@ -20,21 +18,31 @@ var serviceIconMap = <String, String>{
   'Water': FileConstants.water,
   'Credit Card': FileConstants.credit,
   'Loan Repayment': FileConstants.depositIcon,
-  'Recurring Deposit': FileConstants.depositIcon,
+  'Housing Society': FileConstants.housing,
+  'Recurring Deposit': FileConstants.recurring,
   'Insurance': FileConstants.insurance,
   'Life Insurance': FileConstants.lifeInsurance,
   'Education Fees': FileConstants.education,
+  'Rental': FileConstants.houseRent,
   'eChallan': FileConstants.eChalan,
-  'Agent Collection': FileConstants.agentCollection,
+  'Clubs and Associations': FileConstants.agentCollection,
+  'Agent Collection': FileConstants.agent,
   'Prepaid Meter': FileConstants.prepaidMeter,
   'Subscription': FileConstants.subscriptions,
   'Donation': FileConstants.donation,
   'National Pension System': FileConstants.nps,
-  'NPS': FileConstants.mobile,
+  'National Pension System (NPS)': FileConstants.nps,
+  'NPS': FileConstants.nps,
+  'Forex': FileConstants.eChalan,
   'Flight Booking': FileConstants.flight,
-  'LPG Gas': FileConstants.gasCylinder,
-  'Gas': FileConstants.pipegas,
-  'Fastag': FileConstants.erupaiya_3d,
+  'Pipe Gas': FileConstants.gasCylinder,
+  'Book Gas Cylinder': FileConstants.pipegas,
+  'Fleet Card Recharge': FileConstants.fleetCard,
+  'EV Recharge': FileConstants.evrecharge,
+  'NCMC Recharge': FileConstants.credit,
+  'Municipal Taxes': FileConstants.municipal,
+  'Municipal Services': FileConstants.municipal,
+  'Fastag': FileConstants.fastTag,
   'Train Ticket Booking': FileConstants.train,
   'Hotel Booking': FileConstants.hotel,
 };

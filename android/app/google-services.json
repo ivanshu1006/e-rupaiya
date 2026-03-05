@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "715562519142",
+    "project_id": "erupaiya-f9411",
+    "storage_bucket": "erupaiya-f9411.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:715562519142:android:6f7b93fa749fe881057ba7",
+        "android_client_info": {
+          "package_name": "com.innoplix.erupaiya"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCdEhBeVZUgoAiqKcDhgD0slpa6xbo9B7w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

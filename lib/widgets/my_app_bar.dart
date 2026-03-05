@@ -1,4 +1,6 @@
+import 'package:e_rupaiya/constants/file_constants.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../constants/app_colors.dart';
 
@@ -10,7 +12,7 @@ class MyAppBar extends StatelessWidget {
     this.showHelp = false,
     this.onHelp,
     this.trailing,
-    this.height = 180,
+    this.height = 175,
   });
 
   final String title;
@@ -73,11 +75,16 @@ class MyAppBar extends StatelessWidget {
                   ),
                   if (trailing != null) trailing!,
                   if (trailing == null && showHelp)
-                    IconButton(
-                      icon: const Icon(Icons.help_outline,
-                          color: AppColors.textPrimary),
-                      onPressed: onHelp,
-                    ),
+                    Image.asset(
+                      FileConstants.bharatConnectColor,
+                      height: 15.h,
+                      width: 50.w,
+                    )
+                  // IconButton(
+                  //   icon: const Icon(Icons.help_outline,
+                  //       color: AppColors.textPrimary),
+                  //   onPressed: onHelp,
+                  // ),
                 ],
               ),
             ),

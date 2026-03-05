@@ -1,5 +1,7 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
-import 'package:frappe_flutter_app/features/profile/models/api_response_model.dart';
+import 'package:e_rupaiya/features/profile/models/api_response_model.dart';
 
 import '../../../constants/api_constants.dart';
 import '../../../services/dio_service.dart';
@@ -35,13 +37,14 @@ class ProfileRepository {
     required String address,
   }) async {
     try {
-      final response = await _dio.put(
+      final response = await _dio.post(
         ApiConstants.profileUpdateEndpoint,
-        data: {
+        data: FormData.fromMap({
           'name': name,
           'email': email,
           'address': address,
-        },
+        }),
+        options: Options(contentType: 'multipart/form-data'),
       );
       final payload = response.data as Map<String, dynamic>?;
       final success = payload?['success'] == true ||
@@ -56,7 +59,42 @@ class ProfileRepository {
           {};
       return ProfileModel.fromJson(data);
     } catch (e) {
+      if (e is DioException) {
+        final data = e.response?.data;
+        final message = (data is Map ? data['message'] as String? : null) ??
+            'Failed to update profile';
+        logger.error('Failed to update profile: $message', error: e);
+        throw Exception(message);
+      }
       logger.error('Failed to update profile: $e', error: e);
+      rethrow;
+    }
+  }
+
+  Future<ProfileModel> updateProfileImage(File image) async {
+    try {
+      final formData = FormData.fromMap({
+        'profile_photo': await MultipartFile.fromFile(image.path),
+      });
+      final response = await _dio.post(
+        ApiConstants.profileUpdateEndpoint,
+        data: formData,
+        options: Options(contentType: 'multipart/form-data'),
+      );
+      final payload = response.data as Map<String, dynamic>?;
+      final success = payload?['success'] == true ||
+          (payload?['status']?.toString().toUpperCase() == 'SUCCESS');
+      if (!success) {
+        final message =
+            payload?['message'] as String? ?? 'Failed to update profile image';
+        throw Exception(message);
+      }
+      final data = payload?['data'] as Map<String, dynamic>? ??
+          payload?['payload'] as Map<String, dynamic>? ??
+          {};
+      return ProfileModel.fromJson(data);
+    } catch (e) {
+      logger.error('Failed to update profile image: $e', error: e);
       rethrow;
     }
   }
@@ -102,6 +140,17 @@ class ProfileRepository {
       data: {
         'type': 'email',
         'otp': otp,
+      },
+    );
+
+    return ApiResponse.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<ApiResponse> updateDeviceToken(String token) async {
+    final response = await _dio.post(
+      ApiConstants.profileUpdateDeviceTokenEndpoint,
+      data: {
+        'device_token': token,
       },
     );
 

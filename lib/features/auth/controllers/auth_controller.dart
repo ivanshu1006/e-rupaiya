@@ -40,8 +40,19 @@ class AuthController extends StateNotifier<AuthState> {
 
   Future<void> _checkInitialAuth() async {
     final isAuthenticated = await Utils.checkAuthentication();
+    if (isAuthenticated) {
+      state = state.copyWith(
+        isAuthenticated: true,
+        isLoading: false,
+        isSubmitting: false,
+        errorMessage: null,
+      );
+      return;
+    }
+
+    final refreshed = await _repository.refreshSession();
     state = state.copyWith(
-      isAuthenticated: isAuthenticated,
+      isAuthenticated: refreshed,
       isLoading: false,
       isSubmitting: false,
       errorMessage: null,

@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
 import '../models/spin_reward.dart';
 

@@ -6,7 +6,9 @@ import '../../../constants/api_constants.dart';
 import '../../../services/dio_service.dart';
 import '../../../services/logger_service.dart';
 import '../models/operator_info.dart';
+import '../models/operator_option.dart';
 import '../models/plan_item.dart';
+import '../models/region_option.dart';
 
 class MobilePrepaidRepository {
   MobilePrepaidRepository({Dio? dio})
@@ -68,6 +70,56 @@ class MobilePrepaidRepository {
     } catch (e, stackTrace) {
       logger.error(
         'Failed to fetch plans',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  Future<List<OperatorOption>> fetchOperators() async {
+    try {
+      final response = await _dio.get(
+        ApiConstants.prepaidFetchOperatorsEndpoint,
+      );
+      final payload = _normalizePayload(response.data);
+      final data = payload['data'] as Map<String, dynamic>? ?? {};
+      final operators = data['operators'];
+      if (operators is List) {
+        return operators
+            .map((item) =>
+                OperatorOption.fromJson(item as Map<String, dynamic>? ?? {}))
+            .toList();
+      }
+      return [];
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to fetch operators',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  Future<List<RegionOption>> fetchRegions() async {
+    try {
+      final response = await _dio.get(
+        ApiConstants.prepaidFetchRegionsEndpoint,
+      );
+      final payload = _normalizePayload(response.data);
+      final data = payload['data'] as Map<String, dynamic>? ?? {};
+      final regions = data['regions'];
+      if (regions is List) {
+        return regions
+            .map((item) =>
+                RegionOption.fromJson(item as Map<String, dynamic>? ?? {}))
+            .toList();
+      }
+      return [];
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to fetch regions',
         error: e,
         stackTrace: stackTrace,
       );

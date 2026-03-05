@@ -7,6 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_colors.dart';
 import '../../../constants/routes_constant.dart';
+import '../../../widgets/app_network_image.dart';
 import '../../../widgets/my_app_bar.dart';
 import '../../../widgets/screen_wrapper.dart';
 import '../../../widgets/search_textfield.dart';
@@ -139,16 +140,11 @@ class _BillerTile extends StatelessWidget {
                 color: AppColors.gradientStart.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Center(
-                child: Text(
-                  biller.billerName.isNotEmpty
-                      ? biller.billerName[0].toUpperCase()
-                      : '',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
+              child: _BillerIcon(
+                name: biller.billerName,
+                iconUrl: biller.iconUrl,
+                size: 40,
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
             const SizedBox(width: 14),
@@ -169,6 +165,49 @@ class _BillerTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _BillerIcon extends StatelessWidget {
+  const _BillerIcon({
+    required this.name,
+    required this.iconUrl,
+    required this.size,
+    required this.borderRadius,
+  });
+
+  final String name;
+  final String? iconUrl;
+  final double size;
+  final BorderRadius borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    final initial =
+        name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : '';
+    final fallback = Center(
+      child: Text(
+        initial,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w700,
+            ),
+      ),
+    );
+
+    if (iconUrl == null || iconUrl!.isEmpty) {
+      return fallback;
+    }
+
+    return AppNetworkImage(
+      url: iconUrl,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+      borderRadius: borderRadius,
+      placeholder: fallback,
+      errorWidget: fallback,
     );
   }
 }

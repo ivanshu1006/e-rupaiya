@@ -2,11 +2,13 @@
 
 import 'dart:async';
 
+import 'package:e_rupaiya/features/mobile_prepaid/models/mobile_prepaid_state.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:frappe_flutter_app/features/mobile_prepaid/models/mobile_prepaid_state.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_colors.dart';
@@ -14,12 +16,36 @@ import '../../../constants/file_constants.dart';
 import '../../../services/permission_service.dart';
 import '../../../widgets/k_dialog.dart';
 import '../../../widgets/my_app_bar.dart';
+import '../../../widgets/screen_wrapper.dart';
 import '../../../widgets/search_textfield.dart';
 import '../components/payment_bottom_sheet.dart';
 import '../components/plan_card.dart';
+import '../controllers/contacts_cache_controller.dart';
 import '../controllers/mobile_prepaid_controller.dart';
+import '../controllers/prepaid_meta_controller.dart';
+import '../models/operator_option.dart';
 import '../models/plan_item.dart';
 import '../models/recharge_quick_action_payload.dart';
+import '../models/region_option.dart';
+
+List<int> _filterContactIndices(Map<String, dynamic> payload) {
+  final rawEntries = payload['entries'] as List<dynamic>? ?? const [];
+  final query = (payload['query'] as String? ?? '').toLowerCase();
+  if (rawEntries.isEmpty) return const [];
+  if (query.isEmpty) {
+    return List<int>.generate(rawEntries.length, (index) => index);
+  }
+  final matches = <int>[];
+  for (var i = 0; i < rawEntries.length; i++) {
+    final entry = rawEntries[i] as Map;
+    final name = (entry['name'] as String? ?? '');
+    final phone = (entry['phone'] as String? ?? '');
+    if (name.contains(query) || phone.contains(query)) {
+      matches.add(i);
+    }
+  }
+  return matches;
+}
 
 class MobilePrepaidView extends HookConsumerWidget {
   const MobilePrepaidView({super.key, this.quickAction});
@@ -34,10 +60,14 @@ class MobilePrepaidView extends HookConsumerWidget {
 
     final permissionService = useMemoized(() => const PermissionService());
     final hasPermission = useState(false);
-    final isContactsLoading = useState(false);
-    final contacts = useState<List<Contact>>([]);
+    final contactsState = ref.watch(contactsCacheControllerProvider);
+    final contactsController =
+        ref.read(contactsCacheControllerProvider.notifier);
+    final filteredContacts = useState<List<Contact>>([]);
     final contactQuery = useState('');
     final contactSearchController = useTextEditingController();
+    final isMounted = useIsMounted();
+    final filterToken = useRef(0);
 
     final manualMobileController = useTextEditingController();
     final planSearchController =
@@ -45,19 +75,20 @@ class MobilePrepaidView extends HookConsumerWidget {
 
     final showPlans = state.mobile.isNotEmpty || state.operatorInfo != null;
 
+    useEffect(() {
+      return () {
+        controller.reset();
+      };
+    }, const []);
+
     Future<void> loadContacts() async {
-      isContactsLoading.value = true;
-      try {
-        final list = await FlutterContacts.getContacts(withProperties: true);
-        contacts.value = list;
-      } finally {
-        isContactsLoading.value = false;
-      }
+      await contactsController.fetchIfNeeded();
     }
 
     useEffect(() {
       Future.microtask(() async {
         final granted = await permissionService.hasContactsPermission();
+        if (!isMounted()) return;
         hasPermission.value = granted;
         if (granted) {
           await loadContacts();
@@ -84,9 +115,10 @@ class MobilePrepaidView extends HookConsumerWidget {
 
     Future<void> handleRequestPermission() async {
       final granted = await permissionService.requestContacts();
+      if (!isMounted()) return;
       hasPermission.value = granted;
       if (granted) {
-        await loadContacts();
+        await contactsController.reload();
       }
     }
 
@@ -103,6 +135,34 @@ class MobilePrepaidView extends HookConsumerWidget {
       }
       return null;
     }, [contactQuery.value]);
+
+    Future<void> rebuildFilteredContacts() async {
+      final entries = contactsState.searchIndex;
+      if (entries.isEmpty) {
+        filteredContacts.value = [];
+        return;
+      }
+      final token = ++filterToken.value;
+      final query = contactQuery.value.trim().toLowerCase();
+      final indices = await compute(
+        _filterContactIndices,
+        <String, dynamic>{
+          'entries': entries,
+          'query': query,
+        },
+      );
+      if (!isMounted() || token != filterToken.value) return;
+      filteredContacts.value = [
+        for (final i in indices)
+          if (i >= 0 && i < contactsState.contacts.length)
+            contactsState.contacts[i],
+      ];
+    }
+
+    useEffect(() {
+      Future.microtask(rebuildFilteredContacts);
+      return null;
+    }, [contactQuery.value, contactsState.searchIndex]);
 
     final lastError = useRef<String?>(null);
     final lastMessage = useRef<String?>(null);
@@ -142,20 +202,23 @@ class MobilePrepaidView extends HookConsumerWidget {
       return null;
     }, [state.rechargeMessage]);
 
-    final filteredContacts = contacts.value.where((c) {
-      final name = c.displayName.toLowerCase();
-      final phone = c.phones.isNotEmpty ? c.phones.first.number : '';
-      final q = contactQuery.value.toLowerCase();
-      return name.contains(q) || phone.contains(q);
-    }).toList();
-
     final hasPlanSelected = showPlans && state.selectedPlan != null;
     final showOperatorCard = showPlans || hasPlanSelected;
 
     void handleChange() {
-      manualMobileController.clear();
-      planSearchController.clear();
-      controller.reset();
+      _openOperatorSheet(
+        ref,
+        mobile: state.mobile,
+        onSelected: (operator, region) async {
+          await controller.fetchPlansForSelection(
+            mobileInput: state.mobile,
+            operatorName: operator.name,
+            circleName: region.name,
+            circleCode: region.code,
+            iconUrl: operator.iconUrl,
+          );
+        },
+      );
     }
 
     return Scaffold(
@@ -175,7 +238,8 @@ class MobilePrepaidView extends HookConsumerWidget {
                 Positioned(
                   left: 16,
                   right: 16,
-                  bottom: -32,
+                  bottom: -38.h,
+                  height: 72.h,
                   child: _QuickActionHeaderCard(
                     mobileNumber: state.mobile,
                     operatorName: state.operatorInfo?.operatorName,
@@ -186,8 +250,9 @@ class MobilePrepaidView extends HookConsumerWidget {
                 ),
             ],
           ),
+          SizedBox(height: showOperatorCard ? 20.h : 16.h),
           // Space for the overlapping card
-          if (showOperatorCard) const SizedBox(height: 40),
+          if (showOperatorCard) const SizedBox(height: 36),
           // Main content
           Expanded(
             child: !hasPermission.value
@@ -204,8 +269,8 @@ class MobilePrepaidView extends HookConsumerWidget {
                             planSearchController: planSearchController,
                           )
                         : _ContactsSection(
-                            isLoading: isContactsLoading.value,
-                            contacts: filteredContacts,
+                            isLoading: contactsState.isLoading,
+                            contacts: filteredContacts.value,
                             contactSearchController: contactSearchController,
                             onQueryChange: (value) =>
                                 contactQuery.value = value,
@@ -381,7 +446,7 @@ class _PlanSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: [
         SearchTextfield(
           hintText: 'Search a plan, eg 299, 5g, etc.',
@@ -767,7 +832,7 @@ class _QuickActionHeaderCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(18.r),
         boxShadow: const [
           BoxShadow(
             color: AppColors.cardShadow,
@@ -777,11 +842,12 @@ class _QuickActionHeaderCard extends StatelessWidget {
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 14, top: 14, bottom: 14),
+            padding: EdgeInsets.only(left: 12.w, top: 8.h, bottom: 8.h),
             child: CircleAvatar(
-              radius: 34,
+              radius: 26.r,
               backgroundColor: AppColors.primary.withOpacity(0.12),
               child: iconUrl.isNotEmpty
                   ? _OperatorIcon(url: iconUrl)
@@ -794,10 +860,10 @@ class _QuickActionHeaderCard extends StatelessWidget {
                     ),
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 8.w),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14),
+              padding: EdgeInsets.symmetric(vertical: 8.h),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -807,52 +873,58 @@ class _QuickActionHeaderCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary,
+                          fontSize: 13.sp,
                         ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 2.h),
                   Text(
                     '$operator • $circle',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppColors.textPrimary.withOpacity(0.65),
+                          fontSize: 11.sp,
                         ),
                   ),
                 ],
               ),
             ),
           ),
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topRight: Radius.circular(18),
-              bottomRight: Radius.circular(18),
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Image.asset(
-                  FileConstants.quickAction,
-                  height: 84,
-                  fit: BoxFit.cover,
-                ),
-                TextButton(
-                  onPressed: onChange,
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: Colors.transparent,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
+          SizedBox(
+            width: 88.w,
+            child: ClipRRect(
+              borderRadius: BorderRadius.only(
+                topRight: Radius.circular(18.r),
+                bottomRight: Radius.circular(18.r),
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                alignment: Alignment.center,
+                children: [
+                  Image.asset(
+                    FileConstants.quickAction,
+                    fit: BoxFit.fill,
+                  ),
+                  TextButton(
+                    onPressed: onChange,
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.transparent,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 8.w,
+                        vertical: 6.h,
+                      ),
+                    ),
+                    child: Text(
+                      'Change',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.4,
+                            fontSize: 11.sp,
+                          ),
                     ),
                   ),
-                  child: Text(
-                    'Change',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.4,
-                        ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -862,6 +934,7 @@ class _QuickActionHeaderCard extends StatelessWidget {
 }
 
 class _OperatorIcon extends StatelessWidget {
+  // ignore: unused_element_parameter
   const _OperatorIcon({required this.url, this.size = 34});
 
   final String url;
@@ -889,16 +962,6 @@ class _OperatorIcon extends StatelessWidget {
     );
   }
 
-  Widget _rasterFallback(BuildContext context) {
-    return Image.network(
-      url,
-      width: size,
-      height: size,
-      fit: BoxFit.contain,
-      errorBuilder: (_, __, ___) => _fallbackPlaceholder(context),
-    );
-  }
-
   Widget _fallbackPlaceholder(BuildContext context) {
     return Container(
       width: size,
@@ -909,6 +972,282 @@ class _OperatorIcon extends StatelessWidget {
         color: AppColors.primary.withOpacity(0.6),
         size: 24,
       ),
+    );
+  }
+}
+
+Future<void> _openOperatorSheet(
+  WidgetRef ref, {
+  required String mobile,
+  required Future<void> Function(OperatorOption operator, RegionOption region)
+      onSelected,
+}) async {
+  final metaController = ref.read(prepaidMetaControllerProvider.notifier);
+  KDialog.instance.openDialog(
+    dialog: const ScreenWrapper(
+      isFetching: true,
+      isEmpty: false,
+      emptyMessage: '',
+      child: SizedBox.shrink(),
+    ),
+    barrierDismissible: false,
+  );
+  await metaController.loadOperatorsIfNeeded();
+  if (navigatorKey.currentContext != null) {
+    Navigator.of(navigatorKey.currentContext!).pop();
+  }
+  KDialog.instance.openConstraintsSheet(
+    dialog: _OperatorSelectSheet(
+      onSelected: (operator) async {
+        KDialog.instance.openDialog(
+          dialog: const ScreenWrapper(
+            isFetching: true,
+            isEmpty: false,
+            emptyMessage: '',
+            child: SizedBox.shrink(),
+          ),
+          barrierDismissible: false,
+        );
+        await metaController.loadRegionsIfNeeded();
+        if (navigatorKey.currentContext != null) {
+          Navigator.of(navigatorKey.currentContext!).pop();
+        }
+        KDialog.instance.openConstraintsSheet(
+          dialog: _RegionSelectSheet(
+            onSelected: (region) async {
+              if (mobile.trim().isEmpty) return;
+              await onSelected(operator, region);
+            },
+          ),
+          maxHeight: MediaQuery.of(navigatorKey.currentContext!).size.height *
+              0.65,
+        );
+      },
+    ),
+    maxHeight: MediaQuery.of(navigatorKey.currentContext!).size.height * 0.6,
+  );
+}
+
+class _OperatorSelectSheet extends ConsumerWidget {
+  const _OperatorSelectSheet({required this.onSelected});
+
+  final ValueChanged<OperatorOption> onSelected;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final meta = ref.watch(prepaidMetaControllerProvider);
+    return Container(
+      padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 24.h),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Select Operator',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          Divider(color: AppColors.lightBorder.withOpacity(0.7)),
+          if (meta.isLoadingOperators)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: CircularProgressIndicator(),
+            )
+          else
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: meta.operators.length,
+                separatorBuilder: (_, __) => Divider(
+                  color: AppColors.lightBorder.withOpacity(0.7),
+                  height: 1,
+                ),
+                itemBuilder: (_, index) {
+                  final item = meta.operators[index];
+                  return ListTile(
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      onSelected(item);
+                    },
+                    leading: _OperatorLogo(iconUrl: item.iconUrl),
+                    title: Text(
+                      item.name,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    trailing: const Icon(Icons.arrow_forward),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RegionSelectSheet extends ConsumerStatefulWidget {
+  const _RegionSelectSheet({required this.onSelected});
+
+  final ValueChanged<RegionOption> onSelected;
+
+  @override
+  ConsumerState<_RegionSelectSheet> createState() => _RegionSelectSheetState();
+}
+
+class _RegionSelectSheetState extends ConsumerState<_RegionSelectSheet> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final meta = ref.watch(prepaidMetaControllerProvider);
+    final query = _searchController.text.trim().toLowerCase();
+    final regions = query.isEmpty
+        ? meta.regions
+        : meta.regions
+            .where((r) => r.name.toLowerCase().contains(query))
+            .toList();
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 24.h),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Select Your Circle',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+          Divider(color: AppColors.lightBorder.withOpacity(0.7)),
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search region',
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+          SizedBox(height: 8.h),
+          if (meta.isLoadingRegions)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: CircularProgressIndicator(),
+            )
+          else
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: regions.length,
+                separatorBuilder: (_, __) => Divider(
+                  color: AppColors.lightBorder.withOpacity(0.7),
+                  height: 1,
+                ),
+                itemBuilder: (_, index) {
+                  final item = regions[index];
+                  return ListTile(
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      widget.onSelected(item);
+                    },
+                    title: Text(
+                      item.name,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    trailing: const Icon(Icons.arrow_forward),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OperatorLogo extends StatelessWidget {
+  const _OperatorLogo({required this.iconUrl});
+
+  final String iconUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    if (iconUrl.isEmpty) {
+      return CircleAvatar(
+        radius: 20.r,
+        backgroundColor: AppColors.primary.withOpacity(0.1),
+        child: const Icon(Icons.sim_card, color: AppColors.primary),
+      );
+    }
+    final isSvg = iconUrl.toLowerCase().endsWith('.svg');
+    return CircleAvatar(
+      radius: 20.r,
+      backgroundColor: Colors.white,
+      child: isSvg
+          ? SvgPicture.network(
+              iconUrl,
+              width: 24.r,
+              height: 24.r,
+              fit: BoxFit.contain,
+              placeholderBuilder: (_) => _logoPlaceholder(),
+            )
+          : Image.network(
+              iconUrl,
+              width: 24.r,
+              height: 24.r,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => _logoPlaceholder(),
+            ),
+    );
+  }
+
+  Widget _logoPlaceholder() {
+    return Icon(
+      Icons.sim_card,
+      size: 20.r,
+      color: AppColors.primary,
     );
   }
 }

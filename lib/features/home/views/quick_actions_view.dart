@@ -13,6 +13,7 @@ import '../../../constants/routes_constant.dart';
 import '../../../widgets/my_app_bar.dart';
 import '../../mobile_prepaid/models/recharge_quick_action_payload.dart';
 import '../../services/controllers/biller_detail_controller.dart';
+import '../../services/models/biller_detail_args.dart';
 import '../../services/models/biller_model.dart';
 import '../components/quick_action_card.dart';
 import '../controllers/home_controller.dart';
@@ -141,6 +142,7 @@ class QuickActionsView extends HookConsumerWidget {
                                   : 'Biller';
                           final type = item.paymentType?.toLowerCase() ?? '';
                           final isRecharge = type.contains('recharge');
+                          final isCreditCard = type.contains('credit');
                           final buttonLabel = isRecharge
                               ? 'Repeat'
                               : (amount.isEmpty ? '' : 'PAY NOW');
@@ -172,13 +174,18 @@ class QuickActionsView extends HookConsumerWidget {
                                       Biller(
                                         billerId: billerId,
                                         billerName: billerName,
+                                        icon: item.icon,
                                       ),
                                     );
                                 context.push(
                                   RouteConstants.billerDetail,
-                                  extra: Biller(
-                                    billerId: billerId,
-                                    billerName: billerName,
+                                  extra: BillerDetailArgs(
+                                    biller: Biller(
+                                      billerId: billerId,
+                                      billerName: billerName,
+                                      icon: item.icon,
+                                    ),
+                                    isCreditCard: isCreditCard,
                                   ),
                                 );
                               }

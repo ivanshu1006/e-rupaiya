@@ -15,9 +15,19 @@ class RouteConstants {
   static const String billerDetail = '/billers/detail';
   static const String creditCardIntro = '/credit-card';
   static const String creditCardListing = '/credit-card/billers';
+  static const String creditCardMyCards = '/credit-card/cards';
   static const String spinAndWin = '/spin-and-win';
   static const String mobilePrepaid = '/mobile-prepaid';
+  static const String mobileRecentRecharges = '/mobile-prepaid/recent';
   static const String aboutUs = '/about-us';
+  static const String termsPrivacy = '/terms-privacy';
+  static const String helpSupport = '/help-support';
+  static const String helpCenterChat = '/help-center/chat';
+  static const String faq = '/faq';
+  static const String transactions = '/transactions';
+  static const String transactionDetail = '/transactions/detail';
+  static const String notifications = '/notifications';
+  static const String myQr = '/my-qr';
   static const String quickActions = '/quick-actions';
   static const String offers = '/offers';
 }

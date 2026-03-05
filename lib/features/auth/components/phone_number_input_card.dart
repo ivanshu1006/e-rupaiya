@@ -252,7 +252,7 @@ class PhoneNumberInputCard extends StatelessWidget {
                 Expanded(
                   child: Text.rich(
                     const TextSpan(
-                      text: 'allow ',
+                      text: 'Allow ',
                       children: [
                         TextSpan(
                           text: 'E-Rupaiya',

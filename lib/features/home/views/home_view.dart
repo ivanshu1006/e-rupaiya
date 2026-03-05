@@ -2,6 +2,7 @@
 
 import 'dart:async';
 
+import 'package:e_rupaiya/features/home/components/home_shimmer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -12,18 +13,22 @@ import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
+import '../../../widgets/custom_elevated_button.dart';
 import '../../mobile_prepaid/models/recharge_quick_action_payload.dart';
 import '../../profile/controllers/profile_controller.dart';
+import '../../profile/views/offers_view.dart';
 import '../../profile/views/profile_view.dart';
+import '../../profile/views/transaction_history_screen.dart';
+import '../../scan/views/scan_user_screen.dart';
 import '../../services/controllers/biller_detail_controller.dart';
 import '../../services/models/biller_model.dart';
 import '../../spinandear/controllers/spin_options_controller.dart';
 import '../components/home_icon_tile.dart';
 import '../components/home_section_header.dart';
-import '../components/home_shimmer.dart';
 import '../components/quick_action_card.dart';
 import '../components/service_utils.dart';
 import '../controllers/home_controller.dart';
+import '../controllers/home_tab_controller.dart';
 import '../models/quick_action_model.dart';
 import 'home_search_view.dart';
 
@@ -32,54 +37,62 @@ class HomeView extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final tabController = ref.watch(homeTabControllerProvider);
     final tabs = [
       const _HomeContent(),
-      const _PlaceholderTab(title: 'Offers'),
-      const _PlaceholderTab(title: 'Scan User'),
-      const _PlaceholderTab(title: 'History'),
+      const OffersView(),
+      const ScanUserScreen(),
+      const TransactionHistoryScreen(),
       const ProfileView(),
     ];
 
+    final navTextStyle = TextStyle(
+        fontSize: 11.sp, fontWeight: FontWeight.w600, color: Colors.black);
     final navItems = [
       PersistentBottomNavBarItem(
-        icon: _BottomIcon(asset: FileConstants.paybills, size: 26),
+        icon: _BottomIcon(asset: FileConstants.paybills, size: 20.r),
         title: 'Pay Bills',
-        iconSize: 26,
+        iconSize: 30.r,
+        textStyle: navTextStyle,
         activeColorPrimary: AppColors.primary,
         inactiveColorPrimary: AppColors.textPrimary.withOpacity(0.6),
       ),
       PersistentBottomNavBarItem(
-        icon: _BottomIcon(asset: FileConstants.offers, size: 26),
+        icon: _BottomIcon(asset: FileConstants.offers, size: 20.r),
         title: 'Offers',
-        iconSize: 26,
+        iconSize: 30.r,
+        textStyle: navTextStyle,
         activeColorPrimary: AppColors.primary,
         inactiveColorPrimary: AppColors.textPrimary.withOpacity(0.6),
       ),
       PersistentBottomNavBarItem(
-        icon: _GradientFabIcon(asset: FileConstants.scanUser, size: 26),
+        icon: _GradientFabIcon(asset: FileConstants.scanUser, size: 20.r),
         title: 'Scan User',
-        iconSize: 32,
+        iconSize: 40.r,
+        textStyle: navTextStyle,
         activeColorPrimary: AppColors.primary,
         inactiveColorPrimary: AppColors.textPrimary.withOpacity(0.6),
       ),
       PersistentBottomNavBarItem(
-        icon: _BottomIcon(asset: FileConstants.history, size: 26),
+        icon: _BottomIcon(asset: FileConstants.history, size: 20.r),
         title: 'History',
-        iconSize: 26,
+        iconSize: 30.r,
+        textStyle: navTextStyle,
         activeColorPrimary: AppColors.primary,
         inactiveColorPrimary: AppColors.textPrimary.withOpacity(0.6),
       ),
       PersistentBottomNavBarItem(
-        icon: _BottomIcon(asset: FileConstants.profile, size: 26),
+        icon: _BottomIcon(asset: FileConstants.profile, size: 20.r),
         title: 'Profile',
-        iconSize: 26,
+        iconSize: 30.r,
+        textStyle: navTextStyle,
         activeColorPrimary: AppColors.primary,
         inactiveColorPrimary: AppColors.textPrimary.withOpacity(0.6),
       ),
     ];
-
     return PersistentTabView(
       context,
+      controller: tabController,
       screens: tabs,
       items: navItems,
       navBarStyle: NavBarStyle.style15,
@@ -92,39 +105,60 @@ class HomeView extends HookConsumerWidget {
         ),
         colorBehindNavBar: AppColors.gradientStart,
       ),
-      handleAndroidBackButtonPress: true, // Default is true.
-      resizeToAvoidBottomInset:
-          true, // This needs to be true if you want to move up the screen on a non-scrollable screen when keyboard appears. Default is true.
-      stateManagement: true, // Default is true.
+      navBarHeight: 65.h,
+      padding: EdgeInsets.only(top: 10.h, bottom: 10.h),
+      backgroundColor: Colors.white,
       hideNavigationBarWhenKeyboardAppears: true,
-      padding: const EdgeInsets.only(top: 8),
-      backgroundColor: Colors.grey.shade900,
-      isVisible: true,
-      animationSettings: const NavBarAnimationSettings(
-        navBarItemAnimation: ItemAnimationSettings(
-          // Navigation Bar's items animation properties.
-          duration: Duration(milliseconds: 400),
-          curve: Curves.ease,
-        ),
-        screenTransitionAnimation: ScreenTransitionAnimationSettings(
-          // Screen transition animation on change of selected tab.
-          animateTabTransition: true,
-          duration: Duration(milliseconds: 200),
-          screenTransitionAnimationType: ScreenTransitionAnimationType.fadeIn,
-        ),
-      ),
       confineToSafeArea: true,
-      // popAllScreensOnTapOfSelectedTab: true,
-      // itemAnimationProperties: const ItemAnimationProperties(
-      //   duration: Duration(milliseconds: 200),
-      //   curve: Curves.easeInOut,
-      // ),
-      // screenTransitionAnimation: const ScreenTransitionAnimation(
-      //   animateTabTransition: true,
-      //   duration: Duration(milliseconds: 200),
-      //   curve: Curves.easeInOut,
-      // ),
     );
+
+    // return PersistentTabView(
+    //   context,
+    //   screens: tabs,
+    //   items: navItems,
+    //   navBarStyle: NavBarStyle.style15,
+    //   decoration: NavBarDecoration(
+    //     borderRadius: BorderRadius.circular(0),
+    //     gradient: const LinearGradient(
+    //       colors: [Color(0xffFFEAE3), Color(0xffF6F4F3)],
+    //       begin: Alignment.topCenter,
+    //       end: Alignment.bottomCenter,
+    //     ),
+    //     colorBehindNavBar: AppColors.gradientStart,
+    //   ),
+    //   handleAndroidBackButtonPress: true, // Default is true.
+    //   resizeToAvoidBottomInset:
+    //       true, // This needs to be true if you want to move up the screen on a non-scrollable screen when keyboard appears. Default is true.
+    //   stateManagement: true, // Default is true.
+    //   hideNavigationBarWhenKeyboardAppears: true,
+    //   padding: const EdgeInsets.only(top: 2),
+    //   backgroundColor: Colors.grey.shade900,
+    //   isVisible: true,
+    //   animationSettings: const NavBarAnimationSettings(
+    //     navBarItemAnimation: ItemAnimationSettings(
+    //       // Navigation Bar's items animation properties.
+    //       duration: Duration(milliseconds: 400),
+    //       curve: Curves.ease,
+    //     ),
+    //     screenTransitionAnimation: ScreenTransitionAnimationSettings(
+    //       // Screen transition animation on change of selected tab.
+    //       animateTabTransition: true,
+    //       duration: Duration(milliseconds: 200),
+    //       screenTransitionAnimationType: ScreenTransitionAnimationType.fadeIn,
+    //     ),
+    //   ),
+    //   confineToSafeArea: true,
+    //   // popAllScreensOnTapOfSelectedTab: true,
+    //   // itemAnimationProperties: const ItemAnimationProperties(
+    //   //   duration: Duration(milliseconds: 200),
+    //   //   curve: Curves.easeInOut,
+    //   // ),
+    //   // screenTransitionAnimation: const ScreenTransitionAnimation(
+    //   //   animateTabTransition: true,
+    //   //   duration: Duration(milliseconds: 200),
+    //   //   curve: Curves.easeInOut,
+    //   // ),
+    // );
   }
 }
 
@@ -132,7 +166,8 @@ SliverPadding _buildIconSection({
   required String title,
   required List<String> items,
   List<String?>? assets,
-  void Function(String serviceName)? onServiceTap,
+  List<int?>? offers,
+  Future<void> Function(String serviceName)? onServiceTap,
   bool expanded = false,
   VoidCallback? onViewAll,
 }) {
@@ -144,9 +179,10 @@ SliverPadding _buildIconSection({
   final visibleCount = (expanded || !showViewAll) ? items.length : maxItems;
   final visibleItems = items.take(visibleCount).toList();
   final visibleAssets = assets?.take(visibleCount).toList();
+  final visibleOffers = offers?.take(visibleCount).toList();
 
   return SliverPadding(
-    padding: const EdgeInsets.only(left: 16, right: 16, top: 10),
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     sliver: SliverToBoxAdapter(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -159,29 +195,37 @@ SliverPadding _buildIconSection({
             onAction: showViewAll ? onViewAll : null,
             padding: EdgeInsets.zero,
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 16.sp),
           LayoutBuilder(
             builder: (context, constraints) {
               final double maxWidth = constraints.maxWidth;
-              const double spacing = 12;
-              final double itemWidth =
-                  (maxWidth - (spacing * (columns - 1))) / columns;
+              final double tileWidth = 64.r;
+              final double spacing = columns > 1
+                  ? (maxWidth - tileWidth * columns) / (columns - 1)
+                  : 0;
 
               return Wrap(
                 spacing: spacing,
-                runSpacing: 16,
+                runSpacing: 20.h,
                 children: List.generate(visibleItems.length, (index) {
                   final iconAsset =
                       (visibleAssets != null && visibleAssets.length > index)
                           ? visibleAssets[index]
                           : null;
                   final serviceName = visibleItems[index];
+                  final offer =
+                      (visibleOffers != null && visibleOffers.length > index)
+                          ? visibleOffers[index]
+                          : null;
                   return SizedBox(
-                    width: itemWidth,
+                    width: tileWidth,
                     child: HomeIconTile(
                       label: displayServiceName(serviceName),
                       asset: iconAsset,
-                      onTap: () => onServiceTap?.call(serviceName),
+                      offer: offer,
+                      onTap: () async {
+                        await onServiceTap?.call(serviceName);
+                      },
                     ),
                   );
                 }),
@@ -197,15 +241,52 @@ SliverPadding _buildIconSection({
 List<Widget> _buildQuickActionSlivers(
   List<QuickActionCategory> categories,
   BuildContext context, {
+  required WidgetRef ref,
   required Set<String> expandedCategories,
   required void Function(String category) onExpand,
 }) {
-  final slivers = <Widget>[];
+  final slivers = <Widget>[
+    const SliverToBoxAdapter(child: SizedBox(height: 12)),
+  ];
+  const utilitiesCategoryName = 'Utilities';
   const financeCategoryName = 'Finance & Banking';
+  const propertyRentCategoryName = 'Property & Rent';
 
   for (final category in categories) {
     final title = category.category;
-    if (title == financeCategoryName) {
+
+    slivers.add(
+      _buildIconSection(
+        title: title,
+        items: category.services.map((s) => s.name).toList(),
+        assets: category.services.map((s) => serviceIconMap[s.name]).toList(),
+        offers: category.services.map((s) => s.offers).toList(),
+        expanded: expandedCategories.contains(title),
+        onViewAll: () => onExpand(title),
+        onServiceTap: (serviceName) async {
+          if (serviceName == 'Credit Card') {
+            await ref
+                .read(homeControllerProvider.notifier)
+                .fetchCreditCardActions();
+            final cards = ref.read(homeControllerProvider).creditCardActions;
+            if (cards != null && cards.isNotEmpty) {
+              context.push(RouteConstants.creditCardMyCards);
+            } else {
+              context.push(RouteConstants.creditCardListing);
+            }
+          } else if (serviceName == 'Mobile Prepaid') {
+            context.push(RouteConstants.mobileRecentRecharges);
+          } else {
+            context.push(
+              RouteConstants.billerListing,
+              extra: serviceName,
+            );
+          }
+        },
+      ),
+    );
+
+    if (title == utilitiesCategoryName) {
       slivers.add(
         SliverToBoxAdapter(
           child: Padding(
@@ -223,86 +304,101 @@ List<Widget> _buildQuickActionSlivers(
       );
     }
 
-    slivers.add(
-      _buildIconSection(
-        title: title,
-        items: category.services.map((s) => s.name).toList(),
-        assets: category.services.map((s) => serviceIconMap[s.name]).toList(),
-        expanded: expandedCategories.contains(title),
-        onViewAll: () => onExpand(title),
-        onServiceTap: (serviceName) {
-          if (serviceName == 'Credit Card') {
-            context.push(RouteConstants.creditCardListing);
-          } else if (serviceName == 'Mobile Prepaid') {
-            context.push(RouteConstants.mobilePrepaid);
-          } else {
-            context.push(
-              RouteConstants.billerListing,
-              extra: serviceName,
-            );
-          }
-        },
-      ),
-    );
+    if (title == financeCategoryName) {
+      slivers.add(
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset(
+                FileConstants.preCard,
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (title == propertyRentCategoryName) {
+      slivers.add(
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset(
+                FileConstants.homeBanner1,
+                width: double.infinity,
+                fit: BoxFit.fitWidth,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
   }
 
   return slivers;
 }
 
-class _MembershipChip extends StatelessWidget {
-  const _MembershipChip({required this.label});
-  final String label;
+// class _MembershipChip extends StatelessWidget {
+//   const _MembershipChip({required this.label});
+//   final String label;
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.lightBorder),
-        boxShadow: const [
-          BoxShadow(
-            color: AppColors.cardShadow,
-            blurRadius: 10,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset(
-            FileConstants.bharatConnect,
-            height: 18,
-            width: 18,
-            color: AppColors.primary,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return Container(
+//       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+//       decoration: BoxDecoration(
+//         color: Colors.white,
+//         borderRadius: BorderRadius.circular(20),
+//         border: Border.all(color: AppColors.lightBorder),
+//         boxShadow: const [
+//           BoxShadow(
+//             color: AppColors.cardShadow,
+//             blurRadius: 10,
+//             offset: Offset(0, 6),
+//           ),
+//         ],
+//       ),
+//       child: Row(
+//         mainAxisSize: MainAxisSize.min,
+//         children: [
+//           Image.asset(
+//             FileConstants.bharatConnect,
+//             height: 18,
+//             width: 18,
+//             color: AppColors.primary,
+//           ),
+//           const SizedBox(width: 8),
+//           Text(
+//             label,
+//             style: Theme.of(context).textTheme.bodySmall?.copyWith(
+//                   color: AppColors.textPrimary,
+//                   fontWeight: FontWeight.w600,
+//                 ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
 
-class _PlaceholderTab extends StatelessWidget {
-  const _PlaceholderTab({required this.title});
-  final String title;
+// class _PlaceholderTab extends StatelessWidget {
+//   const _PlaceholderTab({required this.title});
+//   final String title;
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(child: Text(title)),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       body: Center(child: Text(title)),
+//     );
+//   }
+// }
 
 class _Dot extends StatelessWidget {
   const _Dot({required this.active});
@@ -345,13 +441,6 @@ class _HeaderIconButton extends StatelessWidget {
         decoration: const BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.cardShadow,
-              blurRadius: 12,
-              offset: Offset(0, 6),
-            ),
-          ],
         ),
         child: Stack(
           clipBehavior: Clip.none,
@@ -432,8 +521,8 @@ class _GradientFabIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 52,
-      width: 52,
+      height: 65.h,
+      width: 55.w,
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
         gradient: LinearGradient(
@@ -445,8 +534,8 @@ class _GradientFabIcon extends StatelessWidget {
       child: Center(
         child: Image.asset(
           asset,
-          height: size,
-          width: size,
+          height: 45.h,
+          width: 30.w,
           color: Colors.white,
         ),
       ),
@@ -474,7 +563,7 @@ class _HomeContent extends HookConsumerWidget {
     }, const []);
 
     final banners = useMemoized(
-      () => [FileConstants.homeBanner2, FileConstants.homeBanner2],
+      () => [FileConstants.homeBanner3, FileConstants.homeBanner4],
     );
     final bannerPage = useState(0);
     final bannerController = useMemoized(() => PageController(), const []);
@@ -508,93 +597,34 @@ class _HomeContent extends HookConsumerWidget {
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            SliverToBoxAdapter(
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: AppColors.onboardingBackground,
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.only(
-                    left: 16,
-                    right: 16,
-                    top: 52,
-                    bottom: 12,
+            SliverAppBar(
+              pinned: true,
+              floating: false,
+              automaticallyImplyLeading: false,
+              centerTitle: false,
+              titleSpacing: 0,
+              backgroundColor: const Color(0xFFFFE8DF),
+              elevation: 0,
+              toolbarHeight: 64,
+              expandedHeight:
+                  MediaQuery.of(context).padding.top + 64 + 12 + 100.h + 10 + 8,
+              flexibleSpace: FlexibleSpaceBar(
+                collapseMode: CollapseMode.none,
+                background: Container(
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.onboardingBackground,
                   ),
-                  child: Column(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      left: 16,
+                      right: 16,
+                      top: MediaQuery.of(context).padding.top + 64 + 12,
+                    ),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(24),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: AppColors.cardShadow,
-                                    blurRadius: 12,
-                                    offset: Offset(0, 6),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                children: [
-                                  SizedBox(
-                                    height: 30,
-                                    width: 30,
-                                    child: Center(
-                                      child: Image.asset(
-                                        FileConstants.wallet,
-                                        height: 24,
-                                        width: 24,
-                                        fit: BoxFit.contain,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    '$walletBalance',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.textPrimary,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Row(
-                              children: [
-                                _HeaderIconButton(
-                                  icon: Icons.search,
-                                  onTap: () {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => const HomeSearchView(),
-                                      ),
-                                    );
-                                  },
-                                ),
-                                const SizedBox(width: 10),
-                                _HeaderIconButton(
-                                  iconAsset: FileConstants.notification,
-                                  showBadge: true,
-                                  onTap: () {},
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
                         SizedBox(
-                          height: 120.h,
+                          height: 100.h,
                           child: PageView.builder(
                             controller: bannerController,
                             onPageChanged: (page) => bannerPage.value = page,
@@ -602,12 +632,23 @@ class _HomeContent extends HookConsumerWidget {
                             itemBuilder: (_, index) => Padding(
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 6),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: Image.asset(
-                                  banners[index],
-                                  width: double.infinity,
-                                  fit: BoxFit.fill,
+                              child: GestureDetector(
+                                onTap: () {
+                                  if (index == 0) {
+                                    context.push(
+                                        RouteConstants.mobileRecentRecharges);
+                                  } else if (index == 1) {
+                                    context
+                                        .push(RouteConstants.creditCardMyCards);
+                                  }
+                                },
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Image.asset(
+                                    banners[index],
+                                    width: double.infinity,
+                                    fit: BoxFit.fill,
+                                  ),
                                 ),
                               ),
                             ),
@@ -625,137 +666,195 @@ class _HomeContent extends HookConsumerWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        if (allQuickActions.isNotEmpty) ...[
-                          HomeSectionHeader(
-                            title: 'Quick Actions',
-                            actionLabel: 'View All',
-                            onAction: () =>
-                                context.push(RouteConstants.quickActions),
-                            padding: EdgeInsets.zero,
-                          ),
-                          const SizedBox(height: 12),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              title: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Row(
+                        children: [
                           SizedBox(
-                            height: 92,
-                            child: ListView.separated(
-                              scrollDirection: Axis.horizontal,
-                              itemCount: allQuickActions.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(width: 12),
-                              itemBuilder: (context, index) {
-                                final item = allQuickActions[index];
-                                final title =
-                                    item.billerName?.trim().isNotEmpty == true
-                                        ? item.billerName!.trim()
-                                        : item.paymentType?.trim().isNotEmpty ==
-                                                true
-                                            ? item.paymentType!.trim()
-                                            : 'Quick Action';
-                                final due = (item.nextDue ?? '').trim();
-                                final subtitle = due.isEmpty
-                                    ? (item.paymentType ?? '')
-                                    : '${item.paymentType ?? ''} Due : $due'
-                                        .trim();
-                                final amount =
-                                    item.amount?.trim().isNotEmpty == true
-                                        ? '\u20B9 ${item.amount}'
-                                        : '';
-                                final rawAmount = item.amount ?? '';
-                                final amountValue =
-                                    (double.tryParse(rawAmount) ?? 0).round();
-                                final billerId = item.billerId ?? '';
-                                final billerName =
-                                    item.billerName?.trim().isNotEmpty == true
-                                        ? item.billerName!.trim()
-                                        : 'Biller';
-                                return SizedBox(
-                                  width: 320.w,
-                                  child: QuickActionCard(
-                                    title: title,
-                                    subtitle: subtitle,
-                                    amount: amount,
-                                    buttonLabel:
-                                        amount.isEmpty ? '' : 'PAY NOW',
-                                    onTap: () {
-                                      final type =
-                                          item.paymentType?.toLowerCase() ?? '';
-                                      if (type.contains('recharge')) {
-                                        if (billerId.isEmpty) return;
-                                        context.push(
-                                          RouteConstants.mobilePrepaid,
-                                          extra: RechargeQuickActionPayload(
-                                            phone: billerId,
-                                            amount: amountValue,
-                                            desc: item.desc,
-                                            operatorName: billerName,
-                                            iconUrl: item.icon,
-                                          ),
-                                        );
-                                      } else {
-                                        if (billerId.isEmpty) return;
-                                        ref
-                                            .read(billerDetailControllerProvider
-                                                .notifier)
-                                            .selectBiller(
-                                              Biller(
-                                                billerId: billerId,
-                                                billerName: billerName,
-                                              ),
-                                            );
-                                        context.push(
-                                          RouteConstants.billerDetail,
-                                          extra: Biller(
+                            height: 30,
+                            width: 30,
+                            child: Center(
+                              child: Image.asset(
+                                FileConstants.wallet,
+                                height: 24,
+                                width: 24,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            '$walletBalance',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        _HeaderIconButton(
+                          icon: Icons.search,
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const HomeSearchView(),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 10),
+                        _HeaderIconButton(
+                          iconAsset: FileConstants.notification,
+                          showBadge: true,
+                          onTap: () {
+                            context.push(RouteConstants.notifications);
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (allQuickActions.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.onboardingBackground,
+                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      HomeSectionHeader(
+                        title: 'Quick Actions',
+                        actionLabel: 'View All',
+                        onAction: () =>
+                            context.push(RouteConstants.quickActions),
+                        padding: EdgeInsets.zero,
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 92,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: allQuickActions.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(width: 12),
+                          itemBuilder: (context, index) {
+                            final item = allQuickActions[index];
+                            final title = item.billerName?.trim().isNotEmpty ==
+                                    true
+                                ? item.billerName!.trim()
+                                : item.paymentType?.trim().isNotEmpty == true
+                                    ? item.paymentType!.trim()
+                                    : 'Quick Action';
+                            final due = (item.nextDue ?? '').trim();
+                            final subtitle = due.isEmpty
+                                ? (item.paymentType ?? '')
+                                : '${item.paymentType ?? ''} Due : $due'.trim();
+                            final amount =
+                                item.amount?.trim().isNotEmpty == true
+                                    ? '\u20B9 ${item.amount}'
+                                    : '';
+                            final rawAmount = item.amount ?? '';
+                            final amountValue =
+                                (double.tryParse(rawAmount) ?? 0).round();
+                            final billerId = item.billerId ?? '';
+                            final billerName =
+                                item.billerName?.trim().isNotEmpty == true
+                                    ? item.billerName!.trim()
+                                    : 'Biller';
+                            return SizedBox(
+                              width: 320.w,
+                              child: QuickActionCard(
+                                title: title,
+                                subtitle: subtitle,
+                                amount: amount,
+                                buttonLabel: amount.isEmpty ? '' : 'PAY NOW',
+                                onTap: () {
+                                  final type =
+                                      item.paymentType?.toLowerCase() ?? '';
+                                  if (type.contains('recharge')) {
+                                    if (billerId.isEmpty) return;
+                                    context.push(
+                                      RouteConstants.mobilePrepaid,
+                                      extra: RechargeQuickActionPayload(
+                                        phone: billerId,
+                                        amount: amountValue,
+                                        desc: item.desc,
+                                        operatorName: billerName,
+                                        iconUrl: item.icon,
+                                      ),
+                                    );
+                                  } else {
+                                    if (billerId.isEmpty) return;
+                                    ref
+                                        .read(billerDetailControllerProvider
+                                            .notifier)
+                                        .selectBiller(
+                                          Biller(
                                             billerId: billerId,
                                             billerName: billerName,
                                           ),
                                         );
-                                      }
-                                    },
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          const _PagerDots(),
-                        ],
-                      ]),
+                                    context.push(
+                                      RouteConstants.billerDetail,
+                                      extra: Biller(
+                                        billerId: billerId,
+                                        billerName: billerName,
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const _PagerDots(),
+                    ],
+                  ),
                 ),
               ),
-            ),
             if (homeState.isFetching && quickActions == null)
               const HomeShimmer()
             else if (homeState.errorMessage != null && quickActions == null)
               SliverToBoxAdapter(
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
-                  child: Center(
-                    child: Column(
-                      children: [
-                        Text(
-                          homeState.errorMessage!,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.red.shade700,
-                                  ),
-                        ),
-                        const SizedBox(height: 12),
-                        TextButton(
-                          onPressed: () => ref
-                              .read(homeControllerProvider.notifier)
-                              .fetchQuickActions(),
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  ),
+                child: _HomeErrorState(
+                  onRetry: () => ref
+                      .read(homeControllerProvider.notifier)
+                      .fetchQuickActions(),
+                  onRestart: () => context.go(RouteConstants.splash),
                 ),
               )
             else if (quickActions != null)
               ..._buildQuickActionSlivers(
                 quickActions,
                 context,
+                ref: ref,
                 expandedCategories: expandedCategories.value,
                 onExpand: (category) {
                   if (expandedCategories.value.contains(category)) {
@@ -770,101 +869,170 @@ class _HomeContent extends HookConsumerWidget {
                   }
                 },
               ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.asset(
-                    FileConstants.homeBanner1,
-                    height: 100,
-                    width: double.infinity,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.asset(
-                    FileConstants.preCard,
-                    height: 200,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: InkWell(
-                  onTap: () => context.push(RouteConstants.spinAndWin),
-                  borderRadius: BorderRadius.circular(16),
-                  child: ClipRRect(
+            if (quickActions != null) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: InkWell(
+                    onTap: () => context.push(RouteConstants.spinAndWin),
                     borderRadius: BorderRadius.circular(16),
-                    child: Image.asset(
-                      FileConstants.spincoin,
-                      height: 250,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.asset(
+                        FileConstants.spincoin,
+                        width: double.infinity,
+                        fit: BoxFit.fill,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    HomeSectionHeader(
-                      title: 'Memberships',
-                      actionLabel: 'View All',
-                      onAction: () {},
-                      padding: EdgeInsets.zero,
-                    ),
-                    const SizedBox(height: 12),
-                    const Wrap(
-                      spacing: 18,
-                      runSpacing: 16,
-                      children: [
-                        _MembershipChip(label: 'Credit Card'),
-                        _MembershipChip(label: 'Loan Repayment'),
-                        _MembershipChip(label: 'Recurring Deposit'),
-                        _MembershipChip(label: 'Insurance'),
-                      ],
-                    ),
-                    const SizedBox(height: 28),
-                    Text(
-                      'e-rupaiya',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '#India Ka Smartest Bill Payment App',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.textPrimary,
-                          ),
-                    ),
-                    const SizedBox(height: 18),
-                  ],
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.asset(
+                          FileConstants.homeBanner5,
+                          height: 100.h,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.asset(
+                          FileConstants.homeBanner6,
+                          height: 50.h,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
+            ],
+            // SliverToBoxAdapter(
+            //   child: Padding(
+            //     padding:
+            //         const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            //     child: Column(
+            //       crossAxisAlignment: CrossAxisAlignment.start,
+            //       children: [
+            //         HomeSectionHeader(
+            //           title: 'Memberships',
+            //           actionLabel: 'View All',
+            //           onAction: () {},
+            //           padding: EdgeInsets.zero,
+            //         ),
+            //         const SizedBox(height: 12),
+            //         const Wrap(
+            //           spacing: 18,
+            //           runSpacing: 16,
+            //           children: [
+            //             _MembershipChip(label: 'Credit Card'),
+            //             _MembershipChip(label: 'Loan Repayment'),
+            //             _MembershipChip(label: 'Recurring Deposit'),
+            //             _MembershipChip(label: 'Insurance'),
+            //           ],
+            //         ),
+            //         const SizedBox(height: 28),
+            //         Text(
+            //           'e-rupaiya',
+            //           style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            //                 color: AppColors.primary,
+            //                 fontWeight: FontWeight.w700,
+            //               ),
+            //         ),
+            //         const SizedBox(height: 6),
+            //         Text(
+            //           '#India Ka Smartest Bill Payment App',
+            //           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            //                 color: AppColors.textPrimary,
+            //               ),
+            //         ),
+            //         const SizedBox(height: 18),
+            //       ],
+            //     ),
+            //   ),
+            // ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _HomeErrorState extends StatelessWidget {
+  const _HomeErrorState({
+    required this.onRetry,
+    required this.onRestart,
+  });
+
+  final VoidCallback onRetry;
+  final VoidCallback onRestart;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(24.w, 32.h, 24.w, 32.h),
+      child: Column(
+        children: [
+          Image.asset(
+            FileConstants.somethingWentWrong,
+            width: 170.w,
+            fit: BoxFit.contain,
+          ),
+          SizedBox(height: 20.h),
+          Text(
+            'Something Went Wrong',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          SizedBox(height: 6.h),
+          Text(
+            'We’re facing a temporary issue loading your data. Please try again.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textPrimary.withOpacity(0.7),
+                  height: 1.4,
+                ),
+          ),
+          SizedBox(height: 18.h),
+          Row(
+            children: [
+              Expanded(
+                child: CustomElevatedButton(
+                  onPressed: onRetry,
+                  label: 'Retry',
+                  uppercaseLabel: false,
+                  height: 35.h,
+                  isBorder: true,
+                  backgroundColor: Colors.white,
+                  borderColor: AppColors.primary,
+                  labelColor: AppColors.primary,
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: CustomElevatedButton(
+                  onPressed: onRestart,
+                  label: 'Restart',
+                  uppercaseLabel: false,
+                  height: 35.h,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -7,6 +7,7 @@ import '../../../constants/app_colors.dart';
 import '../../../widgets/my_app_bar.dart';
 import '../components/offer_card.dart';
 import '../models/offer_model.dart';
+import '../../home/controllers/home_tab_controller.dart';
 
 class OffersView extends HookConsumerWidget {
   const OffersView({super.key});
@@ -23,7 +24,13 @@ class OffersView extends HookConsumerWidget {
         children: [
           MyAppBar(
             title: 'Offers',
-            onBack: () => context.pop(),
+            onBack: () {
+              if (context.canPop()) {
+                context.pop();
+                return;
+              }
+              ref.read(homeTabControllerProvider).index = 0;
+            },
             trailing: IconButton(
               icon:
                   const Icon(Icons.help_outline, color: AppColors.textPrimary),

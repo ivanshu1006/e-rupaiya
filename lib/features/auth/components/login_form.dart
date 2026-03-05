@@ -73,6 +73,7 @@ class LoginForm extends HookWidget {
               children: [
                 TextSpan(
                   text: 'Login',
+                  // ignore: prefer_const_constructors
                   style: TextStyle(
                     color: AppColors.primary,
                     decoration: TextDecoration.underline,

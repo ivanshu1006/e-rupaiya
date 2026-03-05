@@ -19,4 +19,18 @@ class OperatorInfo {
       iconUrl: (json['icon'] ?? '').toString(),
     );
   }
+
+  factory OperatorInfo.fromSelection({
+    required String operatorName,
+    required String circle,
+    required String circleCode,
+    String? iconUrl,
+  }) {
+    return OperatorInfo(
+      operatorName: operatorName,
+      circle: circle,
+      circleCode: circleCode,
+      iconUrl: iconUrl,
+    );
+  }
 }

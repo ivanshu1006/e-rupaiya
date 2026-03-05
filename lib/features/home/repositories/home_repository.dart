@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:frappe_flutter_app/features/home/models/quick_actions_model.dart';
+import 'package:e_rupaiya/features/home/models/quick_actions_model.dart';
 
 import '../../../constants/api_constants.dart';
 import '../../../services/dio_service.dart';
@@ -56,6 +56,56 @@ class HomeRepository {
       return QuickActionModel.fromJson(json);
     } catch (e) {
       logger.error('Failed to fetch all quick actions: $e', error: e);
+      rethrow;
+    }
+  }
+
+  Future<List<Data>> fetchCreditCardActions(String userId) async {
+    try {
+      final response = await _dio.get(
+        ApiConstants.quickActionsDueEndpoint,
+        queryParameters: {
+          'user_id': 1,
+          'payment_type': 'Credit Card',
+        },
+      );
+      final payload = response.data;
+      Map<String, dynamic> json;
+      if (payload is String) {
+        json = jsonDecode(payload) as Map<String, dynamic>;
+      } else if (payload is Map<String, dynamic>) {
+        json = payload;
+      } else {
+        json = Map<String, dynamic>.from(payload as Map);
+      }
+      return QuickActionModel.fromJson(json).data ?? [];
+    } catch (e) {
+      logger.error('Failed to fetch credit card actions: $e', error: e);
+      rethrow;
+    }
+  }
+
+  Future<List<Data>> fetchRechargeActions(String userId) async {
+    try {
+      final response = await _dio.get(
+        ApiConstants.quickActionsDueEndpoint,
+        queryParameters: {
+          'user_id': 1,
+          'payment_type': 'RECHARGE',
+        },
+      );
+      final payload = response.data;
+      Map<String, dynamic> json;
+      if (payload is String) {
+        json = jsonDecode(payload) as Map<String, dynamic>;
+      } else if (payload is Map<String, dynamic>) {
+        json = payload;
+      } else {
+        json = Map<String, dynamic>.from(payload as Map);
+      }
+      return QuickActionModel.fromJson(json).data ?? [];
+    } catch (e) {
+      logger.error('Failed to fetch recharge actions: $e', error: e);
       rethrow;
     }
   }

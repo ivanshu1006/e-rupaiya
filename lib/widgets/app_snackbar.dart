@@ -1,5 +1,5 @@
+import 'package:e_rupaiya/constants/app_colors.dart';
 import 'package:flutter/material.dart';
-import 'package:frappe_flutter_app/constants/app_colors.dart';
 
 class AppSnackbar {
   static final messengerKey = GlobalKey<ScaffoldMessengerState>();

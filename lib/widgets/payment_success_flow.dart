@@ -5,9 +5,11 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../constants/app_colors.dart';
 import '../constants/file_constants.dart';
+import '../utils/screenutil_ext.dart';
 import 'custom_elevated_button.dart';
 
 class PaymentDetailItem {
@@ -348,7 +350,7 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
                           vertical: 10,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF4F0B0B).withOpacity(0.7),
+                          color: AppColors.white,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -399,7 +401,7 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
                                   ),
                             ),
                           ),
-                          const SizedBox(height: 20),
+                          20.hs,
                         ],
                         CustomElevatedButton(
                           onPressed: widget.onContinue == null
@@ -422,9 +424,9 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
                         const SizedBox(height: 8),
                         Image.asset(
                           widget.poweredByLogo.isEmpty
-                              ? FileConstants.bharatConnect
+                              ? FileConstants.bharatConnectColor
                               : widget.poweredByLogo,
-                          height: 40,
+                          height: 30.h,
                           fit: BoxFit.contain,
                         ),
                       ],
@@ -541,7 +543,7 @@ class _TransactionDetailsCard extends StatelessWidget {
                           ),
                         ),
                         if (item.copyable) ...[
-                          const SizedBox(width: 6),
+                          6.vs,
                           InkWell(
                             onTap: () async {
                               await Clipboard.setData(

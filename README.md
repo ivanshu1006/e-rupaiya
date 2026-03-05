@@ -1,4 +1,4 @@
-# frappe_flutter_app
+# e_rupaiya
 
 A new Flutter project.
 

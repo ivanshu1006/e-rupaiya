@@ -1,4 +1,4 @@
-import 'package:frappe_flutter_app/utils/utils.dart';
+import 'package:e_rupaiya/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../services/logger_service.dart';
@@ -63,6 +63,56 @@ class HomeController extends StateNotifier<HomeState> {
       state = state.copyWith(
         isFetching: false,
         errorMessage: 'Failed to fetch services. Please try again.',
+      );
+    }
+  }
+
+  Future<void> fetchCreditCardActions() async {
+    state = state.copyWith(
+      isFetchingCreditCards: true,
+      creditCardActions: null,
+    );
+    try {
+      final userId = await Utils.getUserId() ?? '';
+      final data = await _repository.fetchCreditCardActions(userId);
+      state = state.copyWith(
+        isFetchingCreditCards: false,
+        creditCardActions: data,
+      );
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to fetch credit card actions',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      state = state.copyWith(
+        isFetchingCreditCards: false,
+        creditCardActions: [],
+      );
+    }
+  }
+
+  Future<void> fetchRechargeActions() async {
+    state = state.copyWith(
+      isFetchingRecharge: true,
+      rechargeActions: null,
+    );
+    try {
+      final userId = await Utils.getUserId() ?? '';
+      final data = await _repository.fetchRechargeActions(userId);
+      state = state.copyWith(
+        isFetchingRecharge: false,
+        rechargeActions: data,
+      );
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to fetch recharge actions',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      state = state.copyWith(
+        isFetchingRecharge: false,
+        rechargeActions: [],
       );
     }
   }

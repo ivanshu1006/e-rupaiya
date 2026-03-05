@@ -26,10 +26,24 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location is used to protect against fraudulent payment activities.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Your location is used to protect against fraudulent payment activities.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>This app needs access to your contacts to pick a number for recharge.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs camera access to scan QR codes.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Use Face ID to unlock the app.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs photo access to scan QR codes from gallery.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

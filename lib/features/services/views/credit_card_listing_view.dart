@@ -8,11 +8,13 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
+import '../../../widgets/app_network_image.dart';
 import '../../../widgets/my_app_bar.dart';
 import '../../../widgets/screen_wrapper.dart';
 import '../../../widgets/search_textfield.dart';
 import '../controllers/biller_detail_controller.dart';
 import '../controllers/biller_listing_controller.dart';
+import '../models/biller_detail_args.dart';
 import '../models/biller_model.dart';
 
 class CreditCardListingView extends HookConsumerWidget {
@@ -109,7 +111,10 @@ class CreditCardListingView extends HookConsumerWidget {
                                   .selectBiller(biller);
                               context.push(
                                 RouteConstants.billerDetail,
-                                extra: biller,
+                                extra: BillerDetailArgs(
+                                  biller: biller,
+                                  isCreditCard: true,
+                                ),
                               );
                             },
                           );
@@ -133,7 +138,10 @@ class CreditCardListingView extends HookConsumerWidget {
                                   .selectBiller(biller);
                               context.push(
                                 RouteConstants.billerDetail,
-                                extra: biller,
+                                extra: BillerDetailArgs(
+                                  biller: biller,
+                                  isCreditCard: true,
+                                ),
                               );
                             },
                           );
@@ -179,18 +187,12 @@ class _BillerGridTile extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircleAvatar(
-              radius: 18,
+            _BillerIcon(
+              name: biller.billerName,
+              iconUrl: biller.iconUrl,
+              size: 36,
               backgroundColor: AppColors.gradientStart.withOpacity(0.5),
-              child: Text(
-                biller.billerName.isNotEmpty
-                    ? biller.billerName[0].toUpperCase()
-                    : '',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
+              isCircle: true,
             ),
             const SizedBox(height: 10),
             Text(
@@ -224,18 +226,12 @@ class _BillerListTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 14),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
+            _BillerIcon(
+              name: biller.billerName,
+              iconUrl: biller.iconUrl,
+              size: 36,
               backgroundColor: Colors.white,
-              child: Text(
-                biller.billerName.isNotEmpty
-                    ? biller.billerName[0].toUpperCase()
-                    : '',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
+              isCircle: true,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -255,6 +251,57 @@ class _BillerListTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _BillerIcon extends StatelessWidget {
+  const _BillerIcon({
+    required this.name,
+    required this.iconUrl,
+    required this.size,
+    required this.backgroundColor,
+    this.isCircle = false,
+  });
+
+  final String name;
+  final String? iconUrl;
+  final double size;
+  final Color backgroundColor;
+  final bool isCircle;
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : '';
+    final fallback = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(isCircle ? size / 2 : 10),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w700,
+            ),
+      ),
+    );
+
+    if (iconUrl == null || iconUrl!.isEmpty) {
+      return fallback;
+    }
+
+    return AppNetworkImage(
+      url: iconUrl,
+      width: size,
+      height: size,
+      fit: BoxFit.cover,
+      borderRadius: BorderRadius.circular(isCircle ? size / 2 : 10),
+      placeholder: fallback,
+      errorWidget: fallback,
     );
   }
 }

@@ -149,6 +149,18 @@ class BillerDetailController extends StateNotifier<BillerDetailState> {
     state = state.copyWith(showFullDetails: !state.showFullDetails);
   }
 
+  void clearBill() {
+    state = state.copyWith(
+      billResponse: null,
+      customerParamsInput: null,
+      showFullDetails: false,
+      isFetchingBill: false,
+      payResponse: null,
+      payErrorMessage: null,
+      errorMessage: null,
+    );
+  }
+
   void reset() {
     state = const BillerDetailState();
   }

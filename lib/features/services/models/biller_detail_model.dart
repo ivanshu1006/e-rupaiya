@@ -62,9 +62,18 @@ class BillerCustomerParam {
     this.maxLength,
     this.regex,
     this.visibility = true,
+    this.values = const [],
   });
 
   factory BillerCustomerParam.fromJson(Map<String, dynamic> json) {
+    final rawValues = json['values'] as String?;
+    final values = (rawValues != null && rawValues.trim().isNotEmpty)
+        ? rawValues
+            .split('|')
+            .map((v) => v.trim())
+            .where((v) => v.isNotEmpty)
+            .toList()
+        : <String>[];
     return BillerCustomerParam(
       paramName: json['paramName'] as String? ?? '',
       dataType: json['dataType'] as String? ?? '',
@@ -73,6 +82,7 @@ class BillerCustomerParam {
       maxLength: int.tryParse(json['maxLength']?.toString() ?? ''),
       regex: json['regex'] as String?,
       visibility: json['visibility'] != 'false',
+      values: values,
     );
   }
 
@@ -83,6 +93,9 @@ class BillerCustomerParam {
   final int? maxLength;
   final String? regex;
   final bool visibility;
+  final List<String> values;
+
+  bool get hasDropdown => values.isNotEmpty;
 }
 
 class BillerAdditionalInfo {

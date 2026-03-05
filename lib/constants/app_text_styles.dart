@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'app_colors.dart';
 
@@ -9,6 +10,7 @@ class AppTextStyles {
     return Theme.of(context).textTheme.bodySmall?.copyWith(
           fontWeight: FontWeight.w600,
           color: color ?? AppColors.textPrimary,
+          fontSize: 10.sp,
         );
   }
 

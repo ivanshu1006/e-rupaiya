@@ -91,7 +91,7 @@ class SplashView extends HookConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Image.asset(
-                        FileConstants.bharatConnect,
+                        FileConstants.bharatConnectColor,
                         height: 28.h,
                         fit: BoxFit.contain,
                       ),

@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
+import 'package:e_rupaiya/constants/api_constants.dart';
+import 'package:e_rupaiya/features/auth/repositories/auth_repository.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frappe_flutter_app/constants/api_constants.dart';
-import 'package:frappe_flutter_app/features/auth/repositories/auth_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockHTTPClient extends Mock implements Dio {}

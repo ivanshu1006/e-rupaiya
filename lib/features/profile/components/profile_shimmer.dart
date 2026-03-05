@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 
 import '../../../constants/app_colors.dart';
@@ -171,10 +173,10 @@ class _MenuRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 12),
       child: Row(
-        children: const [
+        children: [
           _Line(width: 22, height: 22),
           SizedBox(width: 16),
           _Line(width: 160, height: 14),

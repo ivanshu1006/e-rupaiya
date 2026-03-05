@@ -18,7 +18,6 @@ import '../controllers/spin_options_controller.dart';
 import '../models/spin_reward.dart';
 import '../repositories/spin_repository.dart';
 
-/// Static rewards always present on the wheel regardless of API data.
 const _staticRewards = [
   SpinReward(label: 'Better Luck\nNext Time', type: SpinRewardType.betterLuck),
   SpinReward(label: 'Extra Spin', type: SpinRewardType.extraSpin),
@@ -58,7 +57,7 @@ class SpinAndWinView extends HookConsumerWidget {
       spinCount.value = totalSpins;
     });
 
-    // Fetch profile on mount (spin options are fetched on home screen)
+    // Fetch profile on mount
     useEffect(() {
       Future.microtask(() async {
         if (profile == null) {
@@ -119,6 +118,7 @@ class SpinAndWinView extends HookConsumerWidget {
                 reward.type == SpinRewardType.extraSpin) {
               spinCount.value += 1;
             } else {
+              profileController.fetchProfile();
               context.go(RouteConstants.home);
             }
           },
