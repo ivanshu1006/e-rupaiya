@@ -19,16 +19,39 @@ class TransactionHistoryRepository {
     DateTime? fromDate,
     DateTime? toDate,
     int? lastYears,
+    String? month,
+    String? status,
+    String? service,
+    String? paymentType,
+    double? minAmount,
+    double? maxAmount,
   }) async {
     try {
       final query = <String, dynamic>{};
       if (fromDate != null && toDate != null) {
         query['from_date'] = DateHelpers.formatYmd(fromDate);
         query['to_date'] = DateHelpers.formatYmd(toDate);
+      } else if (month != null && month.isNotEmpty) {
+        query['month'] = month;
       } else if (lastYears != null) {
         query['last_years'] = lastYears;
       } else if (days != null) {
         query['days'] = days;
+      }
+      if (status != null && status.isNotEmpty) {
+        query['status'] = status;
+      }
+      if (service != null && service.isNotEmpty) {
+        query['service'] = service;
+      }
+      if (paymentType != null && paymentType.isNotEmpty) {
+        query['payment_type'] = paymentType;
+      }
+      if (minAmount != null) {
+        query['min_amount'] = minAmount.toStringAsFixed(0);
+      }
+      if (maxAmount != null) {
+        query['max_amount'] = maxAmount.toStringAsFixed(0);
       }
       if (page != null) query['page'] = page;
       if (limit != null) query['limit'] = limit;

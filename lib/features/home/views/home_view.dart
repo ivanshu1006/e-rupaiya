@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
 import 'dart:async';
 
@@ -19,8 +19,8 @@ import '../../profile/controllers/profile_controller.dart';
 import '../../profile/views/offers_view.dart';
 import '../../profile/views/profile_view.dart';
 import '../../profile/views/transaction_history_screen.dart';
-import '../../scan/views/scan_user_screen.dart';
 import '../../services/controllers/biller_detail_controller.dart';
+import '../../services/models/biller_detail_args.dart';
 import '../../services/models/biller_model.dart';
 import '../../spinandear/controllers/spin_options_controller.dart';
 import '../components/home_icon_tile.dart';
@@ -38,10 +38,20 @@ class HomeView extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tabController = ref.watch(homeTabControllerProvider);
+    final lastTabIndex = useRef<int>(tabController.index);
     final tabs = [
       const _HomeContent(),
       const OffersView(),
-      const ScanUserScreen(),
+      // const ScanUserScreen(),
+      SizedBox(
+        height: 200,
+        child: Center(
+          child: Text(
+            'Scan User Coming Soon',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ),
+      ),
       const TransactionHistoryScreen(),
       const ProfileView(),
     ];
@@ -90,6 +100,18 @@ class HomeView extends HookConsumerWidget {
         inactiveColorPrimary: AppColors.textPrimary.withOpacity(0.6),
       ),
     ];
+    useEffect(() {
+      void listener() {
+        final index = tabController.index;
+        if (index == 0 && lastTabIndex.value != 0) {
+          ref.read(profileControllerProvider.notifier).fetchProfile();
+        }
+        lastTabIndex.value = index;
+      }
+
+      tabController.addListener(listener);
+      return () => tabController.removeListener(listener);
+    }, [tabController]);
     return PersistentTabView(
       context,
       controller: tabController,
@@ -219,13 +241,15 @@ SliverPadding _buildIconSection({
                           : null;
                   return SizedBox(
                     width: tileWidth,
-                    child: HomeIconTile(
-                      label: displayServiceName(serviceName),
-                      asset: iconAsset,
-                      offer: offer,
-                      onTap: () async {
-                        await onServiceTap?.call(serviceName);
-                      },
+                    child: RepaintBoundary(
+                      child: HomeIconTile(
+                        label: displayServiceName(serviceName),
+                        asset: iconAsset,
+                        offer: offer,
+                        onTap: () async {
+                          await onServiceTap?.call(serviceName);
+                        },
+                      ),
                     ),
                   );
                 }),
@@ -245,6 +269,9 @@ List<Widget> _buildQuickActionSlivers(
   required Set<String> expandedCategories,
   required void Function(String category) onExpand,
 }) {
+  final bannerCacheWidth = (MediaQuery.sizeOf(context).width *
+          MediaQuery.devicePixelRatioOf(context))
+      .round();
   final slivers = <Widget>[
     const SliverToBoxAdapter(child: SizedBox(height: 12)),
   ];
@@ -291,16 +318,18 @@ List<Widget> _buildQuickActionSlivers(
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.asset(
-                FileConstants.digitalGold,
-                width: double.infinity,
-                fit: BoxFit.fitWidth,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.asset(
+                  FileConstants.digitalGold,
+                  width: double.infinity,
+                  fit: BoxFit.fitWidth,
+                  cacheWidth: bannerCacheWidth,
+                  filterQuality: FilterQuality.low,
+                ),
               ),
             ),
           ),
-        ),
       );
     }
 
@@ -309,17 +338,19 @@ List<Widget> _buildQuickActionSlivers(
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.asset(
-                FileConstants.preCard,
-                height: 200,
-                width: double.infinity,
-                fit: BoxFit.cover,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.asset(
+                  FileConstants.preCard,
+                  height: 200,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  cacheWidth: bannerCacheWidth,
+                  filterQuality: FilterQuality.low,
+                ),
               ),
             ),
           ),
-        ),
       );
     }
 
@@ -328,16 +359,18 @@ List<Widget> _buildQuickActionSlivers(
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.asset(
-                FileConstants.homeBanner1,
-                width: double.infinity,
-                fit: BoxFit.fitWidth,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.asset(
+                  FileConstants.homeBanner1,
+                  width: double.infinity,
+                  fit: BoxFit.fitWidth,
+                  cacheWidth: bannerCacheWidth,
+                  filterQuality: FilterQuality.low,
+                ),
               ),
             ),
           ),
-        ),
       );
     }
   }
@@ -551,6 +584,9 @@ class _HomeContent extends HookConsumerWidget {
     final homeState = ref.watch(homeControllerProvider);
     final profileState = ref.watch(profileControllerProvider);
     final walletBalance = profileState.profile?.walletBalance ?? 0;
+    final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final bannerCacheWidth = (screenWidth * devicePixelRatio).round();
 
     useEffect(() {
       Future.microtask(() {
@@ -648,6 +684,8 @@ class _HomeContent extends HookConsumerWidget {
                                     banners[index],
                                     width: double.infinity,
                                     fit: BoxFit.fill,
+                                    cacheWidth: bannerCacheWidth,
+                                    filterQuality: FilterQuality.low,
                                   ),
                                 ),
                               ),
@@ -788,46 +826,51 @@ class _HomeContent extends HookConsumerWidget {
                                     : 'Biller';
                             return SizedBox(
                               width: 320.w,
-                              child: QuickActionCard(
-                                title: title,
-                                subtitle: subtitle,
-                                amount: amount,
-                                buttonLabel: amount.isEmpty ? '' : 'PAY NOW',
-                                onTap: () {
-                                  final type =
-                                      item.paymentType?.toLowerCase() ?? '';
-                                  if (type.contains('recharge')) {
-                                    if (billerId.isEmpty) return;
-                                    context.push(
-                                      RouteConstants.mobilePrepaid,
-                                      extra: RechargeQuickActionPayload(
-                                        phone: billerId,
-                                        amount: amountValue,
-                                        desc: item.desc,
-                                        operatorName: billerName,
-                                        iconUrl: item.icon,
-                                      ),
-                                    );
-                                  } else {
-                                    if (billerId.isEmpty) return;
-                                    ref
-                                        .read(billerDetailControllerProvider
-                                            .notifier)
-                                        .selectBiller(
-                                          Biller(
+                              child: RepaintBoundary(
+                                child: QuickActionCard(
+                                  title: title,
+                                  subtitle: subtitle,
+                                  amount: amount,
+                                  buttonLabel: amount.isEmpty ? '' : 'PAY NOW',
+                                  onTap: () {
+                                    final type =
+                                        item.paymentType?.toLowerCase() ?? '';
+                                    if (type.contains('recharge')) {
+                                      if (billerId.isEmpty) return;
+                                      context.push(
+                                        RouteConstants.mobilePrepaid,
+                                        extra: RechargeQuickActionPayload(
+                                          phone: billerId,
+                                          amount: amountValue,
+                                          desc: item.desc,
+                                          operatorName: billerName,
+                                          iconUrl: item.icon,
+                                        ),
+                                      );
+                                    } else {
+                                      if (billerId.isEmpty) return;
+                                      ref
+                                          .read(billerDetailControllerProvider
+                                              .notifier)
+                                          .selectBiller(
+                                            Biller(
+                                              billerId: billerId,
+                                              billerName: billerName,
+                                            ),
+                                          );
+                                      context.push(
+                                        RouteConstants.billerDetail,
+                                        extra: BillerDetailArgs(
+                                          biller: Biller(
                                             billerId: billerId,
                                             billerName: billerName,
                                           ),
-                                        );
-                                    context.push(
-                                      RouteConstants.billerDetail,
-                                      extra: Biller(
-                                        billerId: billerId,
-                                        billerName: billerName,
-                                      ),
-                                    );
-                                  }
-                                },
+                                          paymentType: item.paymentType,
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
                               ),
                             );
                           },
@@ -883,6 +926,8 @@ class _HomeContent extends HookConsumerWidget {
                         FileConstants.spincoin,
                         width: double.infinity,
                         fit: BoxFit.fill,
+                        cacheWidth: bannerCacheWidth,
+                        filterQuality: FilterQuality.low,
                       ),
                     ),
                   ),
@@ -901,6 +946,8 @@ class _HomeContent extends HookConsumerWidget {
                           FileConstants.homeBanner5,
                           height: 100.h,
                           fit: BoxFit.contain,
+                          cacheWidth: bannerCacheWidth,
+                          filterQuality: FilterQuality.low,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -910,6 +957,8 @@ class _HomeContent extends HookConsumerWidget {
                           FileConstants.homeBanner6,
                           height: 50.h,
                           fit: BoxFit.contain,
+                          cacheWidth: bannerCacheWidth,
+                          filterQuality: FilterQuality.low,
                         ),
                       ),
                     ],

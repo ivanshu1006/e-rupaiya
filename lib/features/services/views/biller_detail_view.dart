@@ -46,6 +46,7 @@ class BillerDetailView extends HookConsumerWidget {
     final selectedAmountType = useState(_PaymentAmountType.totalOutstanding);
     final permissionService = useMemoized(() => const PermissionService());
     final isCreditCardFlow = args?.isCreditCard ?? false;
+    final bottomInset = MediaQuery.of(context).viewPadding.bottom;
     final isGasCylinder = useMemoized(
       () => _isGasCylinderBiller(biller?.billerName ?? ''),
       [biller?.billerName],
@@ -418,9 +419,8 @@ class BillerDetailView extends HookConsumerWidget {
                   if (detail != null &&
                       !detailState.isFetchingDetail &&
                       !detailState.isFetchingBill)
-                    SafeArea(
-                      top: false,
-                      minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomInset),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -485,6 +485,9 @@ class BillerDetailView extends HookConsumerWidget {
                                           _showPaymentSheet(
                                             context,
                                             amountToPay,
+                                            isCreditCardFlow: isCreditCardFlow,
+                                            paymentTypeOverride:
+                                                args?.paymentType,
                                           );
                                         }
                                       },
@@ -528,9 +531,18 @@ class BillerDetailView extends HookConsumerWidget {
     );
   }
 
-  void _showPaymentSheet(BuildContext context, double amount) {
+  void _showPaymentSheet(
+    BuildContext context,
+    double amount, {
+    required bool isCreditCardFlow,
+    String? paymentTypeOverride,
+  }) {
     KDialog.instance.openSheet(
-      dialog: PaymentBottomSheet(amount: amount),
+      dialog: PaymentBottomSheet(
+        amount: amount,
+        isCreditCardFlow: isCreditCardFlow,
+        paymentTypeOverride: paymentTypeOverride,
+      ),
     );
   }
 
@@ -804,10 +816,6 @@ class _ContactPickerSheetState extends State<_ContactPickerSheet> {
     );
   }
 }
-
-// ─── Provider Card ───────────────────────────────────────────────────────────
-
-// ─── Compact Bill Section ────────────────────────────────────────────────────
 
 class _CompactBillSection extends StatelessWidget {
   const _CompactBillSection({
@@ -1486,117 +1494,6 @@ class _CreditCardAmountCard extends StatelessWidget {
     );
   }
 }
-
-// class _AmountTypeSelector extends StatelessWidget {
-//   const _AmountTypeSelector({
-//     required this.selected,
-//     required this.totalOutstanding,
-//     required this.minimumDue,
-//     required this.onChanged,
-//   });
-
-//   final _PaymentAmountType selected;
-//   final double totalOutstanding;
-//   final double? minimumDue;
-//   final ValueChanged<_PaymentAmountType> onChanged;
-
-//   @override
-//   Widget build(BuildContext context) {
-//     final resolvedMinimum = minimumDue;
-//     return Column(
-//       children: [
-//         _AmountChoiceTile(
-//           title: 'Total outstanding',
-//           subtitle: '\u20B9 ${totalOutstanding.toStringAsFixed(2)}',
-//           value: _PaymentAmountType.totalOutstanding,
-//           groupValue: selected,
-//           onChanged: onChanged,
-//         ),
-//         if (resolvedMinimum != null)
-//           _AmountChoiceTile(
-//             title: 'Minimum amount due',
-//             subtitle: '\u20B9 ${resolvedMinimum.toStringAsFixed(2)}',
-//             value: _PaymentAmountType.minimumDue,
-//             groupValue: selected,
-//             onChanged: onChanged,
-//           ),
-//         _AmountChoiceTile(
-//           title: 'Custom amount',
-//           subtitle: 'Enter any amount',
-//           value: _PaymentAmountType.custom,
-//           groupValue: selected,
-//           onChanged: onChanged,
-//         ),
-//       ],
-//     );
-//   }
-// }
-
-// class _AmountChoiceTile extends StatelessWidget {
-//   const _AmountChoiceTile({
-//     required this.title,
-//     required this.subtitle,
-//     required this.value,
-//     required this.groupValue,
-//     required this.onChanged,
-//   });
-
-//   final String title;
-//   final String subtitle;
-//   final _PaymentAmountType value;
-//   final _PaymentAmountType groupValue;
-//   final ValueChanged<_PaymentAmountType>? onChanged;
-
-//   @override
-//   Widget build(BuildContext context) {
-//     final isSelected = value == groupValue;
-//     final isDisabled = onChanged == null;
-//     final titleStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
-//           fontWeight: FontWeight.w600,
-//           color: isDisabled
-//               ? AppColors.textPrimary.withOpacity(0.4)
-//               : AppColors.textPrimary,
-//         );
-//     final subtitleStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
-//           color: isDisabled
-//               ? AppColors.textPrimary.withOpacity(0.35)
-//               : AppColors.textPrimary.withOpacity(0.65),
-//         );
-
-//     return InkWell(
-//       onTap: isDisabled ? null : () => onChanged?.call(value),
-//       child: Padding(
-//         padding: const EdgeInsets.symmetric(vertical: 6),
-//         child: Row(
-//           children: [
-//             Radio<_PaymentAmountType>(
-//               value: value,
-//               groupValue: groupValue,
-//               activeColor: AppColors.primary,
-//               onChanged: isDisabled ? null : (next) => onChanged?.call(next!),
-//             ),
-//             Expanded(
-//               child: Column(
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   Text(title, style: titleStyle),
-//                   const SizedBox(height: 2),
-//                   Text(subtitle, style: subtitleStyle),
-//                 ],
-//               ),
-//             ),
-//             if (isSelected)
-//               const Icon(
-//                 Icons.check_circle,
-//                 color: AppColors.primary,
-//                 size: 18,
-//               ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
 
 /// Returns the amount to display/pay based on today's date vs early/due dates.
 double _resolveDateBasedAmount(BillResponse bill) {

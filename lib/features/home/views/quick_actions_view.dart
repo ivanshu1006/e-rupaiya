@@ -186,6 +186,7 @@ class QuickActionsView extends HookConsumerWidget {
                                       icon: item.icon,
                                     ),
                                     isCreditCard: isCreditCard,
+                                    paymentType: item.paymentType,
                                   ),
                                 );
                               }

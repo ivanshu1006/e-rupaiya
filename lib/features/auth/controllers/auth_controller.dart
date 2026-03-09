@@ -195,4 +195,72 @@ class AuthController extends StateNotifier<AuthState> {
       errorMessage: null,
     );
   }
+
+  Future<String?> requestForgotPinOtp({
+    String? userId,
+  }) async {
+    final storedUserId = await _repository.secureStorage.read(key: 'userId');
+    final resolvedUserId = userId ?? storedUserId;
+    if (resolvedUserId == null || resolvedUserId.isEmpty) {
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: 'Missing user ID. Please try again.',
+      );
+      return null;
+    }
+
+    state = state.copyWith(isSubmitting: true, errorMessage: null);
+    try {
+      final message = await _repository.requestForgotPinOtp(
+        userId: resolvedUserId,
+      );
+      state = state.copyWith(isSubmitting: false, errorMessage: null);
+      return message;
+    } catch (e) {
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: _messageFromException(
+          e,
+          'Failed to request OTP. Please try again.',
+        ),
+      );
+      return null;
+    }
+  }
+
+  Future<String?> forgotPin({
+    required String otp,
+    required String pin,
+    String? userId,
+  }) async {
+    final storedUserId = await _repository.secureStorage.read(key: 'userId');
+    final resolvedUserId = userId ?? storedUserId;
+    if (resolvedUserId == null || resolvedUserId.isEmpty) {
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: 'Missing user ID. Please try again.',
+      );
+      return null;
+    }
+
+    state = state.copyWith(isSubmitting: true, errorMessage: null);
+    try {
+      final message = await _repository.forgotPin(
+        userId: resolvedUserId,
+        otp: otp,
+        pin: pin,
+      );
+      state = state.copyWith(isSubmitting: false, errorMessage: null);
+      return message;
+    } catch (e) {
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: _messageFromException(
+          e,
+          'Failed to reset PIN. Please try again.',
+        ),
+      );
+      return null;
+    }
+  }
 }

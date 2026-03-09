@@ -13,6 +13,7 @@ class MyAppBar extends StatelessWidget {
     this.onHelp,
     this.trailing,
     this.height = 175,
+    this.backgroundColor,
   });
 
   final String title;
@@ -21,6 +22,7 @@ class MyAppBar extends StatelessWidget {
   final VoidCallback? onHelp;
   final Widget? trailing;
   final double height;
+  final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -30,9 +32,18 @@ class MyAppBar extends StatelessWidget {
         children: [
           Positioned.fill(
             child: Container(
-              decoration: const BoxDecoration(
-                gradient: AppColors.onboardingBackground,
-                borderRadius: BorderRadius.vertical(
+              decoration: BoxDecoration(
+                gradient: backgroundColor == null
+                    ? AppColors.onboardingBackground
+                    : LinearGradient(
+                        colors: [
+                          backgroundColor!,
+                          backgroundColor!.withOpacity(0.92),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                borderRadius: const BorderRadius.vertical(
                   bottom: Radius.circular(28),
                 ),
               ),
@@ -59,8 +70,12 @@ class MyAppBar extends StatelessWidget {
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back,
-                        color: AppColors.textPrimary),
+                    icon: Icon(
+                      Icons.arrow_back,
+                      color: backgroundColor == null
+                          ? AppColors.textPrimary
+                          : Colors.white,
+                    ),
                     onPressed: onBack ?? () => Navigator.of(context).maybePop(),
                   ),
                   const SizedBox(width: 4),
@@ -68,7 +83,9 @@ class MyAppBar extends StatelessWidget {
                     child: Text(
                       title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.textPrimary,
+                            color: backgroundColor == null
+                                ? AppColors.textPrimary
+                                : Colors.white,
                             fontWeight: FontWeight.w700,
                           ),
                     ),

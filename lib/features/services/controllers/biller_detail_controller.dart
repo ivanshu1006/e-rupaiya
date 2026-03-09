@@ -100,12 +100,26 @@ class BillerDetailController extends StateNotifier<BillerDetailState> {
   Future<bool> payBill({
     required double amount,
     String? refIdOverride,
+    bool isCreditCardFlow = false,
+    String? paymentTypeOverride,
   }) async {
     final biller = state.selectedBiller;
     final detail = state.billerDetail;
     final bill = state.billResponse;
     final customerParams = state.customerParamsInput ?? {};
     if (biller == null || detail == null || bill == null) return false;
+
+    final override = paymentTypeOverride?.trim() ?? '';
+    final paymentType = override.isNotEmpty
+        ? override
+        : (isCreditCardFlow
+            ? 'Credit card'
+            : (detail.billerCategoryName.trim().isNotEmpty
+                ? detail.billerCategoryName.trim()
+                : 'BILLPAY'));
+    logger.info(
+      'payBill: payment_type=$paymentType biller_name=${biller.billerName}',
+    );
 
     state = state.copyWith(
       isPayingBill: true,
@@ -122,6 +136,8 @@ class BillerDetailController extends StateNotifier<BillerDetailState> {
             .map((mode) => mode.paymentMode)
             .where((mode) => mode.trim().isNotEmpty)
             .toList(),
+        billerName: biller.billerName,
+        paymentType: paymentType,
       );
       final errorMessage =
           response.isSuccess ? null : _resolvePayErrorMessage(response);

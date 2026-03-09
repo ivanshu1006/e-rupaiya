@@ -1,3 +1,5 @@
+import '../../../constants/file_constants.dart';
+
 class NotificationItem {
   const NotificationItem({
     required this.id,
@@ -6,6 +8,11 @@ class NotificationItem {
     required this.actionLabel,
     required this.iconAsset,
     required this.section,
+    this.type,
+    this.redirectScreen,
+    this.referenceId,
+    this.isRead = false,
+    this.createdAt,
   });
 
   factory NotificationItem.fromJson(Map<String, dynamic> json) {
@@ -16,6 +23,22 @@ class NotificationItem {
       actionLabel: (json['actionLabel'] ?? '').toString(),
       iconAsset: (json['iconAsset'] ?? '').toString(),
       section: (json['section'] ?? '').toString(),
+    );
+  }
+
+  factory NotificationItem.fromApi(Map<String, dynamic> json) {
+    return NotificationItem(
+      id: (json['id'] ?? '').toString(),
+      title: (json['title'] ?? '').toString(),
+      subtitle: (json['message'] ?? '').toString(),
+      actionLabel: _actionLabelFor(json),
+      iconAsset: _iconFor(json),
+      section: _sectionFor(json),
+      type: (json['type'] ?? '').toString(),
+      redirectScreen: (json['redirect_screen'] ?? '').toString(),
+      referenceId: (json['reference_id'] ?? '').toString(),
+      isRead: (json['is_read'] ?? '').toString() == '1',
+      createdAt: _parseCreatedAt(json['created_at']?.toString()),
     );
   }
 
@@ -32,4 +55,47 @@ class NotificationItem {
   final String actionLabel;
   final String iconAsset;
   final String section;
+  final String? type;
+  final String? redirectScreen;
+  final String? referenceId;
+  final bool isRead;
+  final DateTime? createdAt;
+
+  static DateTime? _parseCreatedAt(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    final normalized = raw.contains(' ') ? raw.replaceFirst(' ', 'T') : raw;
+    return DateTime.tryParse(normalized);
+  }
+
+  static String _sectionFor(Map<String, dynamic> json) {
+    final createdAt = _parseCreatedAt(json['created_at']?.toString());
+    if (createdAt == null) return 'Today';
+    final now = DateTime.now();
+    if (createdAt.year == now.year &&
+        createdAt.month == now.month &&
+        createdAt.day == now.day) {
+      return 'Today';
+    }
+    return 'Earlier';
+  }
+
+  static String _iconFor(Map<String, dynamic> json) {
+    final title = (json['title'] ?? '').toString().toLowerCase();
+    final message = (json['message'] ?? '').toString().toLowerCase();
+    final combined = '$title $message';
+    if (combined.contains('spin')) {
+      return FileConstants.spincoin;
+    }
+    return FileConstants.notification;
+  }
+
+  static String _actionLabelFor(Map<String, dynamic> json) {
+    final title = (json['title'] ?? '').toString().toLowerCase();
+    final message = (json['message'] ?? '').toString().toLowerCase();
+    final combined = '$title $message';
+    if (combined.contains('spin')) {
+      return 'Play Now';
+    }
+    return 'View';
+  }
 }

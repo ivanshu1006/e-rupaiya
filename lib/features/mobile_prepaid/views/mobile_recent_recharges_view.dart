@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -55,7 +56,10 @@ class MobileRecentRechargesView extends HookConsumerWidget {
           Expanded(
             child: isFetching || recharges == null || recharges.isEmpty
                 ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
+                    child: SpinKitCircle(
+                      color: AppColors.primary,
+                      size: 48,
+                    ),
                   )
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,8 +69,7 @@ class MobileRecentRechargesView extends HookConsumerWidget {
                         child: ListView.separated(
                           padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 16.h),
                           itemCount: recharges.length,
-                          separatorBuilder: (_, __) =>
-                              SizedBox(height: 12.h),
+                          separatorBuilder: (_, __) => SizedBox(height: 12.h),
                           itemBuilder: (context, index) {
                             final item = recharges[index];
                             return _RechargeCard(
@@ -98,8 +101,8 @@ class MobileRecentRechargesView extends HookConsumerWidget {
                           child: OutlinedButton.icon(
                             onPressed: () {
                               ref
-                                  .read(mobilePrepaidControllerProvider
-                                      .notifier)
+                                  .read(
+                                      mobilePrepaidControllerProvider.notifier)
                                   .reset();
                               context.push(RouteConstants.mobilePrepaid);
                             },
@@ -113,10 +116,8 @@ class MobileRecentRechargesView extends HookConsumerWidget {
                               ),
                             ),
                             style: OutlinedButton.styleFrom(
-                              padding:
-                                  EdgeInsets.symmetric(vertical: 14.h),
-                              side:
-                                  const BorderSide(color: AppColors.primary),
+                              padding: EdgeInsets.symmetric(vertical: 14.h),
+                              side: const BorderSide(color: AppColors.primary),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12.r),
                               ),

@@ -86,6 +86,8 @@ class BillerRepository {
     required String amount,
     required String refId,
     required List<String> paymentModes,
+    required String billerName,
+    String? paymentType,
   }) async {
     try {
       final data = <String, dynamic>{
@@ -93,7 +95,12 @@ class BillerRepository {
         'amount': amount,
         'ref_id': refId,
         'arr_bill_payment_modes': paymentModes.join(','),
+        'biller_name': billerName,
       };
+      final trimmedPaymentType = paymentType?.trim() ?? '';
+      if (trimmedPaymentType.isNotEmpty) {
+        data['payment_type'] = trimmedPaymentType;
+      }
       for (final entry in customerParams.entries) {
         final key = _buildCustomerParamKey(entry.key);
         if (key.isNotEmpty) {

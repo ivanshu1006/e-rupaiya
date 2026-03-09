@@ -37,7 +37,7 @@ import 'features/services/views/credit_card_my_cards_view.dart';
 import 'features/spinandear/views/spin_and_win_view.dart';
 import 'services/logger_service.dart';
 import 'widgets/k_dialog.dart';
-import 'features/profile/models/transaction_item.dart';
+import 'features/profile/models/transaction_history_entry.dart';
 import 'features/services/models/biller_detail_args.dart';
 import 'features/services/models/biller_model.dart';
 
@@ -148,7 +148,11 @@ final routerProvider = Provider<GoRouter>(
             if (extra is BillerDetailArgs) {
               args = extra;
             } else if (extra is Biller) {
-              args = BillerDetailArgs(biller: extra, isCreditCard: false);
+              args = BillerDetailArgs(
+                biller: extra,
+                isCreditCard: false,
+                paymentType: null,
+              );
             }
             return BillerDetailView(args: args);
           },
@@ -206,7 +210,7 @@ final routerProvider = Provider<GoRouter>(
         GoRoute(
           path: RouteConstants.transactionDetail,
           builder: (context, state) => TransactionDetailScreen(
-            item: state.extra as TransactionItem?,
+            entry: state.extra as TransactionHistoryEntry?,
           ),
         ),
         GoRoute(

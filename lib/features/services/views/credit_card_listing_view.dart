@@ -114,6 +114,7 @@ class CreditCardListingView extends HookConsumerWidget {
                                 extra: BillerDetailArgs(
                                   biller: biller,
                                   isCreditCard: true,
+                                  paymentType: 'Credit card',
                                 ),
                               );
                             },
@@ -141,6 +142,7 @@ class CreditCardListingView extends HookConsumerWidget {
                                 extra: BillerDetailArgs(
                                   biller: biller,
                                   isCreditCard: true,
+                                  paymentType: 'Credit card',
                                 ),
                               );
                             },

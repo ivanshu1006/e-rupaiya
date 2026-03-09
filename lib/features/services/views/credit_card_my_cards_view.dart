@@ -98,6 +98,7 @@ class CreditCardMyCardsView extends HookConsumerWidget {
                                   extra: BillerDetailArgs(
                                     biller: biller,
                                     isCreditCard: true,
+                                    paymentType: 'Credit card',
                                   ),
                                 );
                               },

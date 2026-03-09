@@ -168,6 +168,67 @@ class AuthRepository {
     }
   }
 
+  Future<String> requestForgotPinOtp({
+    required String userId,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.requestForgotPinOtpEndpoint,
+        data: {
+          'user_id': userId,
+        },
+      );
+
+      final payload = response.data as Map<String, dynamic>?;
+      final success = payload?['success'] == true;
+      if (!success) {
+        final message =
+            payload?['message'] as String? ?? 'Failed to request OTP';
+        throw Exception(message);
+      }
+      return payload?['message'] as String? ??
+          'OTP sent to registered mobile number.';
+    } catch (e) {
+      logger.error(
+        'Request forgot PIN OTP failed: ${e.toString()}',
+        error: e,
+      );
+      rethrow;
+    }
+  }
+
+  Future<String> forgotPin({
+    required String userId,
+    required String otp,
+    required String pin,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.forgotPinEndpoint,
+        data: {
+          'user_id': userId,
+          'otp': otp,
+          'pin': pin,
+        },
+      );
+
+      final payload = response.data as Map<String, dynamic>?;
+      final success = payload?['success'] == true;
+      if (!success) {
+        final message =
+            payload?['message'] as String? ?? 'Failed to reset PIN';
+        throw Exception(message);
+      }
+      return payload?['message'] as String? ?? 'PIN reset successfully.';
+    } catch (e) {
+      logger.error(
+        'Forgot PIN failed: ${e.toString()}',
+        error: e,
+      );
+      rethrow;
+    }
+  }
+
   Future<void> logout() async {
     try {
       final refreshToken = await _secureStorage.read(key: 'refreshToken');

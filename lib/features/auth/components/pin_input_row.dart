@@ -9,11 +9,15 @@ class PinInputRow extends StatelessWidget {
     required this.controllers,
     required this.focusNodes,
     this.enabled = true,
+    this.onPinChanged,
+    this.onPinCompleted,
   }) : assert(controllers.length == focusNodes.length);
 
   final List<TextEditingController> controllers;
   final List<FocusNode> focusNodes;
   final bool enabled;
+  final ValueChanged<String>? onPinChanged;
+  final ValueChanged<String>? onPinCompleted;
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +33,13 @@ class PinInputRow extends StatelessWidget {
               focusNodes[i - 1].requestFocus();
             } else if (value.isNotEmpty && i < focusNodes.length - 1) {
               focusNodes[i + 1].requestFocus();
+            }
+            final pin = controllers.map((c) => c.text).join();
+            onPinChanged?.call(pin);
+            final isComplete =
+                controllers.every((c) => c.text.trim().isNotEmpty);
+            if (isComplete) {
+              onPinCompleted?.call(pin);
             }
           },
         ),

@@ -7,6 +7,9 @@ class ApiConstants {
   static const String refreshTokenEndpoint = '$baseUrl/api/auth/refresh';
   static const String registerEndpoint = '$baseUrl/api/auth/register';
   static const String setPinEndpoint = '$baseUrl/api/auth/set-pin';
+  static const String requestForgotPinOtpEndpoint =
+      '$baseUrl/api/auth/request-forgot-pin-otp';
+  static const String forgotPinEndpoint = '$baseUrl/api/auth/forgot-pin';
   static const String quickActionsEndpoint = '$baseUrl/api/quick-actions';
   static const String quickActionsDueEndpoint =
       '$baseUrl/api/quick-actions/due';
@@ -22,6 +25,7 @@ class ApiConstants {
   static const String billerDetailsEndpoint = '$baseUrl/api/biller/details';
   static const String billerParamsEndpoint = '$baseUrl/api/biller/params';
   static const String billerIconBaseUrl = '$baseUrl/storage/billers';
+  static const String offersBannerBaseUrl = '$baseUrl/storage/offers';
   static const String fetchBillEndpoint = '$baseUrl/api/bill/fetch';
   static const String payBillEndpoint = '$baseUrl/api/bill/pay';
   static const String prepaidCheckOperatorEndpoint =
@@ -37,4 +41,6 @@ class ApiConstants {
       '$baseUrl/api/prepaid/transaction-history';
   static const String spinEndpoint = '$baseUrl/api/spin';
   static const String spinOptionsEndpoint = '$baseUrl/api/spin/options';
+  static const String offersEndpoint = '$baseUrl/api/offers';
+  static const String notificationsEndpoint = '$baseUrl/api/notifications';
 }

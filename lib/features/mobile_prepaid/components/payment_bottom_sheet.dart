@@ -229,9 +229,16 @@ void _openPaymentResultFlow(
 }
 
 class PaymentBottomSheet extends ConsumerStatefulWidget {
-  const PaymentBottomSheet({super.key, required this.amount});
+  const PaymentBottomSheet({
+    super.key,
+    required this.amount,
+    this.isCreditCardFlow = false,
+    this.paymentTypeOverride,
+  });
 
   final double amount;
+  final bool isCreditCardFlow;
+  final String? paymentTypeOverride;
 
   @override
   ConsumerState<PaymentBottomSheet> createState() => _PaymentBottomSheetState();
@@ -314,6 +321,8 @@ class _PaymentBottomSheetState extends ConsumerState<PaymentBottomSheet> {
     final ok = await controller.payBill(
       amount: amount,
       refIdOverride: paymentId,
+      isCreditCardFlow: widget.isCreditCardFlow,
+      paymentTypeOverride: widget.paymentTypeOverride,
     );
     if (!mounted) return;
     final latestState = ref.read(billerDetailControllerProvider);
@@ -433,6 +442,8 @@ class _PaymentBottomSheetState extends ConsumerState<PaymentBottomSheet> {
                             if (_useECoins && remainingAmount == 0) {
                               final ok = await controller.payBill(
                                 amount: widget.amount,
+                                isCreditCardFlow: widget.isCreditCardFlow,
+                                paymentTypeOverride: widget.paymentTypeOverride,
                               );
                               if (!context.mounted) return;
                               final latestState =

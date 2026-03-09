@@ -11,21 +11,27 @@ class AppNetworkImage extends StatelessWidget {
     required this.url,
     this.width,
     this.height,
+    this.cacheWidth,
+    this.cacheHeight,
     this.fit = BoxFit.cover,
     this.borderRadius,
     this.placeholder,
     this.errorWidget,
     this.showShimmer = true,
+    this.fitToDeviceWidth = false,
   });
 
   final String? url;
   final double? width;
   final double? height;
+  final int? cacheWidth;
+  final int? cacheHeight;
   final BoxFit fit;
   final BorderRadius? borderRadius;
   final Widget? placeholder;
   final Widget? errorWidget;
   final bool showShimmer;
+  final bool fitToDeviceWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -35,10 +41,13 @@ class AppNetworkImage extends StatelessWidget {
     }
 
     final isSvg = trimmed.toLowerCase().endsWith('.svg');
+    final resolvedUrl = fitToDeviceWidth && !isSvg
+        ? _appendWidthParam(context, trimmed)
+        : trimmed;
     if (isSvg) {
       return _wrap(
         SvgPicture.network(
-          trimmed,
+          resolvedUrl,
           width: width,
           height: height,
           fit: fit,
@@ -49,10 +58,12 @@ class AppNetworkImage extends StatelessWidget {
 
     return _wrap(
       Image.network(
-        trimmed,
+        resolvedUrl,
         width: width,
         height: height,
         fit: fit,
+        cacheWidth: cacheWidth,
+        cacheHeight: cacheHeight,
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
           return _buildPlaceholder();
@@ -69,6 +80,19 @@ class AppNetworkImage extends StatelessWidget {
       borderRadius: radius,
       child: child,
     );
+  }
+
+  String _appendWidthParam(BuildContext context, String rawUrl) {
+    final uri = Uri.tryParse(rawUrl);
+    if (uri == null) return rawUrl;
+    if (uri.queryParameters.containsKey('w')) return rawUrl;
+    final logicalWidth = width ?? MediaQuery.sizeOf(context).width;
+    final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final targetWidth = (logicalWidth * devicePixelRatio).round();
+    if (targetWidth <= 0) return rawUrl;
+    final params = Map<String, String>.from(uri.queryParameters);
+    params['w'] = targetWidth.toString();
+    return uri.replace(queryParameters: params).toString();
   }
 
   Widget _buildPlaceholder() {

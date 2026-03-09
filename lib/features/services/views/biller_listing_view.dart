@@ -13,6 +13,7 @@ import '../../../widgets/screen_wrapper.dart';
 import '../../../widgets/search_textfield.dart';
 import '../controllers/biller_detail_controller.dart';
 import '../controllers/biller_listing_controller.dart';
+import '../models/biller_detail_args.dart';
 import '../models/biller_model.dart';
 
 class BillerListingView extends HookConsumerWidget {
@@ -104,7 +105,10 @@ class BillerListingView extends HookConsumerWidget {
                           .selectBiller(billers[index]);
                       context.push(
                         RouteConstants.billerDetail,
-                        extra: billers[index],
+                        extra: BillerDetailArgs(
+                          biller: billers[index],
+                          paymentType: categoryName,
+                        ),
                       );
                     },
                   );

@@ -2,17 +2,18 @@
 
 import 'dart:async';
 
+import 'package:e_rupaiya/constants/file_constants.dart';
 import 'package:e_rupaiya/features/mobile_prepaid/models/mobile_prepaid_state.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_colors.dart';
-import '../../../constants/file_constants.dart';
 import '../../../services/permission_service.dart';
 import '../../../widgets/k_dialog.dart';
 import '../../../widgets/my_app_bar.dart';
@@ -45,6 +46,14 @@ List<int> _filterContactIndices(Map<String, dynamic> payload) {
     }
   }
   return matches;
+}
+
+String _normalizeMobile(String input) {
+  final digits = input.replaceAll(RegExp(r'\D'), '');
+  if (digits.length > 10 && digits.startsWith('91')) {
+    return digits.substring(digits.length - 10);
+  }
+  return digits;
 }
 
 class MobilePrepaidView extends HookConsumerWidget {
@@ -100,7 +109,7 @@ class MobilePrepaidView extends HookConsumerWidget {
     useEffect(() {
       if (quickActionPayload == null) return null;
       Future.microtask(() async {
-        final phone = quickActionPayload.phone.trim();
+        final phone = _normalizeMobile(quickActionPayload.phone.trim());
         if (phone.isEmpty) return;
         manualMobileController.text = phone;
         await controller.fetchOperatorAndPlans(phone);
@@ -204,21 +213,28 @@ class MobilePrepaidView extends HookConsumerWidget {
 
     final hasPlanSelected = showPlans && state.selectedPlan != null;
     final showOperatorCard = showPlans || hasPlanSelected;
+    final isOpeningOperatorSheet = useState(false);
 
-    void handleChange() {
-      _openOperatorSheet(
-        ref,
-        mobile: state.mobile,
-        onSelected: (operator, region) async {
-          await controller.fetchPlansForSelection(
-            mobileInput: state.mobile,
-            operatorName: operator.name,
-            circleName: region.name,
-            circleCode: region.code,
-            iconUrl: operator.iconUrl,
-          );
-        },
-      );
+    Future<void> handleChange() async {
+      if (isOpeningOperatorSheet.value) return;
+      isOpeningOperatorSheet.value = true;
+      try {
+        await _openOperatorSheet(
+          ref,
+          mobile: state.mobile,
+          onSelected: (operator, region) async {
+            await controller.fetchPlansForSelection(
+              mobileInput: state.mobile,
+              operatorName: operator.name,
+              circleName: region.name,
+              circleCode: region.code,
+              iconUrl: operator.iconUrl,
+            );
+          },
+        );
+      } finally {
+        isOpeningOperatorSheet.value = false;
+      }
     }
 
     return Scaffold(
@@ -231,8 +247,20 @@ class MobilePrepaidView extends HookConsumerWidget {
             children: [
               MyAppBar(
                 title: hasPlanSelected ? 'Pay Now' : 'Select A Recharge Plan',
-                onBack:
-                    hasPlanSelected ? () => controller.deselectPlan() : null,
+                onBack: () {
+                  if (hasPlanSelected) {
+                    controller.deselectPlan();
+                    return;
+                  }
+                  if (showPlans) {
+                    controller.reset();
+                    manualMobileController.clear();
+                    planSearchController.clear();
+                    contactQuery.value = '';
+                    return;
+                  }
+                  Navigator.of(context).maybePop();
+                },
               ),
               if (showOperatorCard)
                 Positioned(
@@ -276,12 +304,15 @@ class MobilePrepaidView extends HookConsumerWidget {
                                 contactQuery.value = value,
                             onReload: loadContacts,
                             onSelect: (mobile) {
-                              controller.fetchOperatorAndPlans(mobile);
+                              controller.fetchOperatorAndPlans(
+                                _normalizeMobile(mobile),
+                              );
                             },
                             manualMobileController: manualMobileController,
-                            onManualSubmit: () =>
-                                controller.fetchOperatorAndPlans(
-                                    manualMobileController.text),
+                            onManualSubmit: () => controller
+                                .fetchOperatorAndPlans(_normalizeMobile(
+                              manualMobileController.text,
+                            )),
                           ),
           ),
         ],
@@ -412,7 +443,12 @@ class _ContactsSection extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         if (isLoading)
-          const Center(child: CircularProgressIndicator())
+          const Center(
+            child: SpinKitCircle(
+              color: AppColors.primary,
+              size: 48,
+            ),
+          )
         else if (contacts.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
@@ -477,7 +513,12 @@ class _PlanSection extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         if (state.isFetching)
-          const Center(child: CircularProgressIndicator())
+          const Center(
+            child: SpinKitCircle(
+              color: AppColors.primary,
+              size: 48,
+            ),
+          )
         else if (state.filteredPlans.isEmpty)
           _EmptyPlansState(query: state.planSearchQuery)
         else
@@ -630,47 +671,48 @@ class _PayNowSection extends StatelessWidget {
           ),
         ),
         // Bottom Proceed To Pay button
-        SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: state.isRecharging
-                    ? null
-                    : () => KDialog.instance.openSheet(
-                          dialog: PrepaidPaymentBottomSheet(
-                            amount: plan.amount,
-                          ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            16,
+            8,
+            16,
+            16 + MediaQuery.of(context).viewPadding.bottom,
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: state.isRecharging
+                  ? null
+                  : () => KDialog.instance.openSheet(
+                        dialog: PrepaidPaymentBottomSheet(
+                          amount: plan.amount,
                         ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  elevation: 0,
-                ),
-                child: state.isRecharging
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation(Colors.white),
-                        ),
-                      )
-                    : Text(
-                        'Proceed To Pay',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                ),
                       ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 0,
               ),
+              child: state.isRecharging
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: SpinKitCircle(
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    )
+                  : Text(
+                      'Proceed To Pay',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
             ),
           ),
         ),
@@ -888,42 +930,41 @@ class _QuickActionHeaderCard extends StatelessWidget {
               ),
             ),
           ),
-          SizedBox(
-            width: 88.w,
-            child: ClipRRect(
-              borderRadius: BorderRadius.only(
-                topRight: Radius.circular(18.r),
-                bottomRight: Radius.circular(18.r),
-              ),
-              child: Stack(
-                fit: StackFit.expand,
-                alignment: Alignment.center,
-                children: [
-                  Image.asset(
-                    FileConstants.quickAction,
-                    fit: BoxFit.fill,
-                  ),
-                  TextButton(
-                    onPressed: onChange,
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      backgroundColor: Colors.transparent,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 8.w,
-                        vertical: 6.h,
+          InkWell(
+            onTap: onChange,
+            child: SizedBox(
+              width: 88.w,
+              child: ClipRRect(
+                borderRadius: BorderRadius.only(
+                  topRight: Radius.circular(18.r),
+                  bottomRight: Radius.circular(18.r),
+                ),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onChange,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    alignment: Alignment.center,
+                    children: [
+                      Image.asset(
+                        FileConstants.quickAction,
+                        fit: BoxFit.fill,
                       ),
-                    ),
-                    child: Text(
-                      'Change',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.4,
-                            fontSize: 11.sp,
-                          ),
-                    ),
+                      Center(
+                        child: Text(
+                          'Change',
+                          style:
+                              Theme.of(context).textTheme.labelMedium?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.4,
+                                    fontSize: 11.sp,
+                                  ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -1019,8 +1060,8 @@ Future<void> _openOperatorSheet(
               await onSelected(operator, region);
             },
           ),
-          maxHeight: MediaQuery.of(navigatorKey.currentContext!).size.height *
-              0.65,
+          maxHeight:
+              MediaQuery.of(navigatorKey.currentContext!).size.height * 0.65,
         );
       },
     ),
@@ -1065,7 +1106,10 @@ class _OperatorSelectSheet extends ConsumerWidget {
           if (meta.isLoadingOperators)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
-              child: CircularProgressIndicator(),
+              child: SpinKitCircle(
+                color: AppColors.primary,
+                size: 48,
+              ),
             )
           else
             Flexible(
@@ -1172,7 +1216,10 @@ class _RegionSelectSheetState extends ConsumerState<_RegionSelectSheet> {
           if (meta.isLoadingRegions)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
-              child: CircularProgressIndicator(),
+              child: SpinKitCircle(
+                color: AppColors.primary,
+                size: 48,
+              ),
             )
           else
             Flexible(
@@ -1350,9 +1397,7 @@ class _ContactsList extends StatelessWidget {
                 .join()
             : '';
         return InkWell(
-          onTap: phone.isEmpty
-              ? null
-              : () => onSelect(phone.replaceAll(RegExp(r'\D'), '')),
+          onTap: phone.isEmpty ? null : () => onSelect(_normalizeMobile(phone)),
           borderRadius: BorderRadius.circular(14),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

@@ -182,7 +182,7 @@ class ProfileView extends HookConsumerWidget {
                           ),
                           _ProfileMenuItem(
                             icon: Icons.help_outline,
-                            label: 'Faq',
+                            label: 'FAQs',
                             onTap: () {
                               context.push(RouteConstants.faq);
                             },
@@ -380,6 +380,7 @@ class UpdateProfileView extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.read(profileControllerProvider.notifier);
     final state = ref.watch(profileControllerProvider);
+    final latestProfile = state.profile ?? profile;
     final pickedImage = useState<File?>(null);
     final firstNameController = useTextEditingController();
     final lastNameController = useTextEditingController();
@@ -390,6 +391,10 @@ class UpdateProfileView extends HookConsumerWidget {
     final addressController = useTextEditingController(
       text: profile.address ?? '',
     );
+    useListenable(firstNameController);
+    useListenable(lastNameController);
+    useListenable(addressController);
+    useListenable(mobileController);
 
     useEffect(() {
       final parts = profile.name.trim().split(RegExp(r'\s+'));
@@ -401,6 +406,23 @@ class UpdateProfileView extends HookConsumerWidget {
       }
       return null;
     }, const []);
+
+    final initialNameParts = profile.name.trim().split(RegExp(r'\s+'));
+    final initialFirst =
+        initialNameParts.isNotEmpty ? initialNameParts.first : '';
+    final initialLast =
+        initialNameParts.length > 1 ? initialNameParts.sublist(1).join(' ') : '';
+    final initialAddress = (profile.address ?? '').trim();
+    final initialMobile = profile.mobile.trim();
+
+    final currentFirst = firstNameController.text.trim();
+    final currentLast = lastNameController.text.trim();
+    final currentAddress = addressController.text.trim();
+    final currentMobile = mobileController.text.trim();
+    final hasNonEmailChanges = currentFirst != initialFirst ||
+        currentLast != initialLast ||
+        currentAddress != initialAddress ||
+        currentMobile != initialMobile;
 
     useEffect(() {
       final updatedEmail = state.profile?.email ?? '';
@@ -548,8 +570,10 @@ class UpdateProfileView extends HookConsumerWidget {
                 label: 'Email ID',
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
-                trailingText: profile.isEmailVerified ? null : 'VERIFY',
-                onTrailingTap: profile.isEmailVerified
+                enabled: !latestProfile.isEmailVerified,
+                trailingText:
+                    latestProfile.isEmailVerified ? 'VERIFIED' : 'VERIFY',
+                onTrailingTap: latestProfile.isEmailVerified
                     ? null
                     : () {
                         KDialog.instance.openSheet(
@@ -567,23 +591,21 @@ class UpdateProfileView extends HookConsumerWidget {
               ),
               const SizedBox(height: 24),
               CustomElevatedButton(
-                onPressed: state.isUpdating
+                onPressed: state.isUpdating || !hasNonEmailChanges
                     ? null
                     : () async {
                         final first = firstNameController.text.trim();
                         final last = lastNameController.text.trim();
-                        final email = emailController.text.trim();
                         if (first.isEmpty) {
                           AppSnackbar.show('Please enter your first name.');
-                          return;
-                        }
-                        if (email.isEmpty || !email.contains('@')) {
-                          AppSnackbar.show('Please enter a valid email.');
                           return;
                         }
                         final name =
                             last.isEmpty ? first : '$first $last'.trim();
                         final address = addressController.text.trim();
+                        final email = state.profile?.email ??
+                            profile.email ??
+                            emailController.text.trim();
                         final ok = await controller.updateProfile(
                           name: name,
                           email: email,
@@ -591,6 +613,8 @@ class UpdateProfileView extends HookConsumerWidget {
                         );
                         if (!context.mounted) return;
                         if (ok) {
+                          await controller.fetchProfile();
+                          if (!context.mounted) return;
                           AppSnackbar.show('Profile updated successfully.');
                           Navigator.of(context).pop();
                         } else {

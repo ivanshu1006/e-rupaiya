@@ -47,7 +47,7 @@ dependencies:
   firebase_core:
   firebase_messaging:
   flutter_local_notifications:
-  qr_code_scanner:
+  # qr_code_scanner:
   image_picker: ^1.1.2
   # google_mlkit_barcode_scanning: ^0.13.0
   permission_handler: ^11.3.1
@@ -117,6 +117,6 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-dependency_overrides:
-  qr_code_scanner:
-    path: third_party/qr_code_scanner
+# dependency_overrides:
+#   qr_code_scanner:
+#     path: third_party/qr_code_scanner

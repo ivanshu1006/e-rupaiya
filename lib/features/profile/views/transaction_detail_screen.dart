@@ -1,38 +1,62 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
+import '../../../widgets/app_network_image.dart';
+import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/custom_elevated_button.dart';
-import '../models/transaction_item.dart';
+import '../../../widgets/k_action_button.dart';
+import '../../../widgets/my_app_bar.dart';
+import '../models/transaction_history_entry.dart';
 
 class TransactionDetailScreen extends StatelessWidget {
-  const TransactionDetailScreen({super.key, this.item});
+  const TransactionDetailScreen({super.key, this.entry});
 
-  final TransactionItem? item;
+  final TransactionHistoryEntry? entry;
 
   @override
   Widget build(BuildContext context) {
-    final tx = item ??
-        TransactionItem(
-          id: 't1',
-          title: 'Mobile Recharge',
-          subtitle: 'Airtel Prepaid',
-          amount: '₹ 435',
-          dateTime: '30 Sep 2025, 05:02pm',
-          status: 'success',
-          iconAsset: FileConstants.mobile,
+    final tx = entry ??
+        const TransactionHistoryEntry(
+          paymentStatus: '',
+          paymentType: '',
+          billerName: '',
+          amount: '',
+          iconUrl: '',
+          transactionId: '',
+          referenceId: '',
+          transactionTime: '',
         );
+    final statusMeta = _statusMeta(tx.paymentStatus);
+    final infoRows = <_InfoRow>[
+      _InfoRow(label: 'Recharge Amount', value: _formatAmount(tx.amount)),
+      // ignore: prefer_const_constructors
+      _InfoRow(label: 'E-Coins', value: '-₹ 0'),
+      _InfoRow(
+        label: 'Total Amount',
+        value: _formatAmount(tx.amount),
+        emphasize: true,
+      ),
+    ];
+    final txnId = tx.transactionId.trim();
+    final refId = tx.referenceId.trim();
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          const _TransactionDetailHeader(),
+          MyAppBar(
+            title: statusMeta.label,
+            height: 150,
+            backgroundColor: statusMeta.color,
+            onBack: () => context.pop(),
+          ),
           Expanded(
             child: SingleChildScrollView(
               padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 24.h),
@@ -41,53 +65,59 @@ class TransactionDetailScreen extends StatelessWidget {
                 children: [
                   _TransactionSummaryCard(item: tx),
                   SizedBox(height: 16.h),
-                  const _TransactionInfoSection(
+                  _TransactionInfoSection(
                     title: 'Payment Details',
-                    rows: [
-                      _InfoRow(
-                          label: 'Transaction ID',
-                          value: 'TXNID2025101200123456'),
-                      _InfoRow(label: 'Reference ID', value: '123456789'),
-                    ],
+                    rows: infoRows,
                   ),
-                  SizedBox(height: 12.h),
-                  const _TransactionInfoSection(
-                    title: 'Payment Option Details',
-                    rows: [
-                      _InfoRow(label: 'UPI', value: 'sample007@ybl'),
-                      _InfoRow(label: 'UTR', value: '123456789012'),
-                    ],
-                  ),
+                  SizedBox(height: 10.h),
+                  if (txnId.isNotEmpty)
+                    _CopyRow(
+                      label: 'UPI Transaction ID',
+                      value: txnId,
+                    ),
+                  if (refId.isNotEmpty)
+                    _CopyRow(
+                      label: 'Reference ID',
+                      value: refId,
+                    ),
+                  SizedBox(height: 10.h),
+                  _PaidFromRow(),
                   SizedBox(height: 18.h),
                   Row(
                     children: [
                       Expanded(
-                        child: CustomElevatedButton(
-                          onPressed: () {},
+                        child: KActionButton(
                           label: 'Share Receipt',
-                          height: 44.h,
-                          uppercaseLabel: false,
+                          icon: Icons.share_outlined,
+                          onPressed: () {},
                         ),
                       ),
                       SizedBox(width: 12.w),
                       Expanded(
-                        child: CustomElevatedButton(
+                        child: KActionButton(
+                          label: 'View Receipt',
+                          icon: Icons.receipt_long_outlined,
                           onPressed: () {},
-                          label: 'Download',
-                          height: 44.h,
-                          uppercaseLabel: false,
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 22.h),
+                  SizedBox(height: 12.h),
+                  KActionButton(
+                    label: 'Contact Support',
+                    icon: Icons.headset_mic_outlined,
+                    onPressed: () =>
+                        context.push(RouteConstants.helpCenterChat),
+                  ),
+                  SizedBox(height: 14.h),
+                  _PoweredByRow(),
+                  SizedBox(height: 18.h),
                   CustomElevatedButton(
-                    onPressed: () {
-                      context.push(RouteConstants.helpCenterChat);
-                    },
-                    label: 'Help Center',
-                    height: 46.h,
+                    onPressed: () => context.push(RouteConstants.mobilePrepaid),
+                    label: 'Recharge Again',
+                    height: 48.h,
                     uppercaseLabel: false,
+                    showArrow: false,
                   ),
                 ],
               ),
@@ -99,62 +129,23 @@ class TransactionDetailScreen extends StatelessWidget {
   }
 }
 
-class _TransactionDetailHeader extends StatelessWidget {
-  const _TransactionDetailHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(8.w, 14.h, 16.w, 16.h),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF1AAE57), Color(0xFF0C8F45)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Row(
-          children: [
-            IconButton(
-              onPressed: () => context.pop(),
-              icon: Icon(Icons.arrow_back, color: Colors.white, size: 22.sp),
-            ),
-            SizedBox(width: 4.w),
-            Expanded(
-              child: Text(
-                'Transaction Successful',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _TransactionSummaryCard extends StatelessWidget {
   const _TransactionSummaryCard({required this.item});
 
-  final TransactionItem item;
+  final TransactionHistoryEntry item;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(14.w),
+      padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18.r),
+        borderRadius: BorderRadius.circular(20.r),
         boxShadow: const [
           BoxShadow(
             color: AppColors.cardShadow,
-            blurRadius: 16,
-            offset: Offset(0, 8),
+            blurRadius: 14,
+            offset: Offset(0, 6),
           ),
         ],
       ),
@@ -165,7 +156,9 @@ class _TransactionSummaryCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  item.title,
+                  item.paymentType.isNotEmpty
+                      ? item.paymentType
+                      : 'Mobile Recharged',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w700,
@@ -173,69 +166,68 @@ class _TransactionSummaryCard extends StatelessWidget {
                 ),
               ),
               Text(
-                item.dateTime,
+                _formatTxnTime(item.transactionTime),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppColors.textPrimary.withOpacity(0.6),
                     ),
               ),
             ],
           ),
-          SizedBox(height: 10.h),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-            decoration: BoxDecoration(
-              color: AppColors.lightBorder.withOpacity(0.25),
-              borderRadius: BorderRadius.circular(12.r),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 36.w,
-                  height: 36.w,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.08),
-                    shape: BoxShape.circle,
+          SizedBox(height: 12.h),
+          Row(
+            children: [
+              Container(
+                width: 46.w,
+                height: 46.w,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.primary.withOpacity(0.4),
                   ),
-                  child: Center(
-                    child: Image.asset(
-                      item.iconAsset,
-                      width: 20.w,
-                      height: 20.w,
-                      fit: BoxFit.contain,
+                ),
+                child: Center(
+                  child: AppNetworkImage(
+                    url: item.iconUrl,
+                    width: 24.w,
+                    height: 24.w,
+                    fit: BoxFit.contain,
+                    showShimmer: false,
+                  ),
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.billerName.isNotEmpty ? item.billerName : 'Biller',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
                     ),
-                  ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      item.referenceId.isNotEmpty
+                          ? item.referenceId
+                          : 'Reference ID',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textPrimary.withOpacity(0.6),
+                          ),
+                    ),
+                  ],
                 ),
-                SizedBox(width: 10.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.subtitle,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      SizedBox(height: 2.h),
-                      Text(
-                        '1234567890',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textPrimary.withOpacity(0.6),
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-                Text(
-                  item.amount,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-              ],
-            ),
+              ),
+              Text(
+                _formatAmount(item.amount),
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
           ),
         ],
       ),
@@ -262,60 +254,52 @@ class _TransactionInfoSection extends StatelessWidget {
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w700,
+                fontSize: 15.sp,
               ),
         ),
         SizedBox(height: 10.h),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14.r),
-            boxShadow: const [
-              BoxShadow(
-                color: AppColors.cardShadow,
-                blurRadius: 12,
-                offset: Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Column(
-            children: rows
-                .map(
-                  (row) => Padding(
-                    padding: EdgeInsets.symmetric(vertical: 6.h),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            row.label,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: AppColors.textPrimary.withOpacity(0.6),
-                                ),
-                          ),
-                        ),
-                        Text(
-                          row.value,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                        ),
-                        SizedBox(width: 8.w),
-                        Icon(
-                          Icons.copy_rounded,
-                          size: 16.sp,
-                          color: AppColors.textPrimary.withOpacity(0.5),
-                        ),
-                      ],
+        Column(
+          children: [
+            for (var i = 0; i < rows.length; i++) ...[
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: 6.h),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        rows[i].label,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: rows[i].emphasize
+                                  ? AppColors.textPrimary
+                                  : AppColors.textPrimary.withOpacity(0.6),
+                              fontWeight: rows[i].emphasize
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              fontSize: rows[i].emphasize ? 13.sp : 12.sp,
+                            ),
+                      ),
                     ),
-                  ),
-                )
-                .toList(),
-          ),
+                    Text(
+                      rows[i].value,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: rows[i].emphasize
+                                ? FontWeight.w700
+                                : FontWeight.w600,
+                            fontSize: rows[i].emphasize ? 13.sp : 12.sp,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              if (i == 1) ...[
+                Divider(
+                  color: AppColors.lightBorder.withOpacity(0.8),
+                  height: 12.h,
+                ),
+              ],
+            ],
+          ],
         ),
       ],
     );
@@ -323,8 +307,208 @@ class _TransactionInfoSection extends StatelessWidget {
 }
 
 class _InfoRow {
-  const _InfoRow({required this.label, required this.value});
+  const _InfoRow({
+    required this.label,
+    required this.value,
+    this.canCopy = false,
+    this.emphasize = false,
+  });
 
   final String label;
   final String value;
+  final bool canCopy;
+  final bool emphasize;
+}
+
+class _CopyRow extends StatelessWidget {
+  const _CopyRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    if (value.trim().isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: EdgeInsets.only(bottom: 10.h),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textPrimary.withOpacity(0.6),
+                      ),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          InkWell(
+            onTap: () async {
+              await Clipboard.setData(ClipboardData(text: value));
+              AppSnackbar.show('Copied to clipboard');
+            },
+            borderRadius: BorderRadius.circular(6.r),
+            child: Padding(
+              padding: EdgeInsets.all(6.w),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.copy_rounded,
+                    size: 16.sp,
+                    color: AppColors.primary,
+                  ),
+                  SizedBox(width: 4.w),
+                  Text(
+                    'Copy',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaidFromRow extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(top: 4.h, bottom: 10.h),
+      child: Row(
+        children: [
+          Text(
+            'Paid From',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textPrimary.withOpacity(0.6),
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          SizedBox(width: 8.w),
+          Image.asset(
+            FileConstants.upi,
+            width: 18.w,
+            height: 18.w,
+          ),
+          SizedBox(width: 6.w),
+          Text(
+            'GPAY',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PoweredByRow extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          'powered by',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.textPrimary.withOpacity(0.6),
+              ),
+        ),
+        SizedBox(width: 6.w),
+        Image.asset(
+          FileConstants.bharatConnectColor,
+          height: 16.h,
+          fit: BoxFit.contain,
+        ),
+      ],
+    );
+  }
+}
+
+class _StatusMeta {
+  const _StatusMeta({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+}
+
+_StatusMeta _statusMeta(String rawStatus) {
+  final status = rawStatus.trim().toUpperCase();
+  switch (status) {
+    case 'SUCCESS':
+      return const _StatusMeta(
+        label: 'Transaction Successful',
+        color: Color(0xFF1AAE57),
+      );
+    case 'PENDING':
+      return const _StatusMeta(
+        label: 'Transaction Pending',
+        color: Color(0xFFF59E0B),
+      );
+    case 'FAILED':
+    case 'FAIL':
+      return const _StatusMeta(
+        label: 'Transaction Failed',
+        color: Color(0xFFE53935),
+      );
+    default:
+      return const _StatusMeta(
+        label: 'Transaction Details',
+        color: Color(0xFF1AAE57),
+      );
+  }
+}
+
+String _formatAmount(String raw) {
+  final trimmed = raw.trim();
+  if (trimmed.isEmpty) return '';
+  return trimmed.startsWith('₹') ? trimmed : '₹ $trimmed';
+}
+
+String _formatTxnTime(String raw) {
+  final value = raw.trim();
+  if (value.isEmpty) return '';
+  final normalized = value.contains(' ') ? value.replaceFirst(' ', 'T') : value;
+  final parsed = DateTime.tryParse(normalized);
+  if (parsed == null) return value;
+  const months = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  final day = parsed.day.toString().padLeft(2, '0');
+  final month = months[parsed.month - 1];
+  final hour = parsed.hour % 12 == 0 ? 12 : parsed.hour % 12;
+  final minute = parsed.minute.toString().padLeft(2, '0');
+  final ampm = parsed.hour >= 12 ? 'PM' : 'AM';
+  return '$day $month ${parsed.year}, $hour:$minute$ampm';
 }
