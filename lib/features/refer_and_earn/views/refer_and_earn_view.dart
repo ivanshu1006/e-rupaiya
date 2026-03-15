@@ -1,0 +1,434 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+
+import '../../../constants/app_colors.dart';
+import '../../../constants/file_constants.dart';
+import '../../../services/permission_service.dart';
+import '../../mobile_prepaid/controllers/contacts_cache_controller.dart';
+import '../components/referral_share_actions.dart';
+import '../components/refer_and_earn_app_bar.dart';
+import 'refer_and_earn_wallet_view.dart';
+import 'track_referrals_view.dart';
+import 'referral_works_view.dart';
+
+class ReferAndEarnView extends HookConsumerWidget {
+  const ReferAndEarnView({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final contactsState = ref.watch(contactsCacheControllerProvider);
+    final contactsController =
+        ref.read(contactsCacheControllerProvider.notifier);
+    final permissionService = useMemoized(() => const PermissionService());
+    final hasPermission = useState<bool?>(null);
+
+    useEffect(() {
+      Future<void> load() async {
+        final granted = await permissionService.hasContactsPermission();
+        hasPermission.value = granted;
+        if (!granted) {
+          final requested = await permissionService.requestContacts();
+          hasPermission.value = requested;
+        }
+        if (hasPermission.value == true) {
+          await contactsController.fetchIfNeeded();
+        }
+      }
+
+      load();
+      return null;
+    }, const []);
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              ReferAndEarnAppBar(
+                title: 'Refer Friends & Earn Coins',
+                onHelp: () {},
+                body: Column(
+                  children: [
+                    SizedBox(height: 46.h),
+                    Text(
+                      'Earn E-Coins Lifetime',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    SizedBox(height: 10.h),
+                    Image.asset(
+                      FileConstants.referAndEarn,
+                      height: 100.h,
+                      fit: BoxFit.contain,
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(child: Container(color: Colors.white)),
+            ],
+          ),
+          Positioned.fill(
+            top: 230.h,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(26.r),
+                ),
+              ),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 24.h),
+                child: Column(
+                  children: [
+                    _ReferSummarySection(),
+                    SizedBox(height: 14.h),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _ActionMiniCard(
+                            title: 'Track Your\nReferrals',
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const TrackReferralsView(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _ActionMiniCard(
+                            title: 'How It\nWorks ?',
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const ReferralWorksView(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 18.h),
+                    const _SectionTitle('Invite Contacts'),
+                    SizedBox(height: 10.h),
+                    _ContactsStrip(
+                      hasPermission: hasPermission.value == true,
+                      contacts: contactsState.contacts,
+                    ),
+                    SizedBox(height: 16.h),
+                    _ReferForeverCard(),
+                    SizedBox(height: 16.h),
+                    const ReferralShareActions(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReferSummarySection extends HookWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          'Refer & Earn Lifetime',
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        SizedBox(height: 6.h),
+        Text(
+          'Refer Once, Earn Rewards For A Lifetime.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.textPrimary.withOpacity(0.6),
+              ),
+        ),
+        SizedBox(height: 12.h),
+        Container(
+          height: 1,
+          width: double.infinity,
+          color: AppColors.lightBorder.withOpacity(0.6),
+        ),
+        SizedBox(height: 12.h),
+        _PrimaryPillButton(
+          label: 'My Referral Earnings',
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const ReferAndEarnWalletView(),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _ContactsStrip extends HookWidget {
+  const _ContactsStrip({
+    required this.hasPermission,
+    required this.contacts,
+  });
+
+  final bool hasPermission;
+  final List<Contact> contacts;
+
+  @override
+  Widget build(BuildContext context) {
+    final displayContacts = hasPermission && contacts.isNotEmpty
+        ? contacts.take(6).toList()
+        : const <Contact>[];
+    final items = displayContacts.isNotEmpty
+        ? displayContacts
+        : const [
+            _PlaceholderContact('Ivanshu Patil'),
+            _PlaceholderContact('Monu Ali'),
+            _PlaceholderContact('Supriya Ith...'),
+            _PlaceholderContact('Invite Con...'),
+          ];
+    return SizedBox(
+      height: 84.h,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        separatorBuilder: (_, __) => SizedBox(width: 14.w),
+        itemBuilder: (context, index) {
+          final item = items[index];
+          if (item is Contact) {
+            return _ContactAvatar(
+              item: _ContactItem(name: item.displayName),
+            );
+          }
+          final placeholder = item as _PlaceholderContact;
+          return _ContactAvatar(
+            item: _ContactItem(name: placeholder.name),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PlaceholderContact {
+  const _PlaceholderContact(this.name);
+
+  final String name;
+}
+
+class _PrimaryPillButton extends HookWidget {
+  const _PrimaryPillButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0C5AA6), Color(0xFF154A8C)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          borderRadius: BorderRadius.circular(24.r),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 20.w,
+              height: 20.w,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Image.asset(
+                  FileConstants.coin_3d,
+                  width: 14.w,
+                  height: 14.w,
+                ),
+              ),
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            SizedBox(width: 8.w),
+            const Icon(Icons.arrow_forward, color: Colors.white, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionMiniCard extends HookWidget {
+  const _ActionMiniCard({required this.title, this.onTap});
+
+  final String title;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14.r),
+      child: Container(
+        height: 74.h,
+        padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 12.h),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF2C64A5), Color(0xFF154A8C)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(14.r),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+            const Icon(Icons.arrow_forward, color: Colors.white, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends HookWidget {
+  const _SectionTitle(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              color: Colors.black,
+              fontWeight: FontWeight.w700,
+            ),
+      ),
+    );
+  }
+}
+
+class _ContactItem {
+  const _ContactItem({required this.name});
+
+  final String name;
+}
+
+class _ContactAvatar extends HookWidget {
+  const _ContactAvatar({required this.item});
+
+  final _ContactItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final initials = item.name
+        .split(' ')
+        .where((part) => part.isNotEmpty)
+        .take(2)
+        .map((e) => e[0])
+        .join();
+    return Column(
+      children: [
+        CircleAvatar(
+          radius: 26.r,
+          backgroundColor: const Color(0xFFD9D9D9),
+          child: Text(
+            initials.toUpperCase(),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+          ),
+        ),
+        SizedBox(height: 6.h),
+        SizedBox(
+          width: 70.w,
+          child: Text(
+            item.name,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReferForeverCard extends HookWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 18.h),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDEFE8),
+        borderRadius: BorderRadius.circular(16.r),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'Refer Once, Earn Forever',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            'Refer Once And Earn Coins Every Time Your Friend Spends In\n'
+            'The App. Use Your Coins Like Real Money For Payments\n'
+            'Anytime.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textPrimary.withOpacity(0.7),
+                  height: 1.4,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}

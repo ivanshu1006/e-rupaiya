@@ -28,7 +28,7 @@ class KActionButton extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.r),
           ),
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
           foregroundColor: AppColors.textPrimary,
         ),
         child: Row(
@@ -45,7 +45,7 @@ class KActionButton extends StatelessWidget {
               SizedBox(width: 8.w),
               Icon(
                 icon,
-                size: 18.sp,
+                size: 16.sp,
                 color: AppColors.textPrimary,
               ),
             ],

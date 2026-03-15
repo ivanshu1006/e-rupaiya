@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../constants/api_constants.dart';
 import '../../../services/dio_service.dart';
 import '../../../services/logger_service.dart';
+import '../../../services/push_notification_service.dart';
 import '../models/auth_flow.dart';
 
 class AuthRepository {
@@ -102,8 +103,7 @@ class AuthRepository {
         final message = payload?['message'] as String? ?? 'Set PIN failed';
         throw Exception(message);
       }
-      final message =
-          payload?['message'] as String? ?? 'PIN set successfully.';
+      final message = payload?['message'] as String? ?? 'PIN set successfully.';
       return message;
     } catch (e) {
       logger.error(
@@ -119,11 +119,14 @@ class AuthRepository {
     required String pin,
   }) async {
     try {
+      final deviceToken = PushNotificationService.latestToken;
       final response = await _dio.post(
         ApiConstants.loginEndpoint,
         data: {
           'mobile': mobile,
           'pin': pin,
+          if (deviceToken != null && deviceToken.isNotEmpty)
+            'device_token': deviceToken,
         },
       );
 
@@ -147,6 +150,7 @@ class AuthRepository {
 
       final expiresAt =
           DateTime.now().add(Duration(seconds: expiresIn)).toIso8601String();
+      final refreshExpiry = _resolveRefreshExpiry(data);
 
       await _secureStorage.write(key: 'accessToken', value: accessToken);
       await _secureStorage.write(key: 'refreshToken', value: refreshToken);
@@ -155,6 +159,12 @@ class AuthRepository {
         value: tokenType ?? 'Bearer',
       );
       await _secureStorage.write(key: 'tokenExpiresAt', value: expiresAt);
+      if (refreshExpiry != null) {
+        await _secureStorage.write(
+          key: 'refreshTokenExpiresAt',
+          value: refreshExpiry.toIso8601String(),
+        );
+      }
       if (userId != null && userId.isNotEmpty) {
         await _secureStorage.write(key: 'userId', value: userId);
       }
@@ -162,6 +172,37 @@ class AuthRepository {
     } catch (e) {
       logger.error(
         'Login failed: ${e.toString()}',
+        error: e,
+      );
+      rethrow;
+    }
+  }
+
+  Future<String> pinLock({
+    required String mobile,
+    required String pin,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.pinLockEndpoint,
+        data: {
+          'mobile': mobile,
+          'pin': pin,
+        },
+      );
+
+      final payload = response.data as Map<String, dynamic>?;
+      final success = payload?['success'] == true;
+      if (!success) {
+        final message =
+            payload?['message'] as String? ?? 'PIN validation failed';
+        throw Exception(message);
+      }
+
+      return payload?['message'] as String? ?? 'Login successful';
+    } catch (e) {
+      logger.error(
+        'PIN lock failed: ${e.toString()}',
         error: e,
       );
       rethrow;
@@ -215,8 +256,7 @@ class AuthRepository {
       final payload = response.data as Map<String, dynamic>?;
       final success = payload?['success'] == true;
       if (!success) {
-        final message =
-            payload?['message'] as String? ?? 'Failed to reset PIN';
+        final message = payload?['message'] as String? ?? 'Failed to reset PIN';
         throw Exception(message);
       }
       return payload?['message'] as String? ?? 'PIN reset successfully.';
@@ -287,6 +327,7 @@ class AuthRepository {
 
       final expiresAt =
           DateTime.now().add(Duration(seconds: expiresIn)).toIso8601String();
+      final refreshExpiry = _resolveRefreshExpiry(data);
 
       await _secureStorage.write(key: 'accessToken', value: accessToken);
       await _secureStorage.write(
@@ -294,6 +335,12 @@ class AuthRepository {
         value: tokenType ?? 'Bearer',
       );
       await _secureStorage.write(key: 'tokenExpiresAt', value: expiresAt);
+      if (refreshExpiry != null) {
+        await _secureStorage.write(
+          key: 'refreshTokenExpiresAt',
+          value: refreshExpiry.toIso8601String(),
+        );
+      }
       return true;
     } catch (e, stackTrace) {
       logger.error(
@@ -304,4 +351,23 @@ class AuthRepository {
       return false;
     }
   }
+}
+
+DateTime? _resolveRefreshExpiry(Map<String, dynamic> data) {
+  final refreshExpiresAt = data['refresh_expires_at'];
+  if (refreshExpiresAt is String && refreshExpiresAt.isNotEmpty) {
+    return DateTime.tryParse(refreshExpiresAt);
+  }
+  final refreshExpiresIn =
+      data['refresh_expires_in'] ?? data['refresh_token_expires_in'];
+  if (refreshExpiresIn is int) {
+    return DateTime.now().add(Duration(seconds: refreshExpiresIn));
+  }
+  if (refreshExpiresIn is String) {
+    final parsed = int.tryParse(refreshExpiresIn);
+    if (parsed != null) {
+      return DateTime.now().add(Duration(seconds: parsed));
+    }
+  }
+  return null;
 }

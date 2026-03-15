@@ -21,6 +21,7 @@ class RouteConstants {
   static const String mobileRecentRecharges = '/mobile-prepaid/recent';
   static const String aboutUs = '/about-us';
   static const String termsPrivacy = '/terms-privacy';
+  static const String privacyPolicy = '/privacy-policy';
   static const String helpSupport = '/help-support';
   static const String helpCenterChat = '/help-center/chat';
   static const String faq = '/faq';

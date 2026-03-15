@@ -13,17 +13,16 @@ class CustomLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget loadingWidget = Padding(
-      padding: EdgeInsets.all(SizeConstants.mdSectionPadding),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const CircularProgressIndicator(),
-          SizedBox(width: SizeConstants.mdBetweenItemsSpacing),
-          Text(loadingText),
-        ],
-      ),
+    final loadingWidget = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const CircularProgressIndicator(),
+        SizedBox(height: SizeConstants.smBetweenItemsSpacing),
+        Text(
+          loadingText,
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
 
     return isCentered ? Center(child: loadingWidget) : loadingWidget;

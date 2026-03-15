@@ -10,6 +10,9 @@ class ApiConstants {
   static const String requestForgotPinOtpEndpoint =
       '$baseUrl/api/auth/request-forgot-pin-otp';
   static const String forgotPinEndpoint = '$baseUrl/api/auth/forgot-pin';
+  static const String pinLockEndpoint = '$baseUrl/api/auth/pin-lock';
+  static const String shareDownloadReceiptEndpoint =
+      '$baseUrl/api/bill/share-download-receipt';
   static const String quickActionsEndpoint = '$baseUrl/api/quick-actions';
   static const String quickActionsDueEndpoint =
       '$baseUrl/api/quick-actions/due';
@@ -43,4 +46,23 @@ class ApiConstants {
   static const String spinOptionsEndpoint = '$baseUrl/api/spin/options';
   static const String offersEndpoint = '$baseUrl/api/offers';
   static const String notificationsEndpoint = '$baseUrl/api/notifications';
+  static const String referralGenerateLinkEndpoint =
+      '$baseUrl/api/referral/generate-link';
+  static const String referralTrackEndpoint = '$baseUrl/api/referral/track';
+  static const String referralWalletSummaryEndpoint =
+      '$baseUrl/api/wallet/summary';
+  static const String referralMilestonesEndpoint =
+      '$baseUrl/api/referral/milestones';
+  static const String withdrawEcoinsEndpoint =
+      '$baseUrl/api/wallet/withdraw-ecoins';
+  static const String bankVerifyEndpoint = '$baseUrl/api/bank/verify';
+  static const String bankAddEndpoint = '$baseUrl/api/bank/add';
+  static const String bankAccountsEndpoint = '$baseUrl/api/bank/accounts';
+  static const String kycPanVerifyEndpoint = '$baseUrl/api/kyc/pan/verify';
+  static const String kycAadhaarSendOtpEndpoint =
+      '$baseUrl/api/kyc/aadhaar/send-otp';
+  static const String kycAadhaarVerifyOtpEndpoint =
+      '$baseUrl/api/kyc/aadhaar/verify-otp';
+  static String notificationReadEndpoint(String id) =>
+      '$baseUrl/api/notification/read/$id';
 }

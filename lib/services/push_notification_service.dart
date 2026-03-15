@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:io';
 
@@ -7,6 +8,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../features/profile/repositories/profile_repository.dart';
 import 'logger_service.dart';
+import 'notification_badge_service.dart';
 
 const String _defaultChannelId = 'default_notifications';
 const String _defaultChannelName = 'General Notifications';
@@ -25,6 +27,9 @@ class PushNotificationService {
   PushNotificationService._();
 
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  static String? _latestToken;
+
+  static String? get latestToken => _latestToken;
 
   static Future<void> initialize() async {
     await Firebase.initializeApp();
@@ -47,10 +52,12 @@ class PushNotificationService {
     developer.log(tokenMessage, name: 'PushNotificationService');
     logger.info(tokenMessage);
     if (token != null && token.isNotEmpty) {
+      _latestToken = token;
       await _sendTokenToServer(token);
     }
 
     _messaging.onTokenRefresh.listen((newToken) async {
+      _latestToken = newToken;
       await _sendTokenToServer(newToken);
     });
   }
@@ -135,6 +142,8 @@ class PushNotificationService {
       details,
       payload: message.data.isNotEmpty ? message.data.toString() : null,
     );
+
+    unawaited(NotificationBadgeService.refreshCount());
   }
 
   static Future<void> _sendTokenToServer(String token) async {

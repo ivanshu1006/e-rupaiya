@@ -18,6 +18,7 @@ class FileConstants {
   static String ellipse14 = 'assets/images/png/Ellipse 14.png';
   static String ellipse7 = 'assets/images/png/Ellipse 7.png';
   static String sampleBill = 'assets/images/png/sample_bill.png';
+  static String loadingGif = 'assets/images/png/loading.gif';
 
   //home icons
   static String mobile = 'assets/images/png/home_icon/mobile.png';
@@ -87,6 +88,22 @@ class FileConstants {
   static String ellipse10 = 'assets/images/png/Ellipse 10.png';
   static String goldcoin = 'assets/images/png/goldcoin.png';
   static String search = 'assets/images/png/search-normal.png';
+
+  //refer
+  static String bluebg = 'assets/images/png/bluebg.png';
+  static String arrow = 'assets/images/png/arrow.png';
+  static String referAndEarn = 'assets/images/png/referearn.png';
+  static String coin_3d = 'assets/images/png/3dcoin.png';
+  static String myTeam = 'assets/images/png/my_team.png';
+  static String recentReferrals = 'assets/images/png/recent_referrals.png';
+  static String referralsWorks = 'assets/images/png/referrals_works.png';
+  static String withdrawBanner = 'assets/images/png/withdraw_banner.png';
+  static String nsdl = 'assets/images/png/nsdl.png';
+  static String satyamev = 'assets/images/png/satyamev.png';
+  static String govtindia = 'assets/images/png/govtIndia.png';
+  static String govtIndia = 'assets/images/png/govtIndia.png';
+  static String satyameva = 'assets/images/png/satyamev.png';
+  static String withdrawIcon = 'assets/images/png/withdrawIcon.png';
 
   //bottom bar
   static String paybills = 'assets/images/png/home_icon/paybills.png';

@@ -1,5 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -10,11 +12,12 @@ import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
+import '../../../services/notification_badge_service.dart';
 import '../../../widgets/my_app_bar.dart';
+import '../../profile/views/my_wallet_view.dart';
 import '../components/quick_action_card.dart';
 import '../models/notification_item.dart';
 import '../repositories/notifications_repository.dart';
-import '../../profile/views/my_wallet_view.dart';
 
 final notificationsRepositoryProvider =
     Provider<NotificationsRepository>((ref) => NotificationsRepository());
@@ -25,12 +28,17 @@ final notificationsProvider =
   return repository.fetchNotifications();
 });
 
+final notificationReadIdsProvider =
+    StateProvider.autoDispose<Set<String>>((ref) => <String>{});
+
 class NotificationsScreen extends HookConsumerWidget {
   const NotificationsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notificationsAsync = ref.watch(notificationsProvider);
+    final unreadCount =
+        useValueListenable(NotificationBadgeService.unreadCount);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -39,6 +47,7 @@ class NotificationsScreen extends HookConsumerWidget {
           MyAppBar(
             title: 'Notifications',
             showHelp: true,
+            trailing: unreadCount > 0 ? _CountBadge(count: unreadCount) : null,
             onBack: () => context.pop(),
             onHelp: () {},
           ),
@@ -51,6 +60,13 @@ class NotificationsScreen extends HookConsumerWidget {
                 if (notifications.isEmpty) {
                   return const _NotificationsEmptyState();
                 }
+                final localReadIds = ref.watch(notificationReadIdsProvider);
+                final unreadFromList = notifications
+                    .where(
+                      (n) => !n.isRead && !localReadIds.contains(n.id),
+                    )
+                    .length;
+                NotificationBadgeService.syncFromList(unreadFromList);
                 final today =
                     notifications.where((n) => n.section == 'Today').toList();
                 final earlier =
@@ -76,6 +92,7 @@ class NotificationsScreen extends HookConsumerWidget {
                               showLeadingImage: true,
                               onTap: () => _handleNotificationTap(
                                 context,
+                                ref,
                                 item,
                               ),
                             ),
@@ -99,6 +116,7 @@ class NotificationsScreen extends HookConsumerWidget {
                               showLeadingImage: true,
                               onTap: () => _handleNotificationTap(
                                 context,
+                                ref,
                                 item,
                               ),
                             ),
@@ -119,8 +137,22 @@ class NotificationsScreen extends HookConsumerWidget {
 
 void _handleNotificationTap(
   BuildContext context,
+  WidgetRef ref,
   NotificationItem item,
 ) {
+  final readIds = ref.read(notificationReadIdsProvider);
+  final isAlreadyRead = item.isRead || readIds.contains(item.id);
+  if (!isAlreadyRead) {
+    NotificationBadgeService.decrement();
+    ref.read(notificationReadIdsProvider.notifier).state = {
+      ...readIds,
+      item.id,
+    };
+    unawaited(
+      ref.read(notificationsRepositoryProvider).markNotificationRead(item.id),
+    );
+  }
+
   final combined = '${item.title} ${item.subtitle}'.toLowerCase();
   if (combined.contains('spin')) {
     context.push(RouteConstants.spinAndWin);
@@ -133,6 +165,31 @@ void _handleNotificationTap(
       withNavBar: false,
     );
     return;
+  }
+}
+
+class _CountBadge extends StatelessWidget {
+  const _CountBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final display = count > 99 ? '99+' : '$count';
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: Colors.red.shade600,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        display,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+      ),
+    );
   }
 }
 

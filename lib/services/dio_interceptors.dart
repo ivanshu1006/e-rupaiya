@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:e_rupaiya/constants/api_constants.dart';
 import 'package:e_rupaiya/core/barrel_file.dart';
+import 'package:e_rupaiya/features/auth/controllers/auth_controller.dart';
 import 'package:e_rupaiya/widgets/k_dialog.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
@@ -18,6 +19,7 @@ class DioInterceptors extends InterceptorsWrapper {
     await secureStorage.delete(key: 'refreshToken');
     await secureStorage.delete(key: 'tokenType');
     await secureStorage.delete(key: 'tokenExpiresAt');
+    await secureStorage.delete(key: 'refreshTokenExpiresAt');
     await secureStorage.delete(key: 'userId');
     await secureStorage.delete(key: 'mobile');
   }
@@ -65,6 +67,13 @@ class DioInterceptors extends InterceptorsWrapper {
         value: tokenType ?? 'Bearer',
       );
       await secureStorage.write(key: 'tokenExpiresAt', value: expiresAt);
+      final refreshExpiry = _resolveRefreshExpiry(data);
+      if (refreshExpiry != null) {
+        await secureStorage.write(
+          key: 'refreshTokenExpiresAt',
+          value: refreshExpiry.toIso8601String(),
+        );
+      }
       _refreshCompleter!.complete(true);
       return _refreshCompleter!.future;
     } catch (_) {
@@ -73,6 +82,42 @@ class DioInterceptors extends InterceptorsWrapper {
     } finally {
       _refreshCompleter = null;
     }
+  }
+
+  DateTime? _resolveRefreshExpiry(Map<String, dynamic> data) {
+    final refreshExpiresAt = data['refresh_expires_at'];
+    if (refreshExpiresAt is String && refreshExpiresAt.isNotEmpty) {
+      return DateTime.tryParse(refreshExpiresAt);
+    }
+    final refreshExpiresIn =
+        data['refresh_expires_in'] ?? data['refresh_token_expires_in'];
+    if (refreshExpiresIn is int) {
+      return DateTime.now().add(Duration(seconds: refreshExpiresIn));
+    }
+    if (refreshExpiresIn is String) {
+      final parsed = int.tryParse(refreshExpiresIn);
+      if (parsed != null) {
+        return DateTime.now().add(Duration(seconds: parsed));
+      }
+    }
+    return null;
+  }
+
+  Future<bool> _refreshAccessTokenWithRetry() async {
+    final refreshed = await _refreshAccessToken();
+    if (refreshed) return true;
+    await Future.delayed(const Duration(milliseconds: 300));
+    return _refreshAccessToken();
+  }
+
+  Future<bool?> _isRefreshTokenExpired() async {
+    final refreshTokenExpiry = await Utils.getRefreshTokenExpiry();
+    if (refreshTokenExpiry == null) {
+      final storedRefresh = await secureStorage.read(key: 'refreshToken');
+      if (storedRefresh == null || storedRefresh.isEmpty) return true;
+      return null;
+    }
+    return refreshTokenExpiry.isBefore(DateTime.now());
   }
 
   @override
@@ -126,7 +171,7 @@ class DioInterceptors extends InterceptorsWrapper {
       final alreadyRetried = err.requestOptions.extra['retried'] == true;
       final isRefreshCall = err.requestOptions.extra['isRefresh'] == true;
       if (!alreadyRetried && !isRefreshCall) {
-        final refreshed = await _refreshAccessToken();
+        final refreshed = await _refreshAccessTokenWithRetry();
         if (refreshed) {
           final options = err.requestOptions;
           options.extra['retried'] = true;
@@ -135,80 +180,64 @@ class DioInterceptors extends InterceptorsWrapper {
           return;
         }
       }
+      final refreshExpired = await _isRefreshTokenExpired();
+      if (refreshExpired == null || refreshExpired == true) {
+        AppSnackbar.show(
+          'Session Expired. Please login again.',
+          textColor: Colors.white,
+          backgroundColor: Colors.red,
+        );
+        final context = navigatorKey.currentContext;
+        if (context != null) {
+          try {
+            await ProviderScope.containerOf(context)
+                .read(authControllerProvider.notifier)
+                .logout();
+          } catch (_) {
+            await _clearSession();
+          }
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!context.mounted) return;
+            context.go(RouteConstants.login);
+          });
+        } else {
+          await _clearSession();
+        }
+      } else {
+        AppSnackbar.show(
+          'Session refresh failed. Please try again.',
+          textColor: Colors.white,
+          backgroundColor: Colors.red,
+        );
+      }
+    } else if (err.response?.statusCode == 403) {
+      AppSnackbar.show(
+        'Forbidden',
+        textColor: Colors.white,
+        backgroundColor: Colors.red,
+      );
+    } else if (err.response?.statusCode == 404) {
       AppSnackbar.show(
         'Session Expired. Please login again.',
         textColor: Colors.white,
         backgroundColor: Colors.red,
       );
-      await _clearSession();
       final context = navigatorKey.currentContext;
       if (context != null) {
+        try {
+          await ProviderScope.containerOf(context)
+              .read(authControllerProvider.notifier)
+              .logout();
+        } catch (_) {
+          await _clearSession();
+        }
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!context.mounted) return;
           context.go(RouteConstants.login);
         });
+      } else {
+        await _clearSession();
       }
-    } else if (err.response?.statusCode == 403) {
-      try {
-        final response = err.response?.data;
-        if (response['session_expired'] == 1) {
-          final alreadyRetried = err.requestOptions.extra['retried'] == true;
-          final isRefreshCall = err.requestOptions.extra['isRefresh'] == true;
-          if (!alreadyRetried && !isRefreshCall) {
-            final refreshed = await _refreshAccessToken();
-            if (refreshed) {
-              final options = err.requestOptions;
-              options.extra['retried'] = true;
-              final response = await DioService.instance.client.fetch(options);
-              handler.resolve(response);
-              return;
-            }
-          }
-          AppSnackbar.show(
-            'Session Expired. Please login again.',
-            textColor: Colors.white,
-            backgroundColor: Colors.red,
-          );
-          await _clearSession();
-          final context = navigatorKey.currentContext;
-          if (context != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!context.mounted) return;
-              context.go(RouteConstants.login);
-            });
-          }
-        } else {
-          AppSnackbar.show(
-            'Forbidden',
-            textColor: Colors.white,
-            backgroundColor: Colors.red,
-          );
-        }
-      } catch (e) {
-        throw Exception('Error in Dio Error handler $e');
-      }
-    } else if (err.response?.statusCode == 404) {
-      // AppSnackbar.show(
-      //   'Session Expired. Please login again.',
-      //   textColor: Colors.white,
-      //   backgroundColor: Colors.red,
-      // );
-      // final context = navigatorKey.currentContext;
-      // if (context != null) {
-      //   try {
-      //     await ProviderScope.containerOf(context)
-      //         .read(authControllerProvider.notifier)
-      //         .logout();
-      //   } catch (_) {
-      //     await _clearSession();
-      //   }
-      //   WidgetsBinding.instance.addPostFrameCallback((_) {
-      //     if (!context.mounted) return;
-      //     context.go(RouteConstants.login);
-      //   });
-      // } else {
-      //   await _clearSession();
-      // }
     } else if (err.type == DioExceptionType.connectionTimeout) {
       AppSnackbar.show(
         'Connection timeout',

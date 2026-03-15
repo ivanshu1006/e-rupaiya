@@ -27,6 +27,7 @@ import '../components/profile_field.dart';
 import '../components/profile_shimmer.dart';
 import '../controllers/profile_controller.dart';
 import '../models/profile_model.dart';
+import 'bank_accounts_view.dart';
 import 'my_wallet_view.dart';
 
 class ProfileView extends HookConsumerWidget {
@@ -163,6 +164,17 @@ class ProfileView extends HookConsumerWidget {
                             },
                           ),
                           _ProfileMenuItem(
+                            icon: Icons.account_balance_outlined,
+                            label: 'Add Bank Account',
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const BankAccountsView(),
+                                ),
+                              );
+                            },
+                          ),
+                          _ProfileMenuItem(
                             icon: Icons.swap_horiz,
                             label: 'Transactions',
                             onTap: () {
@@ -189,9 +201,16 @@ class ProfileView extends HookConsumerWidget {
                           ),
                           _ProfileMenuItem(
                             icon: Icons.privacy_tip_outlined,
-                            label: 'Terms & Privacy Policy',
+                            label: 'Legal & Policy Document',
                             onTap: () {
                               context.push(RouteConstants.termsPrivacy);
+                            },
+                          ),
+                          _ProfileMenuItem(
+                            icon: Icons.policy_outlined,
+                            label: 'Privacy Policy',
+                            onTap: () {
+                              context.push(RouteConstants.privacyPolicy);
                             },
                           ),
                           _ProfileMenuItem(

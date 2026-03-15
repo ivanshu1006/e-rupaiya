@@ -149,7 +149,7 @@ class _TransactionFilterScreenState extends State<TransactionFilterScreen> {
                       runSpacing: 10.h,
                       children: [
                         _ChoiceChip(
-                          label: 'Successful',
+                          label: 'Success',
                           selected: _status == 'SUCCESS',
                           onTap: () => setState(() => _status = 'SUCCESS'),
                         ),
@@ -159,7 +159,7 @@ class _TransactionFilterScreenState extends State<TransactionFilterScreen> {
                           onTap: () => setState(() => _status = 'FAILED'),
                         ),
                         _ChoiceChip(
-                          label: 'Processing',
+                          label: 'Pending',
                           selected: _status == 'PENDING',
                           onTap: () => setState(() => _status = 'PENDING'),
                         ),

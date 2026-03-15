@@ -28,6 +28,7 @@ import 'features/profile/views/my_qr_screen.dart';
 import 'features/profile/views/transaction_detail_screen.dart';
 import 'features/profile/views/transaction_history_screen.dart';
 import 'features/profile/views/terms_privacy_screen.dart';
+import 'features/profile/views/privacy_policy_screen.dart';
 import 'features/profile/views/offers_view.dart';
 import 'features/services/views/biller_detail_view.dart';
 import 'features/services/views/biller_listing_view.dart';
@@ -190,6 +191,10 @@ final routerProvider = Provider<GoRouter>(
         GoRoute(
           path: RouteConstants.termsPrivacy,
           builder: (context, state) => const TermsPrivacyScreen(),
+        ),
+        GoRoute(
+          path: RouteConstants.privacyPolicy,
+          builder: (context, state) => const PrivacyPolicyScreen(),
         ),
         GoRoute(
           path: RouteConstants.helpSupport,

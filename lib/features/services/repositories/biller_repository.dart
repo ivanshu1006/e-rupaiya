@@ -83,6 +83,7 @@ class BillerRepository {
   Future<BillPayResponse> payBill({
     required String billerId,
     required Map<String, String> customerParams,
+    required String maskedIdentifier,
     required String amount,
     required String refId,
     required List<String> paymentModes,
@@ -97,6 +98,10 @@ class BillerRepository {
         'arr_bill_payment_modes': paymentModes.join(','),
         'biller_name': billerName,
       };
+      final trimmedMasked = maskedIdentifier.trim();
+      if (trimmedMasked.isNotEmpty) {
+        data['masked_identifier'] = trimmedMasked;
+      }
       final trimmedPaymentType = paymentType?.trim() ?? '';
       if (trimmedPaymentType.isNotEmpty) {
         data['payment_type'] = trimmedPaymentType;

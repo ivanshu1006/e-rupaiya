@@ -88,11 +88,11 @@ class AppLockService with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive) {
+    if (state == AppLifecycleState.paused) {
       _shouldLock = true;
       _persistBackgroundState();
     }
+    // Avoid locking on brief inactive states (e.g., notification shade).
     if (state == AppLifecycleState.resumed) {
       _showLockIfNeeded();
       _resetTimer();

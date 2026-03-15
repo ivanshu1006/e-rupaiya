@@ -111,6 +111,30 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
+  Future<bool> pinLock({
+    required String mobile,
+    required String pin,
+  }) async {
+    state = state.copyWith(isSubmitting: true, errorMessage: null);
+    try {
+      await _repository.pinLock(mobile: mobile, pin: pin);
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: null,
+      );
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: _messageFromException(
+          e,
+          'PIN validation failed. Please try again.',
+        ),
+      );
+      return false;
+    }
+  }
+
   Future<bool> verifyOtp({
     required String otp,
     String? userId,

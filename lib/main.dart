@@ -5,6 +5,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+// import 'package:no_screenshot/no_screenshot.dart';
+
 import 'router.dart';
 import 'services/app_lock_service.dart';
 import 'services/location_service.dart';
@@ -13,6 +15,7 @@ import 'widgets/app_snackbar.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // NoScreenshot.instance.screenshotOff();
   await dotenv.load(fileName: '.env');
   await PushNotificationService.initialize();
   await LocationService.initialize();
@@ -32,6 +35,7 @@ class MyApp extends HookConsumerWidget {
     final appLockService = ref.read(appLockServiceProvider);
     useEffect(() {
       appLockService.init();
+      // ScreenSecurityService.enableSecure();
       return appLockService.dispose;
     }, const []);
     return ScreenUtilInit(

@@ -106,6 +106,19 @@ class LoginView extends HookConsumerWidget {
       });
     }
 
+    void resetToMobileStep() {
+      step.value = _LoginStep.mobile;
+      otpErrorText.value = null;
+      remainingSeconds.value = 0;
+      timerRef.value?.cancel();
+      timerRef.value = null;
+      isRequestingOtp.value = false;
+      showForgotPin.value = false;
+      for (final controller in otpControllers) {
+        controller.clear();
+      }
+    }
+
     String joinDigits(List<TextEditingController> controllers) {
       return controllers.map((c) => c.text).join();
     }
@@ -579,47 +592,58 @@ class LoginView extends HookConsumerWidget {
       }
     }
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final headerHeight = constraints.maxHeight * 0.62;
+    return PopScope(
+      canPop: step.value == _LoginStep.mobile,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        if (step.value != _LoginStep.mobile) {
+          resetToMobileStep();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        resizeToAvoidBottomInset:
+            !(step.value == _LoginStep.pin && showForgotPin.value),
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final headerHeight = constraints.maxHeight * 0.62;
 
-          return Stack(
-            children: [
-              Column(
-                children: [
-                  Container(
-                    height: headerHeight,
-                    decoration: const BoxDecoration(
-                      gradient: AppColors.authBackgroundGradient,
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(20),
-                        bottomRight: Radius.circular(20),
+            return Stack(
+              children: [
+                Column(
+                  children: [
+                    Container(
+                      height: headerHeight,
+                      decoration: const BoxDecoration(
+                        gradient: AppColors.authBackgroundGradient,
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(20),
+                          bottomRight: Radius.circular(20),
+                        ),
                       ),
                     ),
-                  ),
-                  const Expanded(
-                    child: ColoredBox(color: Colors.white),
-                  ),
-                ],
-              ),
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: headerHeight,
-                child: const AuthBrandHeader(),
-              ),
-              Positioned(
-                left: 12,
-                right: 12,
-                bottom: 24,
-                child: buildContentCard(),
-              ),
-            ],
-          );
-        },
+                    const Expanded(
+                      child: ColoredBox(color: Colors.white),
+                    ),
+                  ],
+                ),
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: headerHeight,
+                  child: const AuthBrandHeader(),
+                ),
+                Positioned(
+                  left: 12,
+                  right: 12,
+                  bottom: 24,
+                  child: buildContentCard(),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

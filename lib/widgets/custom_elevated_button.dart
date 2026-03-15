@@ -2,6 +2,7 @@
 
 import 'package:e_rupaiya/constants/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class CustomElevatedButton extends StatelessWidget {
   const CustomElevatedButton({
@@ -58,7 +59,7 @@ class CustomElevatedButton extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: isBorder ? null : background,
           color: isBorder ? (backgroundColor ?? Colors.transparent) : null,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(28.r),
           border: isBorder
               ? Border.all(
                   color: borderColor ?? AppColors.primary,
@@ -82,7 +83,7 @@ class CustomElevatedButton extends StatelessWidget {
             foregroundColor: labelColor ?? Colors.white,
             elevation: 0,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(28.r),
             ),
           ),
           child: Row(

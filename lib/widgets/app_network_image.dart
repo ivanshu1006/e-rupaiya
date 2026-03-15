@@ -1,9 +1,11 @@
 // ignore_for_file: deprecated_member_use
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../constants/app_colors.dart';
+import '../constants/file_constants.dart';
 
 class AppNetworkImage extends StatelessWidget {
   const AppNetworkImage({
@@ -51,24 +53,21 @@ class AppNetworkImage extends StatelessWidget {
           width: width,
           height: height,
           fit: fit,
-          placeholderBuilder: (_) => _buildPlaceholder(),
+          placeholderBuilder: (_) => _buildLoading(),
         ),
       );
     }
 
     return _wrap(
-      Image.network(
-        resolvedUrl,
+      CachedNetworkImage(
+        imageUrl: resolvedUrl,
         width: width,
         height: height,
         fit: fit,
-        cacheWidth: cacheWidth,
-        cacheHeight: cacheHeight,
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return _buildPlaceholder();
-        },
-        errorBuilder: (_, __, ___) => errorWidget ?? _buildPlaceholder(),
+        memCacheWidth: cacheWidth,
+        memCacheHeight: cacheHeight,
+        placeholder: (_, __) => _buildLoading(),
+        errorWidget: (_, __, ___) => errorWidget ?? _buildPlaceholder(),
       ),
     );
   }
@@ -102,6 +101,22 @@ class AppNetworkImage extends StatelessWidget {
     }
     return _Shimmer(
       child: _FallbackBox(width: width, height: height),
+    );
+  }
+
+  Widget _buildLoading() {
+    if (placeholder != null) return placeholder!;
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Center(
+        child: Image.asset(
+          FileConstants.loadingGif,
+          width: 32,
+          height: 32,
+          fit: BoxFit.contain,
+        ),
+      ),
     );
   }
 }

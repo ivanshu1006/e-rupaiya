@@ -13,12 +13,15 @@ import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
+import '../../../services/notification_badge_service.dart';
 import '../../../widgets/custom_elevated_button.dart';
+import '../../kyc/views/kyc_verification_view.dart';
 import '../../mobile_prepaid/models/recharge_quick_action_payload.dart';
 import '../../profile/controllers/profile_controller.dart';
 import '../../profile/views/offers_view.dart';
 import '../../profile/views/profile_view.dart';
 import '../../profile/views/transaction_history_screen.dart';
+import '../../refer_and_earn/views/refer_and_earn_view.dart';
 import '../../services/controllers/biller_detail_controller.dart';
 import '../../services/models/biller_detail_args.dart';
 import '../../services/models/biller_model.dart';
@@ -78,7 +81,7 @@ class HomeView extends HookConsumerWidget {
       PersistentBottomNavBarItem(
         icon: _GradientFabIcon(asset: FileConstants.scanUser, size: 20.r),
         title: 'Scan User',
-        iconSize: 40.r,
+        iconSize: 30.r,
         textStyle: navTextStyle,
         activeColorPrimary: AppColors.primary,
         inactiveColorPrimary: AppColors.textPrimary.withOpacity(0.6),
@@ -101,6 +104,7 @@ class HomeView extends HookConsumerWidget {
       ),
     ];
     useEffect(() {
+      NotificationBadgeService.refreshCount();
       void listener() {
         final index = tabController.index;
         if (index == 0 && lastTabIndex.value != 0) {
@@ -318,18 +322,18 @@ List<Widget> _buildQuickActionSlivers(
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Image.asset(
-                  FileConstants.digitalGold,
-                  width: double.infinity,
-                  fit: BoxFit.fitWidth,
-                  cacheWidth: bannerCacheWidth,
-                  filterQuality: FilterQuality.low,
-                ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset(
+                FileConstants.digitalGold,
+                width: double.infinity,
+                fit: BoxFit.fitWidth,
+                cacheWidth: bannerCacheWidth,
+                filterQuality: FilterQuality.low,
               ),
             ),
           ),
+        ),
       );
     }
 
@@ -338,19 +342,19 @@ List<Widget> _buildQuickActionSlivers(
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Image.asset(
-                  FileConstants.preCard,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  cacheWidth: bannerCacheWidth,
-                  filterQuality: FilterQuality.low,
-                ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset(
+                FileConstants.preCard,
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                cacheWidth: bannerCacheWidth,
+                filterQuality: FilterQuality.low,
               ),
             ),
           ),
+        ),
       );
     }
 
@@ -359,18 +363,18 @@ List<Widget> _buildQuickActionSlivers(
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Image.asset(
-                  FileConstants.homeBanner1,
-                  width: double.infinity,
-                  fit: BoxFit.fitWidth,
-                  cacheWidth: bannerCacheWidth,
-                  filterQuality: FilterQuality.low,
-                ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset(
+                FileConstants.homeBanner1,
+                width: double.infinity,
+                fit: BoxFit.fitWidth,
+                cacheWidth: bannerCacheWidth,
+                filterQuality: FilterQuality.low,
               ),
             ),
           ),
+        ),
       );
     }
   }
@@ -455,13 +459,13 @@ class _HeaderIconButton extends StatelessWidget {
     required this.onTap,
     this.icon,
     this.iconAsset,
-    this.showBadge = false,
+    this.badgeCount,
   }) : assert(icon != null || iconAsset != null);
 
   final VoidCallback onTap;
   final IconData? icon;
   final String? iconAsset;
-  final bool showBadge;
+  final int? badgeCount;
 
   @override
   Widget build(BuildContext context) {
@@ -492,16 +496,30 @@ class _HeaderIconButton extends StatelessWidget {
                       color: AppColors.textPrimary,
                     ),
             ),
-            if (showBadge)
+            if ((badgeCount ?? 0) > 0)
               Positioned(
-                top: 10,
-                right: 10,
+                top: 6,
+                right: 6,
                 child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade600,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white, width: 1),
+                  ),
+                  constraints: const BoxConstraints(minWidth: 16),
+                  child: Text(
+                    (badgeCount ?? 0) > 99 ? '99+' : '${badgeCount ?? 0}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      height: 1.1,
+                    ),
                   ),
                 ),
               ),
@@ -567,8 +585,8 @@ class _GradientFabIcon extends StatelessWidget {
       child: Center(
         child: Image.asset(
           asset,
-          height: 45.h,
-          width: 30.w,
+          height: 35.h,
+          width: 20.w,
           color: Colors.white,
         ),
       ),
@@ -583,6 +601,8 @@ class _HomeContent extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final homeState = ref.watch(homeControllerProvider);
     final profileState = ref.watch(profileControllerProvider);
+    final unreadCount =
+        useValueListenable(NotificationBadgeService.unreadCount);
     final walletBalance = profileState.profile?.walletBalance ?? 0;
     final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
     final screenWidth = MediaQuery.sizeOf(context).width;
@@ -764,14 +784,78 @@ class _HomeContent extends HookConsumerWidget {
                         const SizedBox(width: 10),
                         _HeaderIconButton(
                           iconAsset: FileConstants.notification,
-                          showBadge: true,
+                          badgeCount: unreadCount,
                           onTap: () {
                             context.push(RouteConstants.notifications);
                           },
                         ),
                       ],
                     ),
+                    SizedBox(height: 12.h),
+                    GestureDetector(
+                      onTap: () {
+                        PersistentNavBarNavigator.pushNewScreen(
+                          context,
+                          screen: const ReferAndEarnView(),
+                          withNavBar: false,
+                        );
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 14.w,
+                          vertical: 10.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A56A1),
+                          borderRadius: BorderRadius.circular(18.r),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset(
+                              FileConstants.coin_3d,
+                              width: 18.w,
+                              height: 18.w,
+                            ),
+                            SizedBox(width: 8.w),
+                            Text(
+                              'Refer & Earn',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                            // SizedBox(width: 8.w),
+                            // const Icon(
+                            //   Icons.arrow_forward,
+                            //   color: Colors.white,
+                            //   size: 16,
+                            // ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: CustomElevatedButton(
+                  label: 'Complete Your KYC',
+                  uppercaseLabel: false,
+                  height: 42.h,
+                  onPressed: () {
+                    PersistentNavBarNavigator.pushNewScreen(
+                      context,
+                      screen: const KycVerificationView(),
+                      withNavBar: false,
+                    );
+                  },
                 ),
               ),
             ),
@@ -936,10 +1020,11 @@ class _HomeContent extends HookConsumerWidget {
               SliverToBoxAdapter(
                 child: Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      SizedBox(height: 14.h),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(16),
                         child: Image.asset(
@@ -950,7 +1035,7 @@ class _HomeContent extends HookConsumerWidget {
                           filterQuality: FilterQuality.low,
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 18.h),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(16),
                         child: Image.asset(
@@ -961,6 +1046,7 @@ class _HomeContent extends HookConsumerWidget {
                           filterQuality: FilterQuality.low,
                         ),
                       ),
+                      SizedBox(height: 20.h),
                     ],
                   ),
                 ),

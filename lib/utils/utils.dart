@@ -33,6 +33,15 @@ class Utils {
     return DateTime.tryParse(expiryValue);
   }
 
+  static Future<DateTime?> getRefreshTokenExpiry() async {
+    const FlutterSecureStorage secureStorage = FlutterSecureStorage();
+    final expiryValue = await secureStorage.read(key: 'refreshTokenExpiresAt');
+    if (expiryValue == null) {
+      return null;
+    }
+    return DateTime.tryParse(expiryValue);
+  }
+
   static Future<bool> checkAuthentication() async {
     const FlutterSecureStorage secureStorage = FlutterSecureStorage();
     final accessToken = await secureStorage.read(key: 'accessToken');

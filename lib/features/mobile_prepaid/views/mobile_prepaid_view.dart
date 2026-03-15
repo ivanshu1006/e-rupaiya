@@ -73,6 +73,7 @@ class MobilePrepaidView extends HookConsumerWidget {
     final contactsController =
         ref.read(contactsCacheControllerProvider.notifier);
     final filteredContacts = useState<List<Contact>>([]);
+    final visibleContactCount = useState(100);
     final contactQuery = useState('');
     final contactSearchController = useTextEditingController();
     final isMounted = useIsMounted();
@@ -166,6 +167,7 @@ class MobilePrepaidView extends HookConsumerWidget {
           if (i >= 0 && i < contactsState.contacts.length)
             contactsState.contacts[i],
       ];
+      visibleContactCount.value = 100;
     }
 
     useEffect(() {
@@ -299,10 +301,22 @@ class MobilePrepaidView extends HookConsumerWidget {
                         : _ContactsSection(
                             isLoading: contactsState.isLoading,
                             contacts: filteredContacts.value,
+                            visibleCount: visibleContactCount.value,
                             contactSearchController: contactSearchController,
                             onQueryChange: (value) =>
                                 contactQuery.value = value,
                             onReload: loadContacts,
+                            onLoadMore: () {
+                              if (visibleContactCount.value >=
+                                  filteredContacts.value.length) {
+                                return;
+                              }
+                              visibleContactCount.value =
+                                  (visibleContactCount.value + 100).clamp(
+                                0,
+                                filteredContacts.value.length,
+                              );
+                            },
                             onSelect: (mobile) {
                               controller.fetchOperatorAndPlans(
                                 _normalizeMobile(mobile),
@@ -325,9 +339,11 @@ class _ContactsSection extends StatelessWidget {
   const _ContactsSection({
     required this.isLoading,
     required this.contacts,
+    required this.visibleCount,
     required this.contactSearchController,
     required this.onQueryChange,
     required this.onReload,
+    required this.onLoadMore,
     required this.onSelect,
     required this.manualMobileController,
     required this.onManualSubmit,
@@ -335,18 +351,28 @@ class _ContactsSection extends StatelessWidget {
 
   final bool isLoading;
   final List<Contact> contacts;
+  final int visibleCount;
   final TextEditingController contactSearchController;
   final ValueChanged<String> onQueryChange;
   final VoidCallback onReload;
+  final VoidCallback onLoadMore;
   final ValueChanged<String> onSelect;
   final TextEditingController manualMobileController;
   final VoidCallback onManualSubmit;
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      children: [
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification.metrics.pixels >=
+            notification.metrics.maxScrollExtent - 200) {
+          onLoadMore();
+        }
+        return false;
+      },
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
         Text(
           'Enter Mobile Number',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -461,9 +487,26 @@ class _ContactsSection extends StatelessWidget {
               ),
             ),
           )
-        else
-          _ContactsList(contacts: contacts, onSelect: onSelect),
+        else ...[
+          _ContactsList(
+            contacts: contacts,
+            visibleCount: visibleCount,
+            onSelect: onSelect,
+          ),
+          if (contacts.length > visibleCount) ...[
+            const SizedBox(height: 10),
+            Center(
+              child: Text(
+                'Scroll to load more',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textPrimary.withOpacity(0.6),
+                    ),
+              ),
+            ),
+          ],
+        ],
       ],
+      ),
     );
   }
 }
@@ -1372,20 +1415,28 @@ class _PermissionEmptyState extends StatelessWidget {
 }
 
 class _ContactsList extends StatelessWidget {
-  const _ContactsList({required this.contacts, required this.onSelect});
+  const _ContactsList({
+    required this.contacts,
+    required this.visibleCount,
+    required this.onSelect,
+  });
 
   final List<Contact> contacts;
+  final int visibleCount;
   final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
+    final displayContacts = contacts.length > visibleCount
+        ? contacts.take(visibleCount).toList()
+        : contacts;
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: contacts.length,
+      itemCount: displayContacts.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
-        final contact = contacts[index];
+        final contact = displayContacts[index];
         final phone =
             contact.phones.isNotEmpty ? contact.phones.first.number : '';
         final initials = contact.displayName.isNotEmpty

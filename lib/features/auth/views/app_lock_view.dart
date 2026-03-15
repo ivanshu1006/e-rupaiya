@@ -138,7 +138,7 @@ class AppLockView extends HookConsumerWidget {
         return;
       }
       isUnlocking.value = true;
-      final success = await ref.read(authControllerProvider.notifier).login(
+      final success = await ref.read(authControllerProvider.notifier).pinLock(
             mobile: phone,
             pin: pin,
           );
@@ -256,15 +256,24 @@ class AppLockView extends HookConsumerWidget {
       onWillPop: () async => false,
       child: Scaffold(
         backgroundColor: Colors.white,
+        resizeToAvoidBottomInset: !showForgotPin.value,
         body: SafeArea(
           child: isLoading.value
               ? const Center(child: CircularProgressIndicator())
               : Padding(
                   padding:
                       EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
+                  child: AnimatedPadding(
+                    duration: const Duration(milliseconds: 150),
+                    curve: Curves.easeOut,
+                    padding: EdgeInsets.only(
+                      bottom: showForgotPin.value
+                          ? MediaQuery.of(context).viewInsets.bottom
+                          : 0,
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
                         SizedBox(height: 16.h),
                         CircleAvatar(
                           radius: 38.r,
@@ -482,7 +491,8 @@ class AppLockView extends HookConsumerWidget {
                           ),
                         ],
                         SizedBox(height: 12.h),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

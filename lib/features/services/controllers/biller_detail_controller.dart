@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../services/logger_service.dart';
 import '../models/bill_pay_response_model.dart';
 import '../models/biller_detail_state.dart';
+import '../models/biller_detail_model.dart';
 import '../models/biller_model.dart';
 import '../repositories/biller_repository.dart';
 
@@ -130,6 +131,8 @@ class BillerDetailController extends StateNotifier<BillerDetailState> {
       final response = await _repository.payBill(
         billerId: biller.billerId,
         customerParams: customerParams,
+        maskedIdentifier:
+            _resolveMaskedIdentifier(detail.customerParams, customerParams),
         amount: amount.toStringAsFixed(2),
         refId: refIdOverride ?? bill.refId,
         paymentModes: detail.paymentModes
@@ -159,6 +162,18 @@ class BillerDetailController extends StateNotifier<BillerDetailState> {
       );
       return false;
     }
+  }
+
+  String _resolveMaskedIdentifier(
+    List<BillerCustomerParam> params,
+    Map<String, String> input,
+  ) {
+    for (final param in params) {
+      if (!param.visibility || param.optional) continue;
+      final value = input[param.paramName]?.trim() ?? '';
+      if (value.isNotEmpty) return value;
+    }
+    return '';
   }
 
   void toggleFullDetails() {

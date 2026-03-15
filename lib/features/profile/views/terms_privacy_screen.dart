@@ -72,7 +72,7 @@ class _TermsHeader extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Text(
-            'Terms & Privacy Policy',
+            'Legal & Policy Document',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: Colors.black,
                   fontWeight: FontWeight.w700,
@@ -92,137 +92,170 @@ class _TermsBody extends StatelessWidget {
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _MetaText('Effective Date: 05-10-2025'),
-        SizedBox(height: 10),
+        _SectionTitle('E-Rupaiya – Complete Legal & Policy Document'),
+        SizedBox(height: 8),
+        _MetaText('Effective Date: [Insert Date]'),
+        SizedBox(height: 8),
+        _MetaText('Company: INNNOPLIX IT PVT LTD'),
+        _MetaText('Brand: E-Rupaiya'),
+        SizedBox(height: 8),
+        _MetaText('Address:'),
         _Paragraph(
-          "Welcome To E-Rupaiya, A Buy & Bill Our Application "
-          "And Services. You Agree To Comply With And Be Bound By "
-          "The Following Terms And Conditions. Please Read Them Carefully.",
+          'Office No 2, 2nd Floor, Mahesh Plaza,\n'
+          'Bengaluru – Mumbai Highway, Above KTM Showroom,\n'
+          'Near Lodha Hospital, Popular Nagar, Giridhar Nagar, Warje,\n'
+          'Pune, Maharashtra 411058, India',
         ),
+        SizedBox(height: 8),
+        _MetaText('Email: support@erupaiya.com'),
+        _MetaText('Phone: +91-XXXXXXXXXX'),
         SizedBox(height: 16),
-        _SectionTitle('1. Acceptance Of Terms'),
+        _SectionTitle('1. Terms & Conditions'),
         SizedBox(height: 8),
         _Paragraph(
-          "By Accessing Or Using The E-Rupaiya App, You Agree To "
-          "Be Bound By These Terms & Conditions And Any Additional "
-          "Terms Referenced Herein. If You Do Not Agree, Please Do "
-          "Not Use Our Services.",
+          'Acceptance of Terms: By using E-Rupaiya, you agree to comply with '
+          'these Terms & Conditions.',
+        ),
+        _Paragraph(
+          'User Eligibility: Only users 18 years or older can use the Services.',
+        ),
+        _Paragraph(
+          'Account Registration: You must provide a valid mobile number and OTP '
+          'to create an account.',
+        ),
+        _Paragraph('User Responsibilities:'),
+        _Bullet('Keep account credentials secure'),
+        _Bullet('Ensure all payment information is accurate'),
+        _Bullet('Do not misuse the Services'),
+        _Paragraph(
+          'Payment & Transactions: All transactions are final unless otherwise stated. '
+          'Refunds will follow our Refund Policy.',
+        ),
+        _Paragraph(
+          'Service Availability: We may suspend services for maintenance or upgrades.',
+        ),
+        _Paragraph(
+          'Limitation of Liability: INNNOPLIX IT is not liable for indirect losses '
+          'arising from the use of the app.',
+        ),
+        _Paragraph('Governing Law: These Terms are governed by Indian law.'),
+        SizedBox(height: 14),
+        _SectionTitle('2. Privacy Policy'),
+        SizedBox(height: 8),
+        _Paragraph(
+          'Please refer to the full Privacy Policy as drafted earlier (covers '
+          'registration, profile, transaction, device permissions, third-party '
+          'sharing, data security, retention, user rights, and children’s privacy).',
         ),
         SizedBox(height: 14),
-        _SectionTitle('2. Eligibility'),
+        _SectionTitle('3. Refund Policy'),
         SizedBox(height: 8),
         _Paragraph(
-          "You Must Be At Least 18 Years Old To Use This App. "
-          "By Registering, You Confirm That You Meet This Age "
-          "Requirement And Have The Legal Capacity To Enter "
-          "Into A Binding Agreement.",
+          'Transaction Failure: If a payment fails but the amount is deducted, we '
+          'will process a refund automatically within 5–7 business days.',
+        ),
+        _Paragraph(
+          'Refund Eligibility: Refunds are applicable only for failed or duplicate '
+          'transactions initiated via the app.',
+        ),
+        _Paragraph('Non-Refundable Transactions:'),
+        _Bullet('Successful payments'),
+        _Bullet('Payments outside the app'),
+        _Paragraph(
+          'Refund Method: Refunds are credited to the original payment method used.',
         ),
         SizedBox(height: 14),
-        _SectionTitle('3. Account Registration'),
+        _SectionTitle('4. Cookie Policy'),
         SizedBox(height: 8),
         _Paragraph(
-            "Users Must Provide Accurate And Complete Information While Creating An Account."),
-        SizedBox(height: 8),
-        _Bullet(
-            'You Are Responsible For Maintaining The Confidentiality Of Your Account Credentials.'),
-        _Bullet(
-            'You Agree To Notify Us Immediately Of Any Unauthorized Use Of Your Account.'),
-        SizedBox(height: 14),
-        _SectionTitle('4. Services Provided'),
-        SizedBox(height: 8),
-        _Paragraph("E-Rupaiya Allows Users To:"),
-        SizedBox(height: 8),
-        _Bullet(
-            'Pay Utility Bills, Recharge Mobile Numbers, And Other Bill Payment Services.'),
-        _Bullet('Link Bank Accounts Or UPI IDs For Transactions.'),
-        _Bullet('Track Payment History And Receive Notifications.'),
-        SizedBox(height: 8),
+          'We may use cookies or similar technology to improve user experience '
+          'and app performance.',
+        ),
         _Paragraph(
-          "All Services Are Provided In Accordance With Applicable "
-          "Laws And Regulations.",
+          'Cookies may be used for analytics, security, and personalized notifications.',
+        ),
+        _Paragraph(
+          'Users can manage or disable cookies in device settings.',
         ),
         SizedBox(height: 14),
-        _SectionTitle('5. Transactions & Payments'),
-        SizedBox(height: 8),
-        _Bullet(
-          "Transactions Are Subject To Verification And May Require "
-          "KYC/Know Your Customer Compliance.",
-        ),
-        _Bullet(
-          "E-Rupaiya Is Not Responsible For Errors Caused By Incorrect "
-          "Payment Information Provided By Users.",
-        ),
-        _Bullet("All Payments Are Final Unless Otherwise Stated."),
-        SizedBox(height: 14),
-        _SectionTitle('6. Privacy & Data Security'),
+        _SectionTitle('5. KYC / AML Policy'),
         SizedBox(height: 8),
         _Paragraph(
-          "We Respect Your Privacy And Handle Your Data In "
-          "Accordance With Our Privacy Policy.",
+          'E-Rupaiya may require users to complete KYC verification for certain '
+          'transaction limits.',
         ),
         _Paragraph(
-          "Users Consent To The Collection, Use, And Storage Of "
-          "Personal Data For The Purpose Of Providing Services.",
+          'We comply with Indian KYC and Anti-Money Laundering (AML) regulations.',
+        ),
+        _Paragraph(
+          'Required information may include identity documents and bank account '
+          'verification.',
         ),
         SizedBox(height: 14),
-        _SectionTitle('7. User Responsibilities'),
+        _SectionTitle('6. Security Policy'),
         SizedBox(height: 8),
-        _Bullet(
-            "You Agree Not To Misuse The App Or Engage In Fraudulent Or Illegal Activities."),
-        _Bullet(
-          "Users Must Ensure Their Devices And Internet Connections "
-          "Are Secure While Using The App.",
+        _Paragraph(
+          'All transactions are processed securely using encrypted communication.',
+        ),
+        _Paragraph(
+          'User data is stored securely on protected servers.',
+        ),
+        _Paragraph(
+          'Access to sensitive information is restricted to authorized personnel.',
+        ),
+        _Paragraph(
+          'Users should keep login credentials confidential.',
         ),
         SizedBox(height: 14),
-        _SectionTitle('8. Limitation Of Liability'),
+        _SectionTitle('7. Charges / Fees Policy'),
         SizedBox(height: 8),
         _Paragraph(
-          "E-Rupaiya Will Not Be Liable For Any Indirect, "
-          "Incidental, Or Consequential Damages Arising From "
-          "The Use Of The App.",
+          'The app may levy nominal service fees for certain transactions.',
         ),
         _Paragraph(
-          "We Strive To Ensure Uninterrupted And Secure Services "
-          "But Cannot Guarantee 100% Availability.",
-        ),
-        SizedBox(height: 14),
-        _SectionTitle('9. Intellectual Property'),
-        SizedBox(height: 8),
-        _Paragraph(
-          "All Content, Logos, Graphics, And Software Used In "
-          "E-Rupaiya Are Owned By Or Licensed To The App And "
-          "Are Protected By Intellectual Property Laws.",
+          'Fees, if any, will be displayed before the user confirms a transaction.',
         ),
         _Paragraph(
-          "Users May Not Reproduce, Distribute, Or Modify Any "
-          "Content Without Prior Written Consent.",
+          'Charges are non-refundable unless a transaction fails.',
         ),
         SizedBox(height: 14),
-        _SectionTitle('10. Modifications To Terms'),
+        _SectionTitle('8. Grievance Redressal Policy'),
         SizedBox(height: 8),
         _Paragraph(
-          "We Reserve The Right To Modify These Terms & "
-          "Conditions At Any Time. Updates Will Be Posted "
-          "On The App, And Continued Use Constitutes "
-          "Acceptance Of The Changes.",
+          'Users can submit complaints via support@erupaiya.com.',
+        ),
+        _Paragraph(
+          'Complaints will be acknowledged within 24 hours and resolved within 48–72 hours.',
+        ),
+        _Paragraph(
+          'Grievance Officer Contact: [Name], Email: grievance@erupaiya.com',
         ),
         SizedBox(height: 14),
-        _SectionTitle('11. Governing Law'),
+        _SectionTitle('9. Disclaimer Policy'),
         SizedBox(height: 8),
         _Paragraph(
-          "These Terms And Conditions Are Governed By The "
-          "Laws Of India. Any Disputes Will Be Subject To "
-          "The Exclusive Jurisdiction Of The Courts In "
-          "[City/State].",
+          'E-Rupaiya acts as a payment facilitator for bill payments and recharges.',
+        ),
+        _Paragraph(
+          'We are not responsible for delays, errors, or service failures caused '
+          'by banks, telecom operators, or utility providers.',
+        ),
+        _Paragraph(
+          'All transactions are subject to the terms of the service provider.',
         ),
         SizedBox(height: 14),
-        _SectionTitle('12. Contact Us'),
+        _SectionTitle('10. Referral & Rewards Policy'),
         SizedBox(height: 8),
         _Paragraph(
-            "For Any Questions Or Concerns Regarding These Terms, Please Contact Us At:"),
-        SizedBox(height: 8),
-        _MetaText('Email: (support@e-rupaiya.com)'),
-        _MetaText('Phone: (+91-123-456-7890)'),
+          'Users may participate in referral programs at the discretion of INNNOPLIX IT.',
+        ),
+        _Paragraph(
+          'Referral rewards are credited only if the referred user successfully '
+          'completes a valid registration and transaction.',
+        ),
+        _Paragraph(
+          'Rewards are non-transferable and subject to expiry as notified in-app.',
+        ),
       ],
     );
   }

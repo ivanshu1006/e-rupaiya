@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../constants/app_colors.dart';
-
 class HomeSectionHeader extends StatelessWidget {
   const HomeSectionHeader({
     super.key,
@@ -26,8 +24,8 @@ class HomeSectionHeader extends StatelessWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
                 ),
           ),
           if (actionLabel != null) ...[

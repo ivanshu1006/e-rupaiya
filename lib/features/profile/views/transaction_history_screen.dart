@@ -830,12 +830,12 @@ class _TransactionTile extends StatelessWidget {
           color: AppColors.textPrimary.withOpacity(0.7),
           fontWeight: FontWeight.w500,
         );
+    final status = _resolveStatus(item.paymentStatus);
+    final amountColor = _amountColor(status);
     final amountStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
-          color: AppColors.textPrimary,
+          color: amountColor,
           fontWeight: FontWeight.w700,
         );
-
-    final status = _resolveStatus(item.paymentStatus);
 
     return InkWell(
       onTap: onTap,
@@ -892,7 +892,11 @@ class _TransactionTile extends StatelessWidget {
               children: [
                 Text(displayAmount, style: amountStyle),
                 SizedBox(height: 4.h),
-                _StatusChip(status: status),
+                _StatusChip(
+                  status: status,
+                  methodIcon: item.methodIcon,
+                  method: item.method,
+                ),
               ],
             ),
           ],
@@ -903,14 +907,22 @@ class _TransactionTile extends StatelessWidget {
 }
 
 class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status});
+  const _StatusChip({
+    required this.status,
+    required this.methodIcon,
+    required this.method,
+  });
 
   final _TxnStatus status;
+  final String methodIcon;
+  final String method;
 
   @override
   Widget build(BuildContext context) {
     switch (status) {
       case _TxnStatus.success:
+        final iconUrl = methodIcon.trim();
+        final mode = method.trim();
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -921,13 +933,25 @@ class _StatusChip extends StatelessWidget {
                     fontWeight: FontWeight.w600,
                   ),
             ),
-            SizedBox(width: 6.w),
-            Image.asset(
-              FileConstants.upi,
-              width: 16.w,
-              height: 16.w,
-              fit: BoxFit.contain,
-            ),
+            if (iconUrl.isNotEmpty) ...[
+              SizedBox(width: 6.w),
+              AppNetworkImage(
+                url: iconUrl,
+                width: 16.w,
+                height: 16.w,
+                fit: BoxFit.contain,
+                showShimmer: false,
+              ),
+            ] else if (mode.isNotEmpty) ...[
+              SizedBox(width: 6.w),
+              Text(
+                mode,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
           ],
         );
       case _TxnStatus.failed:
@@ -954,7 +978,7 @@ class _StatusChip extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Processing',
+              'Pending',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.orange,
                     fontWeight: FontWeight.w700,
@@ -1005,11 +1029,21 @@ _TxnStatus _resolveStatus(String raw) {
   return _TxnStatus.success;
 }
 
+Color _amountColor(_TxnStatus status) {
+  switch (status) {
+    case _TxnStatus.failed:
+      return Colors.red;
+    case _TxnStatus.processing:
+      return Colors.orange;
+    case _TxnStatus.success:
+      return Colors.green;
+  }
+}
+
 String _formatTxnTime(String raw) {
   final value = raw.trim();
   if (value.isEmpty) return '';
-  final normalized = value.contains(' ') ? value.replaceFirst(' ', 'T') : value;
-  final parsed = DateTime.tryParse(normalized);
+  final parsed = _parseTxnDate(value);
   if (parsed == null) return value;
   const months = [
     'January',
@@ -1030,7 +1064,7 @@ String _formatTxnTime(String raw) {
   final hour = parsed.hour % 12 == 0 ? 12 : parsed.hour % 12;
   final minute = parsed.minute.toString().padLeft(2, '0');
   final ampm = parsed.hour >= 12 ? 'PM' : 'AM';
-  return '$day $month, $hour:$minute$ampm';
+  return '$day $month ${parsed.year}, $hour:$minute$ampm';
 }
 
 class _TxnSection {
@@ -1053,8 +1087,7 @@ List<_TxnSection> _buildSections(List<TransactionHistoryEntry> items) {
 
 String _monthKey(String raw) {
   final value = raw.trim();
-  final normalized = value.contains(' ') ? value.replaceFirst(' ', 'T') : value;
-  final parsed = DateTime.tryParse(normalized);
+  final parsed = _parseTxnDate(value);
   if (parsed == null) return 'Transactions';
   const months = [
     'January',
@@ -1071,6 +1104,57 @@ String _monthKey(String raw) {
     'December',
   ];
   return '${months[parsed.month - 1]},${parsed.year}';
+}
+
+DateTime? _parseTxnDate(String raw) {
+  final normalized = raw.trim();
+  if (normalized.isEmpty) return null;
+  final direct = DateTime.tryParse(
+    normalized.contains(' ') ? normalized.replaceFirst(' ', 'T') : normalized,
+  );
+  if (direct != null) return direct;
+
+  final match = RegExp(
+    r'(\d{1,2})\s+([A-Za-z]{3,})(?:\s+(\d{4}))?,\s*(\d{1,2}):(\d{2})(am|pm|AM|PM)',
+  ).firstMatch(normalized);
+  if (match == null) return null;
+
+  final day = int.parse(match.group(1)!);
+  final monthRaw = match.group(2)!.toLowerCase();
+  final year =
+      match.group(3) != null ? int.parse(match.group(3)!) : DateTime.now().year;
+  var hour = int.parse(match.group(4)!);
+  final minute = int.parse(match.group(5)!);
+  final ampm = match.group(6)!.toLowerCase();
+
+  if (ampm == 'pm' && hour < 12) hour += 12;
+  if (ampm == 'am' && hour == 12) hour = 0;
+
+  const months = [
+    'january',
+    'february',
+    'march',
+    'april',
+    'may',
+    'june',
+    'july',
+    'august',
+    'september',
+    'october',
+    'november',
+    'december',
+  ];
+  var monthIndex = months.indexWhere(
+    (name) => name.startsWith(monthRaw),
+  );
+  if (monthIndex == -1) {
+    monthIndex = months.indexWhere(
+      (name) => monthRaw.startsWith(name.substring(0, 3)),
+    );
+  }
+  if (monthIndex == -1) return null;
+
+  return DateTime(year, monthIndex + 1, day, hour, minute);
 }
 
 class _FilterFab extends StatelessWidget {
