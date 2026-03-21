@@ -16,68 +16,10 @@ class FaqScreen extends StatefulWidget {
 }
 
 class _FaqScreenState extends State<FaqScreen> {
-  static const List<Map<String, dynamic>> _mockFaqs = [
-    {
-      'id': 'services',
-      'question': 'What services can I pay using e-Rupaiya?',
-      'answer': 'You Can Pay Your Utility Bills, Mobile Recharge, DTH, Broadband, '
-          'Electricity, Water, Gas, And More Directly Through The E-Rupaiya App. '
-          'The App Provides A Fast, Secure, And Convenient Way To Manage All '
-          'Your Payments In One Place.',
-    },
-    {
-      'id': 'safe',
-      'question': 'Is e-Rupaiya safe to use for payments?',
-      'answer':
-          'Yes. Transactions Are Encrypted And Protected By Multiple Layers '
-              'Of Security. We Follow Industry Standards To Keep Your Data Safe.',
-    },
-    {
-      'id': 'bank',
-      'question': 'Do I need a bank account to use e-Rupaiya?',
-      'answer':
-          'You Can Use UPI Or Linked Bank Accounts For Payments. A Bank Account '
-              'Is Recommended For Full Access To Services.',
-    },
-    {
-      'id': 'rewards',
-      'question': 'How do I get rewards or cashback?',
-      'answer':
-          'Rewards Are Applied Based On Eligible Transactions And Offers. '
-              'Check The Offers Section For Current Promotions.',
-    },
-    {
-      'id': 'fails',
-      'question': 'What should I do if my payment fails?',
-      'answer':
-          'If A Payment Fails, Please Wait A Few Minutes And Check Your Status. '
-              'If The Issue Persists, Contact Support With The Transaction ID.',
-    },
-  ];
-
-  final TextEditingController _searchController = TextEditingController();
-  String _query = '';
-  int? _expandedIndex = 0;
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
+  int _expandedIndex = 0;
 
   @override
   Widget build(BuildContext context) {
-    final faqs = FaqItem.fromJsonList(_mockFaqs);
-    final filtered = _query.trim().isEmpty
-        ? faqs
-        : faqs
-            .where(
-              (item) => item.question.toLowerCase().contains(
-                    _query.trim().toLowerCase(),
-                  ),
-            )
-            .toList();
-
     return Scaffold(
       backgroundColor: const Color(0xFFFFF7F3),
       body: Stack(
@@ -103,33 +45,35 @@ class _FaqScreenState extends State<FaqScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _FaqSearchField(
-                          controller: _searchController,
-                          onChanged: (value) {
-                            setState(() {
-                              _query = value;
-                              _expandedIndex = null;
-                            });
-                          },
+                        Text(
+                          'Customer Help',
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                         ),
                         SizedBox(height: 12.h),
-                        ...List.generate(filtered.length, (index) {
-                          final item = filtered[index];
-                          final isExpanded = _expandedIndex == index;
-                          return Padding(
-                            padding: EdgeInsets.only(bottom: 12.h),
-                            child: _FaqCard(
-                              question: item.question,
-                              answer: item.answer,
-                              isExpanded: isExpanded,
-                              onTap: () {
-                                setState(() {
-                                  _expandedIndex = isExpanded ? null : index;
-                                });
-                              },
-                            ),
-                          );
-                        }),
+                        ..._paymentsFaqs.asMap().entries.map(
+                          (entry) {
+                            final idx = entry.key;
+                            final item = entry.value;
+                            return Padding(
+                              padding: EdgeInsets.only(bottom: 12.h),
+                              child: _FaqCard(
+                                question: '${idx + 1}. ${item.question}',
+                                answer: item.answer,
+                                isExpanded: _expandedIndex == idx,
+                                onTap: () {
+                                  setState(() {
+                                    _expandedIndex =
+                                        _expandedIndex == idx ? -1 : idx;
+                                  });
+                                },
+                              ),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -158,75 +102,11 @@ class _FaqHeader extends StatelessWidget {
           ),
           SizedBox(width: 4.w),
           Text(
-            'Faq',
+            'FAQs',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: Colors.black,
                   fontWeight: FontWeight.w700,
                 ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FaqSearchField extends StatelessWidget {
-  const _FaqSearchField({
-    required this.controller,
-    required this.onChanged,
-  });
-
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14.r),
-        boxShadow: const [
-          BoxShadow(
-            color: AppColors.cardShadow,
-            blurRadius: 12,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              onChanged: onChanged,
-              decoration: InputDecoration(
-                hintText: 'Search Service',
-                hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textPrimary.withOpacity(0.55),
-                    ),
-                border: InputBorder.none,
-              ),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textPrimary,
-                  ),
-            ),
-          ),
-          Container(
-            width: 28.w,
-            height: 28.w,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.primary.withOpacity(0.7),
-                width: 1.5,
-              ),
-            ),
-            child: Icon(
-              Icons.search,
-              size: 14.sp,
-              color: AppColors.primary,
-            ),
           ),
         ],
       ),
@@ -305,3 +185,112 @@ class _FaqCard extends StatelessWidget {
     );
   }
 }
+
+final List<FaqItem> _paymentsFaqs = FaqItem.fromJsonList([
+  {
+    'id': 'q1',
+    'question': 'What is Erupaiya?',
+    'answer':
+        'Erupaiya is a digital payment platform that allows users to make BBPS bill payments, mobile recharges, credit card bill payments, and other utility payments quickly and securely from one mobile application.',
+  },
+  {
+    'id': 'q2',
+    'question': 'What services can I use on Erupaiya?',
+    'answer':
+        'Users can access services such as: Electricity Bill Payment, Mobile Recharge (Prepaid), Postpaid Mobile Bill Payment, Credit Card Bill Payment, DTH Recharge, Utility Bill Payments, Other BBPS supported services.',
+  },
+  {
+    'id': 'q3',
+    'question': 'What is BBPS?',
+    'answer':
+        'BBPS (Bharat Bill Payment System) is an integrated bill payment system managed by the National Payments Corporation of India that enables customers to pay multiple types of bills through a single platform.',
+  },
+  {
+    'id': 'q4',
+    'question': 'How do I register on Erupaiya?',
+    'answer': 'You can register using your mobile number and OTP verification.',
+  },
+  {
+    'id': 'q5',
+    'question': 'What is the referral program?',
+    'answer':
+        'Erupaiya offers a lifetime referral earning program where users can invite friends and earn rewards when they use the app services.',
+  },
+  {
+    'id': 'q6',
+    'question': 'How does the lifetime referral program work?',
+    'answer':
+        'Share your referral code/link, your friend registers using your code, and when they use services, you receive reward E-coins.',
+  },
+  {
+    'id': 'q7',
+    'question': 'What are E-coins?',
+    'answer':
+        'E-coins are reward points earned through the referral program, promotions and cashback, and campaign rewards. These coins can later be withdrawn or used for payments after KYC verification.',
+  },
+  {
+    'id': 'q8',
+    'question': 'Can E-coins be converted into money?',
+    'answer':
+        'Yes. Once KYC is completed and bank details are added, E-coins can be withdrawn to your bank account.',
+  },
+  {
+    'id': 'q9',
+    'question': 'Can I use E-coins without KYC?',
+    'answer':
+        'No. KYC verification and bank account addition are mandatory before E-coins can be used or withdrawn.',
+  },
+  {
+    'id': 'q10',
+    'question': 'How do I complete KYC?',
+    'answer':
+        'You may be required to submit documents such as PAN Card, Aadhaar Card, and bank account details. Verification may take some time based on compliance checks.',
+  },
+  {
+    'id': 'q11',
+    'question': 'How long does it take to withdraw E-coins?',
+    'answer':
+        'Withdrawal requests are usually processed within 3–7 working days.',
+  },
+  {
+    'id': 'q12',
+    'question': 'What happens if my recharge fails but money is deducted?',
+    'answer':
+        'If the service fails and money is deducted, the amount will either be automatically reversed, or processed as a refund within 7 working days.',
+  },
+  {
+    'id': 'q13',
+    'question': 'Can I cancel a successful recharge or bill payment?',
+    'answer':
+        'No. Once a recharge or bill payment is successfully processed, it cannot be cancelled or refunded.',
+  },
+  {
+    'id': 'q14',
+    'question': 'What is the refund policy?',
+    'answer':
+        'Refunds are only applicable if payment is deducted and service is not delivered. Successful services are non-refundable.',
+  },
+  {
+    'id': 'q15',
+    'question': 'How long does a refund take?',
+    'answer': 'Refunds are processed within 7 working days after verification.',
+  },
+  {
+    'id': 'q16',
+    'question': 'What payment methods are accepted?',
+    'answer':
+        'Users can pay using UPI, Debit Cards, Credit Cards, Net Banking, and Wallets (if supported).',
+  },
+  {
+    'id': 'q17',
+    'question': 'Is my data safe on Erupaiya?',
+    'answer':
+        'Yes. We implement security measures to protect your personal information and transaction details.',
+  },
+  {
+    'id': 'q18',
+    'question': 'How can I contact support?',
+    'answer':
+        'For any queries or issues, please contact: Email: support@erupaiya.com',
+  },
+]);

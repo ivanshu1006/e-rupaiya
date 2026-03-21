@@ -45,7 +45,8 @@ class ProfileField extends StatelessWidget {
               maxLines: maxLines,
               decoration: InputDecoration(
                 filled: true,
-                fillColor: Colors.white,
+                fillColor:
+                    enabled ? Colors.white : AppColors.lightBorder.withOpacity(0.3),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 border: OutlineInputBorder(
@@ -66,7 +67,9 @@ class ProfileField extends StatelessWidget {
                 ),
               ),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textPrimary,
+                    color: enabled
+                        ? AppColors.textPrimary
+                        : AppColors.textPrimary.withOpacity(0.5),
                     fontWeight: FontWeight.w600,
                   ),
             ),

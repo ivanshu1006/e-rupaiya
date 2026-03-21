@@ -173,29 +173,33 @@ class _PlanInfoRow extends StatelessWidget {
     final hasData = dataValue.isNotEmpty;
     final hasBenefitImages = plan.benefitImages.isNotEmpty;
 
-    return Row(
-      children: [
-        if (hasValidity)
-          _PlanInfoColumn(
-            label: 'Validity',
-            value: plan.validity,
-          ),
-        if (hasValidity && hasData)
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12.w),
-            child: SizedBox(
-              height: 32.h,
-              child: const VerticalDivider(width: 1),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Row(
+          children: [
+            Expanded(
+              child: Wrap(
+                spacing: 16.w,
+                runSpacing: 6.h,
+                children: [
+                  if (hasValidity)
+                    _PlanInfoColumn(
+                      label: 'Validity',
+                      value: plan.validity,
+                    ),
+                  if (hasData)
+                    _PlanInfoColumn(
+                      label: 'Data',
+                      value: dataValue,
+                    ),
+                ],
+              ),
             ),
-          ),
-        if (hasData)
-          _PlanInfoColumn(
-            label: 'Data',
-            value: dataValue,
-          ),
-        if ((hasValidity || hasData) && hasBenefitImages) const Spacer(),
-        if (hasBenefitImages) _PlanBenefitImages(images: plan.benefitImages),
-      ],
+            if (hasBenefitImages)
+              _PlanBenefitImages(images: plan.benefitImages),
+          ],
+        );
+      },
     );
   }
 
@@ -321,7 +325,7 @@ class _PlanPayNowButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomElevatedButton(
-      height: 35.h,
+      height: 38.h,
       width: double.infinity,
       onPressed: onTap,
       label: 'Pay Now',

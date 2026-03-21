@@ -246,8 +246,8 @@ class DioInterceptors extends InterceptorsWrapper {
       );
     } else if (err.type == DioExceptionType.badResponse) {
       final data = err.response?.data;
-      final apiMessage =
-          (data is Map ? data['message'] as String? : null) ?? 'Bad Response';
+      final apiMessage = (data is Map ? data['message'] as String? : null) ??
+          'Something went wrong';
       AppSnackbar.show(
         apiMessage,
         textColor: Colors.white,

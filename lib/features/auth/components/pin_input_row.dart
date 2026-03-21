@@ -21,37 +21,48 @@ class PinInputRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final children = <Widget>[];
-    for (var i = 0; i < controllers.length; i++) {
-      children.add(
-        _PinDigitField(
-          controller: controllers[i],
-          focusNode: focusNodes[i],
-          enabled: enabled,
-          onChanged: (value) {
-            if (value.isEmpty && i > 0) {
-              focusNodes[i - 1].requestFocus();
-            } else if (value.isNotEmpty && i < focusNodes.length - 1) {
-              focusNodes[i + 1].requestFocus();
-            }
-            final pin = controllers.map((c) => c.text).join();
-            onPinChanged?.call(pin);
-            final isComplete =
-                controllers.every((c) => c.text.trim().isNotEmpty);
-            if (isComplete) {
-              onPinCompleted?.call(pin);
-            }
-          },
-        ),
-      );
-      if (i != controllers.length - 1) {
-        children.add(SizedBox(width: 10.w));
-      }
-    }
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: children,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final spacing = 8.w;
+        final maxWidth = constraints.maxWidth;
+        final totalSpacing = spacing * (controllers.length - 1);
+        final boxSize =
+            ((maxWidth - totalSpacing) / controllers.length).clamp(36.w, 56.w);
+        final children = <Widget>[];
+        for (var i = 0; i < controllers.length; i++) {
+          children.add(
+            _PinDigitField(
+              controller: controllers[i],
+              focusNode: focusNodes[i],
+              enabled: enabled,
+              width: boxSize,
+              height: boxSize,
+              onChanged: (value) {
+                if (value.isEmpty && i > 0) {
+                  focusNodes[i - 1].requestFocus();
+                } else if (value.isNotEmpty &&
+                    i < focusNodes.length - 1) {
+                  focusNodes[i + 1].requestFocus();
+                }
+                final pin = controllers.map((c) => c.text).join();
+                onPinChanged?.call(pin);
+                final isComplete =
+                    controllers.every((c) => c.text.trim().isNotEmpty);
+                if (isComplete) {
+                  onPinCompleted?.call(pin);
+                }
+              },
+            ),
+          );
+          if (i != controllers.length - 1) {
+            children.add(SizedBox(width: spacing));
+          }
+        }
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: children,
+        );
+      },
     );
   }
 }
@@ -62,18 +73,22 @@ class _PinDigitField extends StatelessWidget {
     required this.focusNode,
     required this.onChanged,
     this.enabled = true,
+    required this.width,
+    required this.height,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
   final ValueChanged<String> onChanged;
   final bool enabled;
+  final double width;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 60.w,
-      height: 56.h,
+      width: width,
+      height: height,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12.r),

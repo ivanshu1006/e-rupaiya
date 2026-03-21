@@ -46,8 +46,16 @@ class ApiConstants {
   static const String spinOptionsEndpoint = '$baseUrl/api/spin/options';
   static const String offersEndpoint = '$baseUrl/api/offers';
   static const String notificationsEndpoint = '$baseUrl/api/notifications';
+  static const String pushNotificationToggleEndpoint =
+      '$baseUrl/api/user/push-notification-enable-disable';
+  static const String sendDeleteAccountOtpEndpoint =
+      '$baseUrl/api/user/send-delete-account-otp';
+  static const String verifyDeleteAccountOtpEndpoint =
+      '$baseUrl/api/user/verify-delete-account-otp';
   static const String referralGenerateLinkEndpoint =
       '$baseUrl/api/referral/generate-link';
+  static const String referralRegisterEndpoint =
+      '$baseUrl/api/referral/register';
   static const String referralTrackEndpoint = '$baseUrl/api/referral/track';
   static const String referralWalletSummaryEndpoint =
       '$baseUrl/api/wallet/summary';
@@ -56,7 +64,10 @@ class ApiConstants {
   static const String withdrawEcoinsEndpoint =
       '$baseUrl/api/wallet/withdraw-ecoins';
   static const String bankVerifyEndpoint = '$baseUrl/api/bank/verify';
+  static const String bankListEndpoint = '$baseUrl/api/banks';
   static const String bankAddEndpoint = '$baseUrl/api/bank/add';
+  static const String bankEditEndpoint = '$baseUrl/api/bank/update';
+  static const String bankDeleteEndpoint = '$baseUrl/api/bank/delete';
   static const String bankAccountsEndpoint = '$baseUrl/api/bank/accounts';
   static const String kycPanVerifyEndpoint = '$baseUrl/api/kyc/pan/verify';
   static const String kycAadhaarSendOtpEndpoint =

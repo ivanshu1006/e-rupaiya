@@ -3,18 +3,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../constants/routes_constant.dart';
 import '../../../utils/utils.dart';
+import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/k_dialog.dart';
+import '../../profile/repositories/bank_accounts_repository.dart';
 import '../components/refer_and_earn_app_bar.dart';
 import '../repositories/bank_account_repository.dart';
 
 class AddBankAccountView extends HookWidget {
-  const AddBankAccountView({super.key});
+  const AddBankAccountView({
+    super.key,
+    this.existingAccount,
+    this.selectedBankName,
+    this.redirectToHomeOnSuccess = false,
+  });
+
+  final BankAccountEntry? existingAccount;
+  final String? selectedBankName;
+  final bool redirectToHomeOnSuccess;
 
   @override
   Widget build(BuildContext context) {
+    final isEdit = existingAccount != null;
     final step = useState(_BankStep.verify);
     final repository = useMemoized(() => BankAccountRepository());
 
@@ -24,29 +38,36 @@ class AddBankAccountView extends HookWidget {
     final branchController = useTextEditingController();
     final bankNameController = useTextEditingController();
 
-    final confirmChecked = useState(false);
+    final confirmChecked = useState(isEdit);
     final isVerifying = useState(false);
     final isSaving = useState(false);
-    final referenceId = useState('');
+    final referenceId = useState(existingAccount?.referenceId ?? '');
+
+    useEffect(() {
+      if (isEdit && existingAccount != null) {
+        accountController.text = existingAccount!.accountNumber;
+        ifscController.text = existingAccount!.ifsc ?? '';
+        nameController.text = existingAccount!.accountHolderName;
+        bankNameController.text = existingAccount!.bankName;
+        referenceId.value = existingAccount!.referenceId ?? '';
+        step.value = _BankStep.verify;
+      } else if (selectedBankName != null &&
+          selectedBankName!.trim().isNotEmpty) {
+        bankNameController.text = selectedBankName!.trim();
+      }
+      return null;
+    }, [existingAccount?.id, selectedBankName]);
 
     Future<void> handleVerify() async {
       final accountNo = accountController.text.trim();
       final ifsc = ifscController.text.trim();
       if (accountNo.isEmpty || ifsc.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please enter account number and IFSC code.'),
-          ),
-        );
+        AppSnackbar.show('Please enter account number and IFSC code.');
         return;
       }
       if (!confirmChecked.value) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Please confirm your bank account details before verifying.',
-            ),
-          ),
+        AppSnackbar.show(
+          'Please confirm your bank account details before verifying.',
         );
         return;
       }
@@ -55,6 +76,7 @@ class AddBankAccountView extends HookWidget {
         final response = await repository.verifyBank(
           accountNo: accountNo,
           ifsc: ifsc,
+          bankName: bankNameController.text.trim(),
         );
         if (!response.isSuccess) {
           final message = response.message.isEmpty
@@ -69,9 +91,7 @@ class AddBankAccountView extends HookWidget {
               ),
             );
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(message)),
-            );
+            AppSnackbar.show(message);
           }
           return;
         }
@@ -81,11 +101,7 @@ class AddBankAccountView extends HookWidget {
         referenceId.value = response.transactionReferenceNumber;
         step.value = _BankStep.confirm;
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to verify account. Please try again.'),
-          ),
-        );
+        AppSnackbar.show('Failed to verify account. Please try again.');
       } finally {
         isVerifying.value = false;
       }
@@ -97,50 +113,60 @@ class AddBankAccountView extends HookWidget {
       final accountHolderName = nameController.text.trim();
       final bankName = bankNameController.text.trim();
       if (accountNo.isEmpty || ifsc.isEmpty || accountHolderName.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please fill all required details.')),
-        );
+        AppSnackbar.show('Please fill all required details.');
         return;
       }
       try {
         isSaving.value = true;
-        final userId = await Utils.getUserId();
-        final response = await repository.addBank(
-          userId: (userId == null || userId.isEmpty) ? '1' : userId,
-          accountNo: accountNo,
-          ifsc: ifsc,
-          accountHolderName: accountHolderName,
-          bankName: bankName,
-          referenceId: referenceId.value,
-          branchName: branchController.text.trim(),
-        );
+        final response = isEdit && existingAccount?.id != null
+            ? await repository.updateBank(
+                bankId: existingAccount!.id!,
+                referenceId: referenceId.value.isNotEmpty
+                    ? referenceId.value
+                    : existingAccount!.referenceId ?? '',
+              )
+            : await repository.addBank(
+                userId: (await Utils.getUserId() ?? '').isEmpty
+                    ? '1'
+                    : (await Utils.getUserId() ?? ''),
+                accountNo: accountNo,
+                ifsc: ifsc,
+                accountHolderName: accountHolderName,
+                bankName: bankName,
+                referenceId: referenceId.value,
+                branchName: branchController.text.trim(),
+              );
+
         if (!response.status) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                response.message.isEmpty
-                    ? 'Unable to save bank account.'
-                    : response.message,
-              ),
-            ),
-          );
+          AppSnackbar.show(response.message.isEmpty
+              ? 'Unable to save bank account.'
+              : response.message);
           return;
         }
+
+        if (isEdit) {
+          AppSnackbar.show(response.message.isEmpty
+              ? 'Bank account updated successfully.'
+              : response.message);
+          Navigator.of(context).pop();
+          return;
+        }
+
         await KDialog.instance.openDialog(
           barrierDismissible: false,
           dialog: _BankAddedDialog(
             onContinue: () {
               Navigator.of(context).pop();
-              Navigator.of(context).maybePop();
+              if (redirectToHomeOnSuccess) {
+                context.go(RouteConstants.home);
+              } else {
+                Navigator.of(context).maybePop();
+              }
             },
           ),
         );
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to save bank account. Please try again.'),
-          ),
-        );
+        AppSnackbar.show('Failed to save bank account. Please try again.');
       } finally {
         isSaving.value = false;
       }
@@ -200,7 +226,7 @@ class AddBankAccountView extends HookWidget {
               _PrimaryButton(
                 label: step.value == _BankStep.verify
                     ? 'Verify Account'
-                    : 'Save Bank Account',
+                    : (isEdit ? 'Update Bank Account' : 'Save Bank Account'),
                 loading: step.value == _BankStep.verify
                     ? isVerifying.value
                     : isSaving.value,
@@ -216,7 +242,7 @@ class AddBankAccountView extends HookWidget {
           Column(
             children: [
               ReferAndEarnAppBar(
-                title: 'Add Bank Account',
+                title: isEdit ? 'Edit Bank Account' : 'Add Bank Account',
                 onHelp: () {},
                 height: 300,
                 body: Column(
@@ -235,9 +261,11 @@ class AddBankAccountView extends HookWidget {
                     ),
                     SizedBox(height: 10.h),
                     Text(
-                      step.value == _BankStep.verify
-                          ? 'Select Your Bank To Link It With Your Wallet For\nWithdrawals.'
-                          : 'Add Your Bank Details To Receive Withdrawal\nPayments Securely.',
+                      isEdit
+                          ? 'Edit your bank account details to keep withdrawals active.'
+                          : step.value == _BankStep.verify
+                              ? 'Select your bank to link it with your wallet for\nwithdrawals.'
+                              : 'Add your bank details to receive withdrawal\npayments securely.',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Colors.white.withOpacity(0.9),
@@ -587,10 +615,13 @@ class _KycMismatchDialog extends HookWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(22.r),
                       ),
-                      side: BorderSide(color: AppColors.lightBorder),
+                      side: const BorderSide(color: AppColors.lightBorder),
                       foregroundColor: AppColors.textPrimary,
                     ),
-                    child: const Text('Cancel'),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(color: AppColors.white),
+                    ),
                   ),
                 ),
                 SizedBox(width: 10.w),
@@ -603,7 +634,8 @@ class _KycMismatchDialog extends HookWidget {
                         borderRadius: BorderRadius.circular(22.r),
                       ),
                     ),
-                    child: const Text('Update Details'),
+                    child: const Text('Update Details',
+                        style: TextStyle(color: Colors.white)),
                   ),
                 ),
               ],
@@ -668,7 +700,10 @@ class _BankAddedDialog extends HookWidget {
                     borderRadius: BorderRadius.circular(22.r),
                   ),
                 ),
-                child: const Text('Continue'),
+                child: const Text(
+                  'Continue',
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
             ),
           ],

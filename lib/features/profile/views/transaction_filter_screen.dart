@@ -268,10 +268,11 @@ class _TransactionFilterScreenState extends State<TransactionFilterScreen> {
       'Dec',
     ];
     final now = DateTime.now();
-    return List.generate(labels.length, (index) {
+    return List.generate(now.month, (index) {
       final month = (index + 1).toString().padLeft(2, '0');
+      final yearSuffix = now.year.toString().substring(2);
       return _MonthOption(
-        label: labels[index],
+        label: '${labels[index]} $yearSuffix',
         value: '${now.year}-$month',
       );
     });

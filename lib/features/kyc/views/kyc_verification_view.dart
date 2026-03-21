@@ -5,21 +5,26 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
 import '../../../helpers/kyc_helpers.dart';
 import '../../../services/push_notification_service.dart';
 import '../../../utils/utils.dart';
+import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/custom_elevated_button.dart';
+import '../../../widgets/k_dialog.dart';
 import '../../auth/components/pin_input_row.dart';
+import '../../profile/controllers/profile_controller.dart';
+import '../../refer_and_earn/views/add_bank_account_view.dart';
 import '../repositories/kyc_repository.dart';
 
-class KycVerificationView extends HookWidget {
+class KycVerificationView extends HookConsumerWidget {
   const KycVerificationView({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final repository = useMemoized(() => KycRepository());
     final step = useState(_KycStep.pan);
     final panDone = useState(false);
@@ -45,6 +50,7 @@ class KycVerificationView extends HookWidget {
     final maskedAadhaar = useState('');
     final timerSeconds = useState(59);
     final timerTick = useRef<Timer?>(null);
+    final successDialogShown = useState(false);
 
     void startTimer() {
       timerTick.value?.cancel();
@@ -73,7 +79,7 @@ class KycVerificationView extends HookWidget {
     Future<void> verifyPan() async {
       final pan = panController.text.trim().toUpperCase();
       if (pan.isEmpty) {
-        _showSnack(context, 'Please enter PAN number.');
+        AppSnackbar.show('Please enter PAN number.');
         return;
       }
       final deviceId = PushNotificationService.latestToken;
@@ -85,8 +91,7 @@ class KycVerificationView extends HookWidget {
               (deviceId == null || deviceId.isEmpty) ? 'ANDROID123' : deviceId,
         );
         if (!response.valid) {
-          _showSnack(
-            context,
+          AppSnackbar.show(
             response.message.isEmpty
                 ? 'PAN verification failed.'
                 : response.message,
@@ -96,7 +101,7 @@ class KycVerificationView extends HookWidget {
         panDone.value = true;
         step.value = _KycStep.aadhaar;
       } catch (e) {
-        _showSnack(context, 'Unable to verify PAN. Please try again.');
+        AppSnackbar.show('Unable to verify PAN. Please try again.');
       } finally {
         isVerifyingPan.value = false;
       }
@@ -105,7 +110,7 @@ class KycVerificationView extends HookWidget {
     Future<void> sendAadhaarOtp() async {
       final aadhaar = aadhaarController.text.replaceAll(RegExp(r'\s+'), '');
       if (aadhaar.length != 12) {
-        _showSnack(context, 'Please enter a valid 12 digit Aadhaar number.');
+        AppSnackbar.show('Please enter a valid 12 digit Aadhaar number.');
         return;
       }
       final deviceId = PushNotificationService.latestToken;
@@ -119,8 +124,7 @@ class KycVerificationView extends HookWidget {
               (deviceId == null || deviceId.isEmpty) ? 'ANDROID123' : deviceId,
         );
         if (!response.success || response.referenceId.isEmpty) {
-          _showSnack(
-            context,
+          AppSnackbar.show(
             response.message.isEmpty
                 ? 'Unable to send OTP. Please try again.'
                 : response.message,
@@ -132,7 +136,7 @@ class KycVerificationView extends HookWidget {
         otpSent.value = true;
         startTimer();
       } catch (e) {
-        _showSnack(context, 'Unable to send OTP. Please try again.');
+        AppSnackbar.show('Unable to send OTP. Please try again.');
       } finally {
         isSendingOtp.value = false;
       }
@@ -141,7 +145,7 @@ class KycVerificationView extends HookWidget {
     Future<void> verifyOtp() async {
       final otp = otpControllers.map((c) => c.text).join();
       if (otp.length != 6) {
-        _showSnack(context, 'Please enter valid OTP.');
+        AppSnackbar.show('Please enter valid OTP.');
         return;
       }
       try {
@@ -153,18 +157,37 @@ class KycVerificationView extends HookWidget {
           otp: otp,
         );
         if (!response.success) {
-          _showSnack(
-            context,
+          AppSnackbar.show(
             response.message.isEmpty
                 ? 'OTP verification failed.'
                 : response.message,
           );
           return;
         }
+        await ref.read(profileControllerProvider.notifier).fetchProfile();
         aadhaarDone.value = true;
         step.value = _KycStep.complete;
+        if (!successDialogShown.value) {
+          successDialogShown.value = true;
+          await KDialog.instance.openDialog(
+            barrierDismissible: false,
+            dialog: _KycSuccessDialog(
+              onNotNow: () => navigatorKey.currentState?.pop(),
+              onAddBankAccount: () {
+                navigatorKey.currentState?.pop();
+                navigatorKey.currentState?.push(
+                  MaterialPageRoute(
+                    builder: (_) => const AddBankAccountView(
+                      redirectToHomeOnSuccess: true,
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        }
       } catch (e) {
-        _showSnack(context, 'OTP verification failed. Please try again.');
+        AppSnackbar.show('OTP verification failed. Please try again.');
       } finally {
         isVerifyingOtp.value = false;
       }
@@ -204,8 +227,14 @@ class KycVerificationView extends HookWidget {
                 child: CustomElevatedButton(
                   label: 'Back To Home',
                   uppercaseLabel: false,
-                  height: 52.h,
-                  onPressed: () => Navigator.of(context).maybePop(),
+                  height: 42.h,
+                  onPressed: () async {
+                    await ref
+                        .read(profileControllerProvider.notifier)
+                        .fetchProfile();
+                    navigatorKey.currentState
+                        ?.popUntil((route) => route.isFirst);
+                  },
                 ),
               ),
             )
@@ -239,12 +268,14 @@ class KycVerificationView extends HookWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _KycStepHeader(
-                currentStep: step.value,
-                panDone: panDone.value,
-                aadhaarDone: aadhaarDone.value,
-              ),
-              SizedBox(height: 18.h),
+              if (step.value != _KycStep.complete) ...[
+                _KycStepHeader(
+                  currentStep: step.value,
+                  panDone: panDone.value,
+                  aadhaarDone: aadhaarDone.value,
+                ),
+                SizedBox(height: 18.h),
+              ],
               if (step.value == _KycStep.pan)
                 _PanStep(
                   controller: panController,
@@ -460,21 +491,7 @@ class _AadhaarStep extends HookWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _AadhaarLogoRow(),
-        SizedBox(height: 14.h),
-        Text(
-          'Enter 12 Digit Aadhaar Number',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.textPrimary.withOpacity(0.7),
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-        SizedBox(height: 6.h),
-        TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: _inputDecoration('1234 5678 9012'),
-        ),
+        _AadhaarLogoRow(controller: controller),
         if (showOtp) ...[
           SizedBox(height: 18.h),
           Text(
@@ -560,6 +577,126 @@ class _AadhaarStep extends HookWidget {
           const _LoadingDots(),
         ],
       ],
+    );
+  }
+}
+
+class _KycSuccessDialog extends StatelessWidget {
+  const _KycSuccessDialog({
+    required this.onNotNow,
+    required this.onAddBankAccount,
+  });
+
+  final VoidCallback onNotNow;
+  final VoidCallback onAddBankAccount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(28.r),
+      ),
+      insetPadding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 24.h),
+      child: Container(
+        padding: EdgeInsets.fromLTRB(20.w, 22.h, 20.w, 24.h),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28.r),
+          gradient: const LinearGradient(
+            colors: [Color(0xFFF38A5F), Color(0xFF0B3A73)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 74.r,
+              width: 74.r,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF0A8A40),
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+              child: const Icon(
+                Icons.check,
+                color: Colors.white,
+                size: 36,
+              ),
+            ),
+            SizedBox(height: 16.h),
+            Text(
+              'KYC Completed\nSuccessfully 🎉',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    height: 1.25,
+                  ),
+            ),
+            SizedBox(height: 12.h),
+            Text(
+              'Your identity verification is complete.\n'
+              'To withdraw your e-Coins rewards,\n'
+              'please add your bank account details.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withOpacity(0.9),
+                    height: 1.5,
+                  ),
+            ),
+            SizedBox(height: 20.h),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 44.h,
+                    child: OutlinedButton(
+                      onPressed: onNotNow,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.white),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24.r),
+                        ),
+                      ),
+                      child: Text(
+                        'Not Now',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: SizedBox(
+                    height: 44.h,
+                    child: ElevatedButton(
+                      onPressed: onAddBankAccount,
+                      style: ElevatedButton.styleFrom(
+                        elevation: 0,
+                        backgroundColor: const Color(0xFFE95A2C),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24.r),
+                        ),
+                      ),
+                      child: Text(
+                        'Add Bank',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -755,7 +892,9 @@ class _PanLogoRow extends HookWidget {
 }
 
 class _AadhaarLogoRow extends HookWidget {
-  const _AadhaarLogoRow();
+  const _AadhaarLogoRow({required this.controller});
+
+  final TextEditingController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -766,12 +905,31 @@ class _AadhaarLogoRow extends HookWidget {
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(color: AppColors.lightBorder.withOpacity(0.6)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Image.asset(FileConstants.satyamev, height: 20.h),
-          Image.asset(FileConstants.aadhaar, height: 20.h),
-          Image.asset(FileConstants.govtindia, height: 20.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Image.asset(FileConstants.satyamev, height: 20.h),
+              Image.asset(FileConstants.govt, height: 20.h),
+              Image.asset(FileConstants.aadhaar, height: 20.h),
+            ],
+          ),
+          SizedBox(height: 14.h),
+          Text(
+            'Enter 12 Digit Aadhaar Number',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textPrimary.withOpacity(0.7),
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          SizedBox(height: 6.h),
+          TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            decoration: _inputDecoration('1234 5678 9012'),
+          ),
         ],
       ),
     );
@@ -847,6 +1005,8 @@ InputDecoration _inputDecoration(String hint) {
       color: AppColors.textPrimary.withOpacity(0.4),
       fontWeight: FontWeight.w600,
     ),
+    filled: true,
+    fillColor: Colors.white,
     contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12.r),
@@ -856,11 +1016,5 @@ InputDecoration _inputDecoration(String hint) {
       borderRadius: BorderRadius.circular(12.r),
       borderSide: const BorderSide(color: Color(0xFFE85A2C)),
     ),
-  );
-}
-
-void _showSnack(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message)),
   );
 }

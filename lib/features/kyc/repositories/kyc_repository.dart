@@ -149,7 +149,8 @@ class KycVerifyOtpResponse {
 
   factory KycVerifyOtpResponse.fromJson(Map<String, dynamic> json) {
     final status = json['status'];
-    final success = status == true ||
+    final success = json['valid'] == true ||
+        status == true ||
         status?.toString().toUpperCase() == 'SUCCESS';
     return KycVerifyOtpResponse(
       success: success,

@@ -3,6 +3,7 @@
 import 'dart:io';
 
 import 'package:e_rupaiya/features/auth/controllers/auth_controller.dart';
+import 'package:e_rupaiya/features/refer_and_earn/views/refer_and_earn_wallet_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -23,12 +24,12 @@ import '../../../widgets/image_picker_helper.dart';
 import '../../../widgets/k_dialog.dart';
 import '../../../widgets/profile_image_picker_sheet.dart';
 import '../../home/components/quick_action_card.dart';
+import '../../kyc/views/complete_kyc_view.dart';
 import '../components/profile_field.dart';
 import '../components/profile_shimmer.dart';
 import '../controllers/profile_controller.dart';
 import '../models/profile_model.dart';
 import 'bank_accounts_view.dart';
-import 'my_wallet_view.dart';
 
 class ProfileView extends HookConsumerWidget {
   const ProfileView({super.key});
@@ -133,9 +134,18 @@ class ProfileView extends HookConsumerWidget {
                           _ProfileMenuItem(
                             icon: Icons.person_outline,
                             label: 'Profile',
-                            trailing: !(profile?.isVerified ?? false)
-                                ? const _KycBadge()
-                                : null,
+                            trailing: (profile?.isKycVerified ?? false)
+                                ? const _VerifiedBadge()
+                                : GestureDetector(
+                                    onTap: () {
+                                      PersistentNavBarNavigator.pushNewScreen(
+                                        context,
+                                        screen: const CompleteKycView(),
+                                        withNavBar: false,
+                                      );
+                                    },
+                                    child: const _KycBadge(),
+                                  ),
                             onTap: () {
                               if (profile == null) return;
                               Navigator.of(context).push(
@@ -156,21 +166,27 @@ class ProfileView extends HookConsumerWidget {
                             icon: Icons.account_balance_wallet_outlined,
                             label: 'My Wallet',
                             onTap: () {
+                              // Navigator.of(context).push(
+                              //   MaterialPageRoute(
+                              //     builder: (_) =>
+                              //         const ReferAndEarnWalletView(),
+                              //   ),
+                              // );
                               PersistentNavBarNavigator.pushNewScreen(
                                 context,
-                                screen: const MyWalletView(),
+                                screen: const ReferAndEarnWalletView(),
                                 withNavBar: false,
                               );
                             },
                           ),
                           _ProfileMenuItem(
                             icon: Icons.account_balance_outlined,
-                            label: 'Add Bank Account',
+                            label: 'Bank Account',
                             onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const BankAccountsView(),
-                                ),
+                              PersistentNavBarNavigator.pushNewScreen(
+                                context,
+                                screen: const BankAccountsView(),
+                                withNavBar: false,
                               );
                             },
                           ),
@@ -181,9 +197,12 @@ class ProfileView extends HookConsumerWidget {
                               context.push(RouteConstants.transactions);
                             },
                           ),
-                          const _ProfileMenuItem(
+                          _ProfileMenuItem(
                             icon: Icons.settings_outlined,
                             label: 'Settings',
+                            onTap: () {
+                              context.push(RouteConstants.settings);
+                            },
                           ),
                           _ProfileMenuItem(
                             icon: Icons.support_agent_outlined,
@@ -390,6 +409,40 @@ class _KycBadge extends StatelessWidget {
   }
 }
 
+class _VerifiedBadge extends StatelessWidget {
+  const _VerifiedBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.green.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.green.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.verified,
+            size: 14,
+            color: AppColors.green,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            'Verified',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: AppColors.green,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class UpdateProfileView extends HookConsumerWidget {
   const UpdateProfileView({super.key, required this.profile});
 
@@ -401,8 +454,7 @@ class UpdateProfileView extends HookConsumerWidget {
     final state = ref.watch(profileControllerProvider);
     final latestProfile = state.profile ?? profile;
     final pickedImage = useState<File?>(null);
-    final firstNameController = useTextEditingController();
-    final lastNameController = useTextEditingController();
+    final fullNameController = useTextEditingController();
     final emailController = useTextEditingController(
       text: profile.email ?? '',
     );
@@ -410,36 +462,36 @@ class UpdateProfileView extends HookConsumerWidget {
     final addressController = useTextEditingController(
       text: profile.address ?? '',
     );
-    useListenable(firstNameController);
-    useListenable(lastNameController);
+    final aadhaarController = useTextEditingController(
+      text: profile.aadhaarMasked ?? '',
+    );
+    final panController = useTextEditingController(
+      text: profile.panMasked ?? '',
+    );
+    final permanentAddressController = useTextEditingController(
+      text: profile.permanentAddress ?? '',
+    );
+    final dobController = useTextEditingController(
+      text: profile.dob ?? '',
+    );
+    useListenable(fullNameController);
     useListenable(addressController);
     useListenable(mobileController);
 
     useEffect(() {
-      final parts = profile.name.trim().split(RegExp(r'\s+'));
-      if (parts.isNotEmpty) {
-        firstNameController.text = parts.first;
-        if (parts.length > 1) {
-          lastNameController.text = parts.sublist(1).join(' ');
-        }
-      }
+      fullNameController.text = profile.name.trim();
       return null;
     }, const []);
 
-    final initialNameParts = profile.name.trim().split(RegExp(r'\s+'));
-    final initialFirst =
-        initialNameParts.isNotEmpty ? initialNameParts.first : '';
-    final initialLast =
-        initialNameParts.length > 1 ? initialNameParts.sublist(1).join(' ') : '';
+    final canEdit = !latestProfile.isKycVerified;
+    final initialFullName = profile.name.trim();
     final initialAddress = (profile.address ?? '').trim();
     final initialMobile = profile.mobile.trim();
 
-    final currentFirst = firstNameController.text.trim();
-    final currentLast = lastNameController.text.trim();
+    final currentFullName = fullNameController.text.trim();
     final currentAddress = addressController.text.trim();
     final currentMobile = mobileController.text.trim();
-    final hasNonEmailChanges = currentFirst != initialFirst ||
-        currentLast != initialLast ||
+    final hasNonEmailChanges = currentFullName != initialFullName ||
         currentAddress != initialAddress ||
         currentMobile != initialMobile;
 
@@ -450,6 +502,33 @@ class UpdateProfileView extends HookConsumerWidget {
       }
       return null;
     }, [state.profile?.email]);
+
+    useEffect(() {
+      final updatedProfile = state.profile;
+      if (updatedProfile == null) return null;
+      final updatedAadhaar = updatedProfile.aadhaarMasked ?? '';
+      if (aadhaarController.text != updatedAadhaar) {
+        aadhaarController.text = updatedAadhaar;
+      }
+      final updatedPan = updatedProfile.panMasked ?? '';
+      if (panController.text != updatedPan) {
+        panController.text = updatedPan;
+      }
+      final updatedPermanent = updatedProfile.permanentAddress ?? '';
+      if (permanentAddressController.text != updatedPermanent) {
+        permanentAddressController.text = updatedPermanent;
+      }
+      final updatedDob = updatedProfile.dob ?? '';
+      if (dobController.text != updatedDob) {
+        dobController.text = updatedDob;
+      }
+      return null;
+    }, [
+      state.profile?.aadhaarMasked,
+      state.profile?.panMasked,
+      state.profile?.permanentAddress,
+      state.profile?.dob,
+    ]);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -513,28 +592,34 @@ class UpdateProfileView extends HookConsumerWidget {
                       right: 0,
                       bottom: 0,
                       child: GestureDetector(
-                        onTap: () {
-                          KDialog.instance.openSheet(
-                            dialog: ProfileImagePickerSheet(
-                              onCamera: () async {
-                                navigatorKey.currentState?.pop();
-                                final image =
-                                    await ImagePickerHelper.pickFromCamera();
-                                if (image == null) return;
-                                pickedImage.value = image;
-                                await controller.updateProfileImage(image);
-                              },
-                              onGallery: () async {
-                                navigatorKey.currentState?.pop();
-                                final image =
-                                    await ImagePickerHelper.pickFromGallery();
-                                if (image == null) return;
-                                pickedImage.value = image;
-                                await controller.updateProfileImage(image);
-                              },
-                            ),
-                          );
-                        },
+                        onTap: canEdit
+                            ? () {
+                                KDialog.instance.openSheet(
+                                  dialog: ProfileImagePickerSheet(
+                                    onCamera: () async {
+                                      navigatorKey.currentState?.pop();
+                                      final image = await ImagePickerHelper
+                                          .pickFromCamera();
+                                      if (image == null) return;
+                                      pickedImage.value = image;
+                                      await controller.updateProfileImage(
+                                        image,
+                                      );
+                                    },
+                                    onGallery: () async {
+                                      navigatorKey.currentState?.pop();
+                                      final image = await ImagePickerHelper
+                                          .pickFromGallery();
+                                      if (image == null) return;
+                                      pickedImage.value = image;
+                                      await controller.updateProfileImage(
+                                        image,
+                                      );
+                                    },
+                                  ),
+                                );
+                              }
+                            : null,
                         child: Container(
                           height: 24,
                           width: 24,
@@ -562,13 +647,9 @@ class UpdateProfileView extends HookConsumerWidget {
               ),
               const SizedBox(height: 24),
               ProfileField(
-                label: 'First Name',
-                controller: firstNameController,
-              ),
-              const SizedBox(height: 16),
-              ProfileField(
-                label: 'Last Name',
-                controller: lastNameController,
+                label: 'Full Name (as per PAN)',
+                controller: fullNameController,
+                enabled: canEdit,
               ),
               const SizedBox(height: 16),
               ProfileField(
@@ -589,10 +670,10 @@ class UpdateProfileView extends HookConsumerWidget {
                 label: 'Email ID',
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
-                enabled: !latestProfile.isEmailVerified,
+                enabled: canEdit && !latestProfile.isEmailVerified,
                 trailingText:
                     latestProfile.isEmailVerified ? 'VERIFIED' : 'VERIFY',
-                onTrailingTap: latestProfile.isEmailVerified
+                onTrailingTap: latestProfile.isEmailVerified || !canEdit
                     ? null
                     : () {
                         KDialog.instance.openSheet(
@@ -607,20 +688,43 @@ class UpdateProfileView extends HookConsumerWidget {
                 label: 'Address (Optional)',
                 controller: addressController,
                 maxLines: 2,
+                enabled: canEdit,
+              ),
+              const SizedBox(height: 16),
+              ProfileField(
+                label: 'Aadhaar Number',
+                controller: aadhaarController,
+                enabled: false,
+              ),
+              const SizedBox(height: 16),
+              ProfileField(
+                label: 'PAN Number',
+                controller: panController,
+                enabled: false,
+              ),
+              const SizedBox(height: 16),
+              ProfileField(
+                label: 'Permanent Address',
+                controller: permanentAddressController,
+                maxLines: 2,
+                enabled: false,
+              ),
+              const SizedBox(height: 16),
+              ProfileField(
+                label: 'Date of Birth',
+                controller: dobController,
+                enabled: false,
               ),
               const SizedBox(height: 24),
               CustomElevatedButton(
-                onPressed: state.isUpdating || !hasNonEmailChanges
+                onPressed: state.isUpdating || !hasNonEmailChanges || !canEdit
                     ? null
                     : () async {
-                        final first = firstNameController.text.trim();
-                        final last = lastNameController.text.trim();
-                        if (first.isEmpty) {
-                          AppSnackbar.show('Please enter your first name.');
+                        final name = fullNameController.text.trim();
+                        if (name.isEmpty) {
+                          AppSnackbar.show('Please enter your full name.');
                           return;
                         }
-                        final name =
-                            last.isEmpty ? first : '$first $last'.trim();
                         final address = addressController.text.trim();
                         final email = state.profile?.email ??
                             profile.email ??

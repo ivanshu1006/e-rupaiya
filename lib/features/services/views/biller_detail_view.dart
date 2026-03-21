@@ -71,10 +71,24 @@ class BillerDetailView extends HookConsumerWidget {
       final message = next.errorMessage;
       if (message != null && message.isNotEmpty) {
         if (previous?.errorMessage != message) {
-          AppSnackbar.show(
-            message,
-            behavior: SnackBarBehavior.fixed,
-          );
+          if (isCreditCardFlow && _isNoBillDueMessage(message)) {
+            KDialog.instance.openDialog(
+              barrierDismissible: true,
+              dialog: _NoBillDueDialog(
+                title: 'No Bill Due',
+                message: 'No bills found for this account right now.',
+                onContinue: () {
+                  Navigator.of(context).pop();
+                  controller.clearBill();
+                },
+              ),
+            );
+          } else {
+            AppSnackbar.show(
+              message,
+              behavior: SnackBarBehavior.fixed,
+            );
+          }
         }
       }
     });
@@ -602,6 +616,87 @@ class _MaskedPrefix extends StatelessWidget {
               color: AppColors.textPrimary.withOpacity(0.6),
               fontWeight: FontWeight.w600,
             ),
+      ),
+    );
+  }
+}
+
+bool _isNoBillDueMessage(String message) {
+  return message.toLowerCase().contains('no bill due');
+}
+
+class _NoBillDueDialog extends StatelessWidget {
+  const _NoBillDueDialog({
+    required this.title,
+    required this.message,
+    required this.onContinue,
+  });
+
+  final String title;
+  final String message;
+  final VoidCallback onContinue;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: const BoxDecoration(
+                color: Color(0xFFE5F8EA),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_circle,
+                color: Color(0xFF1BA13F),
+                size: 44,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textPrimary.withOpacity(0.75),
+                  ),
+            ),
+            const SizedBox(height: 22),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: onContinue,
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 14),
+                  child: Text(
+                    'Got it',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -31,4 +31,6 @@ class RouteConstants {
   static const String myQr = '/my-qr';
   static const String quickActions = '/quick-actions';
   static const String offers = '/offers';
+  static const String settings = '/settings';
+  static const String referral = '/referral';
 }

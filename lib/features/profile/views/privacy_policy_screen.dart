@@ -94,7 +94,7 @@ class _PrivacyBody extends StatelessWidget {
       children: [
         _SectionTitle('Privacy Policy – E-Rupaiya'),
         SizedBox(height: 8),
-        _MetaText('Effective Date: [Insert Date]'),
+        _MetaText('Effective Date: March 17, 2026'),
         SizedBox(height: 10),
         _Paragraph(
           'INNNOPLIX IT (“Company”, “we”, “our”, or “us”) operates the E-Rupaiya '
@@ -139,7 +139,8 @@ class _PrivacyBody extends StatelessWidget {
         _Bullet('Device model and operating system version'),
         _Bullet('IP address'),
         _Bullet('App usage and analytics data'),
-        _Bullet('Approximate location (for fraud prevention and service optimization)'),
+        _Bullet(
+            'Approximate location (for fraud prevention and service optimization)'),
         SizedBox(height: 14),
         _SectionTitle('2. How We Use Your Information'),
         SizedBox(height: 6),
@@ -164,15 +165,20 @@ class _PrivacyBody extends StatelessWidget {
         _Bullet(
           'Business Partners: Partners assisting in providing and improving the services',
         ),
-        _Paragraph('We do not sell or rent your personal data to third parties.'),
+        _Paragraph(
+            'We do not sell or rent your personal data to third parties.'),
         SizedBox(height: 14),
         _SectionTitle('4. Device Permissions'),
         SizedBox(height: 6),
         _Paragraph('E-Rupaiya may request the following permissions:'),
-        _Bullet('SMS Permission: Automatically detect OTP for registration and payment verification'),
-        _Bullet('Contacts Permission: Optional, for selecting numbers from contacts when making payments'),
-        _Bullet('Location Permission: Approximate location for fraud detection and security'),
-        _Bullet('Notification Permission: Send transaction updates, reminders, and service alerts'),
+        _Bullet(
+            'SMS Permission: Automatically detect OTP for registration and payment verification'),
+        _Bullet(
+            'Contacts Permission: Optional, for selecting numbers from contacts when making payments'),
+        _Bullet(
+            'Location Permission: Approximate location for fraud detection and security'),
+        _Bullet(
+            'Notification Permission: Send transaction updates, reminders, and service alerts'),
         _Paragraph(
           'Users can manage these permissions in their device settings. Disabling certain '
           'permissions may limit app functionality.',
@@ -180,12 +186,14 @@ class _PrivacyBody extends StatelessWidget {
         SizedBox(height: 14),
         _SectionTitle('5. Data Security'),
         SizedBox(height: 6),
-        _Paragraph('We implement appropriate measures to protect your information:'),
+        _Paragraph(
+            'We implement appropriate measures to protect your information:'),
         _Bullet('Encrypted communication for transactions'),
         _Bullet('Secure server infrastructure'),
         _Bullet('Restricted access to sensitive information'),
         _Bullet('Continuous monitoring for security threats'),
-        _Paragraph('No system is completely secure; we cannot guarantee absolute security.'),
+        _Paragraph(
+            'No system is completely secure; we cannot guarantee absolute security.'),
         SizedBox(height: 14),
         _SectionTitle('6. Data Retention'),
         SizedBox(height: 6),
@@ -222,7 +230,8 @@ class _PrivacyBody extends StatelessWidget {
         SizedBox(height: 14),
         _SectionTitle('10. Contact Us'),
         SizedBox(height: 6),
-        _Paragraph('If you have any questions, complaints, or requests regarding this Privacy Policy, please contact:'),
+        _Paragraph(
+            'If you have any questions, complaints, or requests regarding this Privacy Policy, please contact:'),
         _MetaText('Company Name: INNNOPLIX IT'),
         _MetaText('Brand: E-Rupaiya'),
         _MetaText('Address:'),
@@ -233,8 +242,9 @@ class _PrivacyBody extends StatelessWidget {
           'Pune, Maharashtra 411058, India',
         ),
         _MetaText('Email: support@erupaiya.com'),
-        _MetaText('Phone: +91-XXXXXXXXXX'),
-        _MetaText('Customer Support Hours: Monday – Saturday, 10:00 AM – 6:00 PM IST'),
+        _MetaText('Phone: +912269645775'),
+        _MetaText(
+            'Customer Support Hours: Monday – Saturday, 10:00 AM – 6:00 PM IST'),
       ],
     );
   }

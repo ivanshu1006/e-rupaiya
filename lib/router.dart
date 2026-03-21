@@ -30,6 +30,8 @@ import 'features/profile/views/transaction_history_screen.dart';
 import 'features/profile/views/terms_privacy_screen.dart';
 import 'features/profile/views/privacy_policy_screen.dart';
 import 'features/profile/views/offers_view.dart';
+import 'features/profile/views/settings_view.dart';
+import 'features/refer_and_earn/views/referral_deeplink_view.dart';
 import 'features/services/views/biller_detail_view.dart';
 import 'features/services/views/biller_listing_view.dart';
 import 'features/services/views/credit_card_intro_view.dart';
@@ -67,6 +69,7 @@ final routerProvider = Provider<GoRouter>(
           RouteConstants.addPin,
         ];
         final isOnAuthRoute = authRoutes.contains(location);
+        final isReferralRoute = location.startsWith(RouteConstants.referral);
 
         // If authenticated and on an auth screen → send to home.
         if (isAuthenticated && isOnAuthRoute) {
@@ -74,7 +77,7 @@ final routerProvider = Provider<GoRouter>(
         }
 
         // If not authenticated and on a protected screen → send to login.
-        if (!isAuthenticated && !isOnAuthRoute) {
+        if (!isAuthenticated && !isOnAuthRoute && !isReferralRoute) {
           return RouteConstants.login;
         }
 
@@ -233,6 +236,16 @@ final routerProvider = Provider<GoRouter>(
         GoRoute(
           path: RouteConstants.offers,
           builder: (context, state) => const OffersView(),
+        ),
+        GoRoute(
+          path: RouteConstants.settings,
+          builder: (context, state) => const SettingsView(),
+        ),
+        GoRoute(
+          path: RouteConstants.referral,
+          builder: (context, state) => ReferralDeepLinkView(
+            referralCode: state.uri.queryParameters['code'] ?? '',
+          ),
         ),
       ],
     );

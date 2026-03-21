@@ -42,78 +42,93 @@ class _AuthBrandHeaderState extends State<AuthBrandHeader>
 
   @override
   Widget build(BuildContext context) {
-    final heroStyle = Theme.of(context).textTheme.displayLarge?.copyWith(
-          fontSize: 40.sp,
-          fontWeight: FontWeight.w700,
-          height: 1.15,
-          fontStyle: FontStyle.italic,
-        );
-
-    final subtitleStyle = Theme.of(context).textTheme.displayMedium?.copyWith(
-          fontSize: 40.sp,
-          fontWeight: FontWeight.w700,
-          height: 1.15,
-          fontStyle: FontStyle.italic,
-        );
-
     return Padding(
       padding: EdgeInsets.only(top: 32.h, left: 20.w, right: 20.w),
-      child: SizedBox(
-        height: 350.h,
-        child: ClipRect(
-          child: AnimatedBuilder(
-            animation: _animation,
-            builder: (context, child) {
-              return Stack(
-                children: [
-                  Positioned(
-                    top: -_animation.value * 350.h,
-                    left: 0,
-                    right: 0,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(height: 24.h),
-                        _GradientText(
-                          text: widget.title,
-                          style: heroStyle,
-                        ),
-                        SizedBox(height: 16.h),
-                        _GradientText(
-                          text: widget.subtitle,
-                          style: subtitleStyle,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Positioned(
-                    top: (1 - _animation.value) * 350.h,
-                    left: 0,
-                    right: 0,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(height: 24.h),
-                        _GradientText(
-                          text: widget.title,
-                          style: heroStyle,
-                        ),
-                        SizedBox(height: 16.h),
-                        _GradientText(
-                          text: widget.subtitle,
-                          style: subtitleStyle,
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(
-                    height: 100.h,
-                  )
-                ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final heroStyle = Theme.of(context).textTheme.displayLarge?.copyWith(
+                fontSize: 40.sp,
+                fontWeight: FontWeight.w700,
+                height: 1.15,
+                fontStyle: FontStyle.italic,
               );
-            },
-          ),
-        ),
+
+          final subtitleStyle =
+              Theme.of(context).textTheme.displayMedium?.copyWith(
+                    fontSize: 40.sp,
+                    fontWeight: FontWeight.w700,
+                    height: 1.15,
+                    fontStyle: FontStyle.italic,
+                  );
+
+          final titlePainter = TextPainter(
+            text: TextSpan(text: widget.title, style: heroStyle),
+            textDirection: TextDirection.ltr,
+          )..layout(maxWidth: constraints.maxWidth);
+
+          final subtitlePainter = TextPainter(
+            text: TextSpan(text: widget.subtitle, style: subtitleStyle),
+            textDirection: TextDirection.ltr,
+          )..layout(maxWidth: constraints.maxWidth);
+
+          final contentHeight =
+              24.h + titlePainter.height + 16.h + subtitlePainter.height;
+
+          return SizedBox(
+            height: contentHeight,
+            child: ClipRect(
+              child: AnimatedBuilder(
+                animation: _animation,
+                builder: (context, child) {
+                  return Stack(
+                    children: [
+                      Positioned(
+                        top: -_animation.value * contentHeight,
+                        left: 0,
+                        right: 0,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(height: 24.h),
+                            _GradientText(
+                              text: widget.title,
+                              style: heroStyle,
+                            ),
+                            SizedBox(height: 16.h),
+                            _GradientText(
+                              text: widget.subtitle,
+                              style: subtitleStyle,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        top: (1 - _animation.value) * contentHeight,
+                        left: 0,
+                        right: 0,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(height: 24.h),
+                            _GradientText(
+                              text: widget.title,
+                              style: heroStyle,
+                            ),
+                            SizedBox(height: 16.h),
+                            _GradientText(
+                              text: widget.subtitle,
+                              style: subtitleStyle,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          );
+        },
       ),
     );
   }

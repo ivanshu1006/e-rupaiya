@@ -24,6 +24,30 @@ class ReferralRepository {
       rethrow;
     }
   }
+
+  Future<ReferralRegisterResponse> registerReferral({
+    required String newUserId,
+    required String referralCode,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.referralRegisterEndpoint,
+        data: {
+          'new_user_id': newUserId,
+          'referral_code': referralCode,
+        },
+      );
+      final payload = response.data as Map<String, dynamic>? ?? {};
+      return ReferralRegisterResponse.fromJson(payload);
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to register referral',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
 }
 
 class ReferralLinkResponse {
@@ -44,4 +68,21 @@ class ReferralLinkResponse {
   final bool status;
   final String referralCode;
   final String referralLink;
+}
+
+class ReferralRegisterResponse {
+  const ReferralRegisterResponse({
+    required this.status,
+    required this.message,
+  });
+
+  factory ReferralRegisterResponse.fromJson(Map<String, dynamic> json) {
+    return ReferralRegisterResponse(
+      status: json['status'] == true,
+      message: (json['message'] ?? '').toString(),
+    );
+  }
+
+  final bool status;
+  final String message;
 }

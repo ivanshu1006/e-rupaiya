@@ -32,29 +32,79 @@ class BankAccountsRepository {
       rethrow;
     }
   }
+
+  Future<BankDeleteResponse> deleteBank({
+    required int bankId,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.bankDeleteEndpoint,
+        data: {
+          'bank_id': bankId,
+        },
+      );
+      final payload = _asMap(response.data);
+      return BankDeleteResponse.fromJson(payload);
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to delete bank account',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+}
+
+class BankDeleteResponse {
+  const BankDeleteResponse({
+    required this.status,
+    required this.message,
+  });
+
+  factory BankDeleteResponse.fromJson(Map<String, dynamic> json) {
+    return BankDeleteResponse(
+      status: json['status'] == true,
+      message: (json['message'] ?? '').toString(),
+    );
+  }
+
+  final bool status;
+  final String message;
 }
 
 class BankAccountEntry {
   const BankAccountEntry({
+    this.id,
     required this.bankName,
     required this.accountNumber,
     required this.accountHolderName,
     required this.verified,
+    this.ifsc,
+    this.referenceId,
   });
 
   factory BankAccountEntry.fromJson(Map<String, dynamic> json) {
     return BankAccountEntry(
+      id: json['bank_id'] is int
+          ? json['bank_id'] as int
+          : int.tryParse(json['bank_id']?.toString() ?? ''),
       bankName: (json['bank_name'] ?? '').toString(),
       accountNumber: (json['account_number'] ?? '').toString(),
       accountHolderName: (json['account_holder_name'] ?? '').toString(),
       verified: json['verified'] == true,
+      ifsc: (json['ifsc'] ?? '').toString(),
+      referenceId: (json['reference_id'] ?? '').toString(),
     );
   }
 
+  final int? id;
   final String bankName;
   final String accountNumber;
   final String accountHolderName;
   final bool verified;
+  final String? ifsc;
+  final String? referenceId;
 }
 
 Map<String, dynamic> _asMap(dynamic data) {

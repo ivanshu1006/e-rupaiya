@@ -15,7 +15,7 @@ import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
 import '../../../services/notification_badge_service.dart';
 import '../../../widgets/custom_elevated_button.dart';
-import '../../kyc/views/kyc_verification_view.dart';
+import '../../kyc/views/complete_kyc_view.dart';
 import '../../mobile_prepaid/models/recharge_quick_action_payload.dart';
 import '../../profile/controllers/profile_controller.dart';
 import '../../profile/views/offers_view.dart';
@@ -730,13 +730,13 @@ class _HomeContent extends HookConsumerWidget {
                 ),
               ),
               title: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.symmetric(horizontal: 10.w),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(24),
@@ -842,23 +842,24 @@ class _HomeContent extends HookConsumerWidget {
                 ),
               ),
             ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: CustomElevatedButton(
-                  label: 'Complete Your KYC',
-                  uppercaseLabel: false,
-                  height: 42.h,
-                  onPressed: () {
-                    PersistentNavBarNavigator.pushNewScreen(
-                      context,
-                      screen: const KycVerificationView(),
-                      withNavBar: false,
-                    );
-                  },
+            if (!(profileState.profile?.isKycVerified ?? false))
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: CustomElevatedButton(
+                    label: 'Complete Your KYC',
+                    uppercaseLabel: false,
+                    height: 42.h,
+                    onPressed: () {
+                      PersistentNavBarNavigator.pushNewScreen(
+                        context,
+                        screen: const CompleteKycView(),
+                        withNavBar: false,
+                      );
+                    },
+                  ),
                 ),
               ),
-            ),
             if (allQuickActions.isNotEmpty)
               SliverToBoxAdapter(
                 child: Container(

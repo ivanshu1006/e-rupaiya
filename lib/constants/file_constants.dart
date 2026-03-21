@@ -97,13 +97,19 @@ class FileConstants {
   static String myTeam = 'assets/images/png/my_team.png';
   static String recentReferrals = 'assets/images/png/recent_referrals.png';
   static String referralsWorks = 'assets/images/png/referrals_works.png';
-  static String withdrawBanner = 'assets/images/png/withdraw_banner.png';
+  static String withdrawBanner = 'assets/images/png/withdrawBanner.png';
   static String nsdl = 'assets/images/png/nsdl.png';
   static String satyamev = 'assets/images/png/satyamev.png';
   static String govtindia = 'assets/images/png/govtIndia.png';
   static String govtIndia = 'assets/images/png/govtIndia.png';
   static String satyameva = 'assets/images/png/satyamev.png';
   static String withdrawIcon = 'assets/images/png/withdrawIcon.png';
+  static String withdrawSuccess = 'assets/images/png/withdraw_success.png';
+  static String withdrawFailed = 'assets/images/png/withdraw_failed.png';
+  static String withdrawRequested = 'assets/images/png/withdraw_requested.png';
+  static String govt = 'assets/images/png/govt.png';
+  static String completeKycBg = 'assets/images/png/completeKycBg.png';
+  static String kycVerified = 'assets/images/png/kyc_verified.png';
 
   //bottom bar
   static String paybills = 'assets/images/png/home_icon/paybills.png';

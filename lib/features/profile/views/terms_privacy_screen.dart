@@ -94,7 +94,7 @@ class _TermsBody extends StatelessWidget {
       children: [
         _SectionTitle('E-Rupaiya – Complete Legal & Policy Document'),
         SizedBox(height: 8),
-        _MetaText('Effective Date: [Insert Date]'),
+        _MetaText('Effective Date: March 17, 2026'),
         SizedBox(height: 8),
         _MetaText('Company: INNNOPLIX IT PVT LTD'),
         _MetaText('Brand: E-Rupaiya'),
@@ -108,7 +108,7 @@ class _TermsBody extends StatelessWidget {
         ),
         SizedBox(height: 8),
         _MetaText('Email: support@erupaiya.com'),
-        _MetaText('Phone: +91-XXXXXXXXXX'),
+        _MetaText('Phone: +912269645775'),
         SizedBox(height: 16),
         _SectionTitle('1. Terms & Conditions'),
         SizedBox(height: 8),

@@ -2,7 +2,6 @@
 
 import 'dart:async';
 
-import 'package:e_rupaiya/constants/file_constants.dart';
 import 'package:e_rupaiya/features/mobile_prepaid/models/mobile_prepaid_state.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +18,7 @@ import '../../../widgets/k_dialog.dart';
 import '../../../widgets/my_app_bar.dart';
 import '../../../widgets/screen_wrapper.dart';
 import '../../../widgets/search_textfield.dart';
+import '../../home/components/quick_action_header_card.dart';
 import '../components/payment_bottom_sheet.dart';
 import '../components/plan_card.dart';
 import '../controllers/contacts_cache_controller.dart';
@@ -270,12 +270,13 @@ class MobilePrepaidView extends HookConsumerWidget {
                   right: 16,
                   bottom: -38.h,
                   height: 72.h,
-                  child: _QuickActionHeaderCard(
-                    mobileNumber: state.mobile,
-                    operatorName: state.operatorInfo?.operatorName,
-                    circleName: state.operatorInfo?.circle,
-                    operatorIconUrl: state.operatorInfo?.iconUrl,
-                    onChange: handleChange,
+                  child: QuickActionHeaderCard(
+                    title: '+91 ${state.mobile}',
+                    subtitle:
+                        '${state.operatorInfo?.operatorName ?? 'Operator'} • ${state.operatorInfo?.circle ?? 'Circle'}',
+                    leadingImageUrl: state.operatorInfo?.iconUrl,
+                    actionLabel: 'Change',
+                    onAction: handleChange,
                   ),
                 ),
             ],
@@ -373,139 +374,139 @@ class _ContactsSection extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-        Text(
-          'Enter Mobile Number',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: manualMobileController,
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(
-                  hintText: 'Enter mobile number',
-                  hintStyle: TextStyle(
-                    color: AppColors.textPrimary.withOpacity(0.45),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: AppColors.lightBorder,
-                    ),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: AppColors.lightBorder,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
+          Text(
+            'Enter Mobile Number',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
                 ),
-                onSubmitted: (_) => onManualSubmit(),
-              ),
-            ),
-            const SizedBox(width: 10),
-            SizedBox(
-              height: 46,
-              child: ElevatedButton(
-                onPressed: onManualSubmit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: const Text('Get Plans'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Text(
-              'Contacts',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
-            ),
-            const Spacer(),
-            TextButton(
-              onPressed: onReload,
-              child: Text(
-                'Refresh',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        SearchTextfield(
-          hintText: 'Search contacts',
-          controller: contactSearchController,
-          onChange: onQueryChange,
-        ),
-        const SizedBox(height: 12),
-        if (isLoading)
-          const Center(
-            child: SpinKitCircle(
-              color: AppColors.primary,
-              size: 48,
-            ),
-          )
-        else if (contacts.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Center(
-              child: Text(
-                'No contacts found',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textPrimary.withOpacity(0.6),
-                    ),
-              ),
-            ),
-          )
-        else ...[
-          _ContactsList(
-            contacts: contacts,
-            visibleCount: visibleCount,
-            onSelect: onSelect,
           ),
-          if (contacts.length > visibleCount) ...[
-            const SizedBox(height: 10),
-            Center(
-              child: Text(
-                'Scroll to load more',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textPrimary.withOpacity(0.6),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: manualMobileController,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    hintText: 'Enter mobile number',
+                    hintStyle: TextStyle(
+                      color: AppColors.textPrimary.withOpacity(0.45),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(
+                        color: AppColors.lightBorder,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(
+                        color: AppColors.lightBorder,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                  ),
+                  onSubmitted: (_) => onManualSubmit(),
+                ),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                height: 46,
+                child: ElevatedButton(
+                  onPressed: onManualSubmit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text('Get Plans'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Text(
+                'Contacts',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
                     ),
               ),
+              const Spacer(),
+              TextButton(
+                onPressed: onReload,
+                child: Text(
+                  'Refresh',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SearchTextfield(
+            hintText: 'Search contacts',
+            controller: contactSearchController,
+            onChange: onQueryChange,
+          ),
+          const SizedBox(height: 12),
+          if (isLoading)
+            const Center(
+              child: SpinKitCircle(
+                color: AppColors.primary,
+                size: 48,
+              ),
+            )
+          else if (contacts.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text(
+                  'No contacts found',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textPrimary.withOpacity(0.6),
+                      ),
+                ),
+              ),
+            )
+          else ...[
+            _ContactsList(
+              contacts: contacts,
+              visibleCount: visibleCount,
+              onSelect: onSelect,
             ),
+            if (contacts.length > visibleCount) ...[
+              const SizedBox(height: 10),
+              Center(
+                child: Text(
+                  'Scroll to load more',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textPrimary.withOpacity(0.6),
+                      ),
+                ),
+              ),
+            ],
           ],
         ],
-      ],
       ),
     );
   }
@@ -889,173 +890,6 @@ class _PayNowSection extends StatelessWidget {
                 ),
           ),
       ],
-    );
-  }
-}
-
-class _QuickActionHeaderCard extends StatelessWidget {
-  const _QuickActionHeaderCard({
-    required this.mobileNumber,
-    required this.operatorName,
-    required this.circleName,
-    required this.operatorIconUrl,
-    required this.onChange,
-  });
-
-  final String mobileNumber;
-  final String? operatorName;
-  final String? circleName;
-  final String? operatorIconUrl;
-  final VoidCallback onChange;
-
-  @override
-  Widget build(BuildContext context) {
-    final operator = operatorName ?? 'Operator';
-    final circle = circleName ?? 'Circle';
-    final iconUrl = (operatorIconUrl ?? '').trim();
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18.r),
-        boxShadow: const [
-          BoxShadow(
-            color: AppColors.cardShadow,
-            blurRadius: 18,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Padding(
-            padding: EdgeInsets.only(left: 12.w, top: 8.h, bottom: 8.h),
-            child: CircleAvatar(
-              radius: 26.r,
-              backgroundColor: AppColors.primary.withOpacity(0.12),
-              child: iconUrl.isNotEmpty
-                  ? _OperatorIcon(url: iconUrl)
-                  : Text(
-                      operator.isNotEmpty ? operator[0].toUpperCase() : 'S',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-            ),
-          ),
-          SizedBox(width: 8.w),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 8.h),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '+91 $mobileNumber',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                          fontSize: 13.sp,
-                        ),
-                  ),
-                  SizedBox(height: 2.h),
-                  Text(
-                    '$operator • $circle',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textPrimary.withOpacity(0.65),
-                          fontSize: 11.sp,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          InkWell(
-            onTap: onChange,
-            child: SizedBox(
-              width: 88.w,
-              child: ClipRRect(
-                borderRadius: BorderRadius.only(
-                  topRight: Radius.circular(18.r),
-                  bottomRight: Radius.circular(18.r),
-                ),
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onChange,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    alignment: Alignment.center,
-                    children: [
-                      Image.asset(
-                        FileConstants.quickAction,
-                        fit: BoxFit.fill,
-                      ),
-                      Center(
-                        child: Text(
-                          'Change',
-                          style:
-                              Theme.of(context).textTheme.labelMedium?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.4,
-                                    fontSize: 11.sp,
-                                  ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OperatorIcon extends StatelessWidget {
-  // ignore: unused_element_parameter
-  const _OperatorIcon({required this.url, this.size = 34});
-
-  final String url;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final isSvg = url.toLowerCase().endsWith('.svg');
-    if (isSvg) {
-      return SvgPicture.network(
-        url,
-        width: size,
-        height: size,
-        fit: BoxFit.contain,
-        colorFilter: null,
-        placeholderBuilder: (_) => _fallbackPlaceholder(context),
-      );
-    }
-    return Image.network(
-      url,
-      width: size,
-      height: size,
-      fit: BoxFit.contain,
-      errorBuilder: (_, __, ___) => _fallbackPlaceholder(context),
-    );
-  }
-
-  Widget _fallbackPlaceholder(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      color: AppColors.primary.withOpacity(0.08),
-      child: Icon(
-        Icons.wifi_calling_3_outlined,
-        color: AppColors.primary.withOpacity(0.6),
-        size: 24,
-      ),
     );
   }
 }

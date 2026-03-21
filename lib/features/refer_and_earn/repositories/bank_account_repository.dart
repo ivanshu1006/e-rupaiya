@@ -14,6 +14,7 @@ class BankAccountRepository {
   Future<BankVerifyResponse> verifyBank({
     required String accountNo,
     required String ifsc,
+    String? bankName,
   }) async {
     try {
       final response = await _dio.post(
@@ -21,6 +22,8 @@ class BankAccountRepository {
         data: {
           'account_no': accountNo,
           'ifsc': ifsc,
+          if (bankName != null && bankName.trim().isNotEmpty)
+            'bank_name': bankName.trim(),
         },
       );
       final payload = _asMap(response.data);
@@ -63,6 +66,45 @@ class BankAccountRepository {
     } catch (e, stackTrace) {
       logger.error(
         'Failed to add bank account',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  Future<BankAddResponse> updateBank({
+    required int bankId,
+    required String referenceId,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.bankEditEndpoint,
+        data: {
+          'bank_id': bankId,
+          'reference_id': referenceId,
+        },
+      );
+      final payload = _asMap(response.data);
+      return BankAddResponse.fromJson(payload);
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to update bank account',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  Future<BankListResponse> fetchBanks() async {
+    try {
+      final response = await _dio.get(ApiConstants.bankListEndpoint);
+      final payload = _asMap(response.data);
+      return BankListResponse.fromJson(payload);
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to fetch bank list',
         error: e,
         stackTrace: stackTrace,
       );
@@ -121,6 +163,90 @@ class BankAddResponse {
   final bool status;
   final String message;
   final String accountNumber;
+}
+
+class BankListResponse {
+  const BankListResponse({
+    required this.status,
+    required this.code,
+    required this.message,
+    required this.popularBanks,
+    required this.allBanks,
+  });
+
+  factory BankListResponse.fromJson(Map<String, dynamic> json) {
+    final data = json['data'];
+    final dataMap = data is Map<String, dynamic> ? data : <String, dynamic>{};
+    return BankListResponse(
+      status: json['status'] == true,
+      code: json['code'] is int
+          ? json['code'] as int
+          : int.tryParse(json['code']?.toString() ?? '') ?? 0,
+      message: (json['message'] ?? '').toString(),
+      popularBanks: _parseBankList(dataMap['popular_banks']),
+      allBanks: _parseBankList(dataMap['all_banks']),
+    );
+  }
+
+  final bool status;
+  final int code;
+  final String message;
+  final List<BankListItem> popularBanks;
+  final List<BankListItem> allBanks;
+}
+
+class BankListItem {
+  const BankListItem({
+    required this.id,
+    required this.bankName,
+    required this.bankCode,
+    this.logoUrl,
+  });
+
+  factory BankListItem.fromJson(Map<String, dynamic> json) {
+    return BankListItem(
+      id: (json['id'] ?? '').toString(),
+      bankName: (json['bank_name'] ?? '').toString(),
+      bankCode: (json['bank_code'] ?? '').toString(),
+      logoUrl: _readFirstString(
+        json,
+        [
+          'logo',
+          'icon',
+          'image',
+          'bank_logo',
+          'bank_icon',
+          'bank_logo_url',
+          'bank_image',
+        ],
+      ),
+    );
+  }
+
+  final String id;
+  final String bankName;
+  final String bankCode;
+  final String? logoUrl;
+}
+
+List<BankListItem> _parseBankList(dynamic raw) {
+  if (raw is List) {
+    return raw
+        .whereType<Map<String, dynamic>>()
+        .map(BankListItem.fromJson)
+        .toList();
+  }
+  return const <BankListItem>[];
+}
+
+String? _readFirstString(Map<String, dynamic> json, List<String> keys) {
+  for (final key in keys) {
+    final value = json[key];
+    if (value is String && value.trim().isNotEmpty) {
+      return value.trim();
+    }
+  }
+  return null;
 }
 
 Map<String, dynamic> _asMap(dynamic data) {

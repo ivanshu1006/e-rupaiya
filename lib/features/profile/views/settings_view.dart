@@ -1,0 +1,548 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:pinput/pinput.dart';
+
+import '../../../constants/app_colors.dart';
+import '../../../constants/routes_constant.dart';
+import '../../../features/auth/controllers/auth_controller.dart';
+import '../controllers/profile_controller.dart';
+import '../../../widgets/app_snackbar.dart';
+import '../../../widgets/k_dialog.dart';
+import '../repositories/settings_repository.dart';
+
+class SettingsView extends HookConsumerWidget {
+  const SettingsView({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final repository = useMemoized(() => SettingsRepository());
+    final profileState = ref.watch(profileControllerProvider);
+    final profile = profileState.profile;
+    final isPushEnabled = useState(true);
+    final isPushLoading = useState(false);
+    final isLocationEnabled = useState(false);
+
+    useEffect(() {
+      if (profile == null && !profileState.isFetching) {
+        Future.microtask(
+          () => ref.read(profileControllerProvider.notifier).fetchProfile(),
+        );
+      }
+      return null;
+    }, [profile, profileState.isFetching]);
+
+    useEffect(() {
+      if (profile != null && !isPushLoading.value) {
+        isPushEnabled.value = profile.isPushNotification;
+      }
+      return null;
+    }, [profile?.isPushNotification, isPushLoading.value]);
+
+    Future<void> togglePush(bool enabled) async {
+      if (isPushLoading.value) return;
+      final previous = isPushEnabled.value;
+      isPushEnabled.value = enabled;
+      isPushLoading.value = true;
+      final result =
+          await repository.setPushNotificationsEnabled(isPushEnabled.value);
+      isPushLoading.value = false;
+      if (!result.success) {
+        isPushEnabled.value = previous;
+      } else {
+        await ref.read(profileControllerProvider.notifier).fetchProfile();
+      }
+      if (result.message.isNotEmpty) {
+        AppSnackbar.show(result.message);
+      }
+    }
+
+    Future<void> handleDeleteSuccess() async {
+      await ref.read(authControllerProvider.notifier).logout();
+      if (context.mounted) {
+        context.go(RouteConstants.login);
+      }
+    }
+
+    Future<void> startDeleteAccountFlow() async {
+      final result = await repository.sendDeleteAccountOtp();
+      if (result.message.isNotEmpty) {
+        AppSnackbar.show(result.message);
+      }
+      if (!result.success) return;
+      await KDialog.instance.openDialog(
+        dialog: _DeleteAccountOtpDialog(
+          repository: repository,
+          onVerified: () async {
+            navigatorKey.currentState?.pop();
+            await handleDeleteSuccess();
+          },
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFF7F3),
+      body: Stack(
+        children: [
+          const _SettingsBackground(),
+          SafeArea(
+            child: Column(
+              children: [
+                const _SettingsHeader(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 24.h),
+                    child: Column(
+                      children: [
+                        // _SettingsTile(
+                        //   icon: Icons.translate,
+                        //   title: 'Change language',
+                        //   onTap: () {
+                        //     context.push(RouteConstants.languageSelection);
+                        //   },
+                        //   trailing: _GradientPill(
+                        //     child: Icon(
+                        //       Icons.arrow_forward_ios,
+                        //       color: Colors.white,
+                        //       size: 18.sp,
+                        //     ),
+                        //   ),
+                        // ),
+                        // SizedBox(height: 14.h),
+                        _SettingsTile(
+                          icon: Icons.notifications_none,
+                          title: 'Notifications',
+                          trailing: Switch(
+                            value: isPushEnabled.value,
+                            onChanged: isPushLoading.value ? null : togglePush,
+                            activeColor: AppColors.primary,
+                          ),
+                        ),
+                        SizedBox(height: 14.h),
+                        _SettingsTile(
+                          icon: Icons.location_on_outlined,
+                          title: 'Location Access',
+                          trailing: Switch(
+                            value: isLocationEnabled.value,
+                            onChanged: (value) {
+                              isLocationEnabled.value = value;
+                            },
+                            activeColor: AppColors.primary,
+                          ),
+                        ),
+                        SizedBox(height: 16.h),
+                        _DeleteAccountCard(
+                          onDelete: () {
+                            KDialog.instance.openDialog(
+                              dialog: _DeleteAccountConfirmDialog(
+                                onConfirm: () async {
+                                  navigatorKey.currentState?.pop();
+                                  await startDeleteAccountFlow();
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsBackground extends StatelessWidget {
+  const _SettingsBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          height: 120.h,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFFFE2D7), Color(0xFFFFF7F3)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+        ),
+        const Expanded(
+          child: ColoredBox(color: Color(0xFFFFF7F3)),
+        ),
+      ],
+    );
+  }
+}
+
+class _SettingsHeader extends StatelessWidget {
+  const _SettingsHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(8.w, 6.h, 16.w, 6.h),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => context.pop(),
+            icon: Icon(Icons.arrow_back, color: Colors.black, size: 22.sp),
+          ),
+          SizedBox(width: 4.w),
+          Text(
+            'Settings',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  const _SettingsTile({
+    required this.icon,
+    required this.title,
+    required this.trailing,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final Widget trailing;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18.r),
+          border: Border.all(color: AppColors.lightBorder),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.cardShadow,
+              blurRadius: 14.r,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            _IconBadge(icon: icon),
+            SizedBox(width: 14.w),
+            Expanded(
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+            trailing,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _IconBadge extends StatelessWidget {
+  const _IconBadge({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 44.r,
+      width: 44.r,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        color: Color(0xFFFFE6DC),
+      ),
+      child: Icon(
+        icon,
+        color: AppColors.primary,
+        size: 22.sp,
+      ),
+    );
+  }
+}
+
+class _GradientPill extends StatelessWidget {
+  const _GradientPill({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 40.h,
+      width: 56.w,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20.r),
+        gradient: const LinearGradient(
+          colors: [AppColors.gradientMid, AppColors.gradientEnd],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(child: child),
+    );
+  }
+}
+
+class _DeleteAccountCard extends StatelessWidget {
+  const _DeleteAccountCard({required this.onDelete});
+
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(18.w, 18.h, 18.w, 20.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18.r),
+        border: Border.all(color: AppColors.lightBorder),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.cardShadow,
+            blurRadius: 14.r,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const _IconBadge(icon: Icons.delete_outline),
+              SizedBox(width: 12.w),
+              Text(
+                'Delete account',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Text(
+            'Deleting your account will permanently remove all your data, '
+            'including your profile, preferences, and activity history.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textPrimary.withOpacity(0.7),
+                  height: 1.4,
+                ),
+          ),
+          SizedBox(height: 16.h),
+          SizedBox(
+            width: double.infinity,
+            height: 44.h,
+            child: ElevatedButton(
+              onPressed: onDelete,
+              style: ElevatedButton.styleFrom(
+                elevation: 0,
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(22.r),
+                ),
+              ),
+              child: Text(
+                'Delete Account',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DeleteAccountConfirmDialog extends StatelessWidget {
+  const _DeleteAccountConfirmDialog({required this.onConfirm});
+
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+      title: Text(
+        'Delete Account',
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+      ),
+      content: Text(
+        'Are you sure you want to delete your account? '
+        'We will send an OTP to confirm this action.',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppColors.textPrimary.withOpacity(0.8),
+              height: 1.4,
+            ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => navigatorKey.currentState?.pop(),
+          child: Text(
+            'Cancel',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.textPrimary.withOpacity(0.7),
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ),
+        TextButton(
+          onPressed: onConfirm,
+          child: Text(
+            'Yes',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DeleteAccountOtpDialog extends HookWidget {
+  const _DeleteAccountOtpDialog({
+    required this.repository,
+    required this.onVerified,
+  });
+
+  final SettingsRepository repository;
+  final Future<void> Function() onVerified;
+
+  @override
+  Widget build(BuildContext context) {
+    final otpController = useTextEditingController();
+    final isLoading = useState(false);
+
+    Future<void> verifyOtp() async {
+      final otp = otpController.text.trim();
+      if (otp.length < 4) {
+        AppSnackbar.show('Please enter the 4-digit OTP.');
+        return;
+      }
+      isLoading.value = true;
+      final result = await repository.verifyDeleteAccountOtp(otp);
+      isLoading.value = false;
+      if (result.message.isNotEmpty) {
+        AppSnackbar.show(result.message);
+      }
+      if (result.success) {
+        await onVerified();
+      }
+    }
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+      title: Text(
+        'Enter OTP',
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Please enter the 4-digit OTP sent to your registered number.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textPrimary.withOpacity(0.7),
+                  height: 1.4,
+                ),
+          ),
+          SizedBox(height: 14.h),
+          Pinput(
+            length: 4,
+            controller: otpController,
+            keyboardType: TextInputType.number,
+            defaultPinTheme: PinTheme(
+              width: 48.w,
+              height: 48.w,
+              textStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7F3),
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(color: AppColors.lightBorder),
+              ),
+            ),
+            focusedPinTheme: PinTheme(
+              width: 48.w,
+              height: 48.w,
+              textStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7F3),
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(color: AppColors.primary),
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed:
+              isLoading.value ? null : () => navigatorKey.currentState?.pop(),
+          child: Text(
+            'Cancel',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.textPrimary.withOpacity(0.7),
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ),
+        TextButton(
+          onPressed: isLoading.value ? null : verifyOtp,
+          child: Text(
+            isLoading.value ? 'Verifying...' : 'Verify',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+}

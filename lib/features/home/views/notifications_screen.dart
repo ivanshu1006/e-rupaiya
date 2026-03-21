@@ -15,7 +15,7 @@ import '../../../constants/routes_constant.dart';
 import '../../../services/notification_badge_service.dart';
 import '../../../widgets/my_app_bar.dart';
 import '../../profile/views/my_wallet_view.dart';
-import '../components/quick_action_card.dart';
+import '../components/quick_action_header_card.dart';
 import '../models/notification_item.dart';
 import '../repositories/notifications_repository.dart';
 
@@ -66,7 +66,9 @@ class NotificationsScreen extends HookConsumerWidget {
                       (n) => !n.isRead && !localReadIds.contains(n.id),
                     )
                     .length;
-                NotificationBadgeService.syncFromList(unreadFromList);
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  NotificationBadgeService.syncFromList(unreadFromList);
+                });
                 final today =
                     notifications.where((n) => n.section == 'Today').toList();
                 final earlier =
@@ -82,14 +84,16 @@ class NotificationsScreen extends HookConsumerWidget {
                         ...today.map(
                           (item) => Padding(
                             padding: EdgeInsets.only(bottom: 12.h),
-                            child: QuickActionCard(
+                            child: QuickActionHeaderCard(
                               title: item.title,
                               subtitle: item.subtitle,
-                              amount: '',
-                              buttonLabel: item.actionLabel,
-                              imageAsset: item.iconAsset,
-                              showTail: true,
-                              showLeadingImage: true,
+                              leadingAsset: item.iconAsset,
+                              actionLabel: item.actionLabel,
+                              onAction: () => _handleNotificationTap(
+                                context,
+                                ref,
+                                item,
+                              ),
                               onTap: () => _handleNotificationTap(
                                 context,
                                 ref,
@@ -106,14 +110,16 @@ class NotificationsScreen extends HookConsumerWidget {
                         ...earlier.map(
                           (item) => Padding(
                             padding: EdgeInsets.only(bottom: 12.h),
-                            child: QuickActionCard(
+                            child: QuickActionHeaderCard(
                               title: item.title,
                               subtitle: item.subtitle,
-                              amount: '',
-                              buttonLabel: item.actionLabel,
-                              imageAsset: item.iconAsset,
-                              showTail: true,
-                              showLeadingImage: true,
+                              leadingAsset: item.iconAsset,
+                              actionLabel: item.actionLabel,
+                              onAction: () => _handleNotificationTap(
+                                context,
+                                ref,
+                                item,
+                              ),
                               onTap: () => _handleNotificationTap(
                                 context,
                                 ref,

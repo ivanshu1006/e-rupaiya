@@ -8,11 +8,11 @@ import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
 import '../../../services/permission_service.dart';
 import '../../mobile_prepaid/controllers/contacts_cache_controller.dart';
-import '../components/referral_share_actions.dart';
 import '../components/refer_and_earn_app_bar.dart';
+import '../components/referral_share_actions.dart';
 import 'refer_and_earn_wallet_view.dart';
-import 'track_referrals_view.dart';
 import 'referral_works_view.dart';
+import 'track_referrals_view.dart';
 
 class ReferAndEarnView extends HookConsumerWidget {
   const ReferAndEarnView({super.key});
@@ -197,10 +197,7 @@ class _ContactsStrip extends HookWidget {
     final items = displayContacts.isNotEmpty
         ? displayContacts
         : const [
-            _PlaceholderContact('Ivanshu Patil'),
-            _PlaceholderContact('Monu Ali'),
-            _PlaceholderContact('Supriya Ith...'),
-            _PlaceholderContact('Invite Con...'),
+            _PlaceholderContact('...'),
           ];
     return SizedBox(
       height: 84.h,

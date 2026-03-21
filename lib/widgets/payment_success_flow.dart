@@ -358,7 +358,7 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
                           textAlign: TextAlign.center,
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.white.withOpacity(0.95),
+                                    color: AppColors.textPrimary,
                                     height: 1.4,
                                   ),
                         ),

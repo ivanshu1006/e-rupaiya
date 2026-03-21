@@ -7,6 +7,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
+import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/k_dialog.dart';
 import '../../profile/repositories/bank_accounts_repository.dart';
 import '../components/refer_and_earn_app_bar.dart';
@@ -83,30 +84,34 @@ class WithdrawECoinsView extends HookWidget {
         child: SafeArea(
           top: false,
           child: InkWell(
-            onTap: () async {
-              if (isFetchingBanks.value) return;
-              await loadBanks();
-              if (bankAccounts.value.isEmpty) {
-                await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const AddBankAccountView(),
-                  ),
-                );
-                await loadBanks();
-                return;
-              }
-              KDialog.instance.openSheet(
-                dialog: _WithdrawConfirmSheet(
-                  amount: amount.value,
-                  accounts: bankAccounts.value,
-                ),
-              );
-            },
+            onTap: amount.value == 0
+                ? null
+                : () async {
+                    if (isFetchingBanks.value) return;
+                    await loadBanks();
+                    if (bankAccounts.value.isEmpty) {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const AddBankAccountView(),
+                        ),
+                      );
+                      await loadBanks();
+                      return;
+                    }
+                    KDialog.instance.openSheet(
+                      dialog: _WithdrawConfirmSheet(
+                        amount: amount.value,
+                        accounts: bankAccounts.value,
+                      ),
+                    );
+                  },
             borderRadius: BorderRadius.circular(28.r),
             child: Container(
               height: 42.h,
               decoration: BoxDecoration(
-                color: const Color(0xFFE85A2C),
+                color: amount.value == 0
+                    ? const Color(0xFFE85A2C).withOpacity(0.5)
+                    : const Color(0xFFE85A2C),
                 borderRadius: BorderRadius.circular(28.r),
               ),
               alignment: Alignment.center,
@@ -507,9 +512,7 @@ class _WithdrawConfirmSheet extends HookWidget {
 
     Future<void> handleConfirm() async {
       if (amount <= 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Enter a valid amount to withdraw.')),
-        );
+        AppSnackbar.show('Enter a valid amount to withdraw.');
         return;
       }
       if (isSubmitting.value) return;
@@ -517,30 +520,27 @@ class _WithdrawConfirmSheet extends HookWidget {
         isSubmitting.value = true;
         final response = await repository.withdrawEcoins(ecoins: amount);
         if (!response.success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                response.message.isEmpty
-                    ? 'Withdrawal failed. Please try again.'
-                    : response.message,
-              ),
-            ),
+          _closeTopRoute();
+          await _openWithdrawStatusDialog(
+            status: _WithdrawStatus.failed,
+            amount: amount,
           );
           return;
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              response.message.isEmpty
-                  ? 'Withdrawal request submitted.'
-                  : response.message,
-            ),
-          ),
+        try {
+          await repository.fetchSummary();
+        } catch (_) {}
+        final status = _resolveWithdrawStatus(response.message);
+        _closeTopRoute();
+        await _openWithdrawStatusDialog(
+          status: status,
+          amount: amount,
         );
-        Navigator.of(context).pop();
       } catch (_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Withdrawal failed. Please try again.')),
+        _closeTopRoute();
+        await _openWithdrawStatusDialog(
+          status: _WithdrawStatus.failed,
+          amount: amount,
         );
       } finally {
         isSubmitting.value = false;
@@ -751,5 +751,260 @@ class _WithdrawConfirmSheet extends HookWidget {
         ],
       ),
     );
+  }
+}
+
+enum _WithdrawStatus { success, failed, requested }
+
+_WithdrawStatus _resolveWithdrawStatus(String message) {
+  final lower = message.trim().toLowerCase();
+  if (lower.contains('request') ||
+      lower.contains('submitted') ||
+      lower.contains('pending')) {
+    return _WithdrawStatus.requested;
+  }
+  if (lower.contains('success') ||
+      lower.contains('withdrawn') ||
+      lower.contains('credited')) {
+    return _WithdrawStatus.success;
+  }
+  return _WithdrawStatus.requested;
+}
+
+Future<void> _openWithdrawStatusDialog({
+  required _WithdrawStatus status,
+  required int amount,
+}) async {
+  await Future.delayed(const Duration(milliseconds: 120));
+  await KDialog.instance.openDialog(
+    barrierDismissible: false,
+    dialog: _WithdrawStatusDialog(
+      status: status,
+      amount: amount,
+      onPrimary: () {
+        if (status == _WithdrawStatus.failed) {
+          _closeTopRoute();
+          return;
+        }
+        _popToWallet();
+      },
+      onSecondary: () {
+        if (status == _WithdrawStatus.failed) {
+          _closeTopRoute();
+          return;
+        }
+        _popToHome();
+      },
+    ),
+  );
+}
+
+void _closeTopRoute() {
+  final nav = navigatorKey.currentState;
+  if (nav != null && nav.canPop()) {
+    nav.pop();
+  }
+}
+
+void _popToWallet() {
+  final nav = navigatorKey.currentState;
+  if (nav == null) return;
+  if (nav.canPop()) {
+    nav.pop();
+  }
+  if (nav.canPop()) {
+    nav.pop();
+  }
+}
+
+void _popToHome() {
+  final nav = navigatorKey.currentState;
+  if (nav == null) return;
+  nav.popUntil((route) => route.isFirst);
+}
+
+class _WithdrawStatusDialog extends StatelessWidget {
+  const _WithdrawStatusDialog({
+    required this.status,
+    required this.amount,
+    required this.onPrimary,
+    required this.onSecondary,
+  });
+
+  final _WithdrawStatus status;
+  final int amount;
+  final VoidCallback onPrimary;
+  final VoidCallback onSecondary;
+
+  @override
+  Widget build(BuildContext context) {
+    final config = _WithdrawStatusConfig.from(status);
+    return Dialog(
+      insetPadding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 24.h),
+      backgroundColor: Colors.transparent,
+      child: Container(
+        padding: EdgeInsets.fromLTRB(18.w, 20.h, 18.w, 18.h),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: config.gradient,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+          borderRadius: BorderRadius.circular(26.r),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64.w,
+              height: 64.w,
+              decoration: BoxDecoration(
+                color: config.iconBackground,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Image.asset(
+                  config.iconAsset,
+                  width: 30.w,
+                  height: 30.w,
+                ),
+              ),
+            ),
+            SizedBox(height: 14.h),
+            Text(
+              config.title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            SizedBox(height: 10.h),
+            Text(
+              config.message(amount),
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.white.withOpacity(0.9),
+                    height: 1.4,
+                  ),
+            ),
+            SizedBox(height: 18.h),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onPrimary,
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: config.primaryBorder),
+                      foregroundColor: config.primaryText,
+                      backgroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(22.r),
+                      ),
+                      padding: EdgeInsets.symmetric(vertical: 10.h),
+                    ),
+                    child: Text(
+                      config.primaryLabel,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: config.primaryText,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: onSecondary,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE85A2C),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(22.r),
+                      ),
+                      padding: EdgeInsets.symmetric(vertical: 10.h),
+                    ),
+                    child: Text(
+                      config.secondaryLabel,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WithdrawStatusConfig {
+  const _WithdrawStatusConfig({
+    required this.title,
+    required this.iconAsset,
+    required this.iconBackground,
+    required this.gradient,
+    required this.primaryLabel,
+    required this.secondaryLabel,
+    required this.primaryBorder,
+    required this.primaryText,
+    required this.message,
+  });
+
+  final String title;
+  final String iconAsset;
+  final Color iconBackground;
+  final List<Color> gradient;
+  final String primaryLabel;
+  final String secondaryLabel;
+  final Color primaryBorder;
+  final Color primaryText;
+  final String Function(int amount) message;
+
+  factory _WithdrawStatusConfig.from(_WithdrawStatus status) {
+    switch (status) {
+      case _WithdrawStatus.success:
+        return _WithdrawStatusConfig(
+          title: 'Withdrawal Successful',
+          iconAsset: FileConstants.withdrawSuccess,
+          iconBackground: const Color(0xFF0F9D58),
+          gradient: const [Color(0xFFF38B6B), Color(0xFF052E6F)],
+          primaryLabel: 'View Details',
+          secondaryLabel: 'Back To Home',
+          primaryBorder: const Color(0xFFE85A2C),
+          primaryText: const Color(0xFFE85A2C),
+          message: (amount) =>
+              '₹${_formatCoins(amount)} has been successfully withdrawn.\nThe amount will be credited to your bank\naccount shortly.',
+        );
+      case _WithdrawStatus.failed:
+        return _WithdrawStatusConfig(
+          title: 'Withdrawal Failed',
+          iconAsset: FileConstants.withdrawFailed,
+          iconBackground: const Color(0xFFB91C1C),
+          gradient: const [Color(0xFF5C1200), Color(0xFF052E6F)],
+          primaryLabel: 'Contact Support',
+          secondaryLabel: 'Retry',
+          primaryBorder: const Color(0xFFE85A2C),
+          primaryText: const Color(0xFFE85A2C),
+          message: (amount) =>
+              '₹${_formatCoins(amount)} withdrawal could not be processed.\nPlease try again or check your bank\ndetails.',
+        );
+      case _WithdrawStatus.requested:
+        return _WithdrawStatusConfig(
+          title: 'Withdrawal Requested',
+          iconAsset: FileConstants.withdrawRequested,
+          iconBackground: const Color(0xFFF59E0B),
+          gradient: const [Color(0xFFF59E0B), Color(0xFF052E6F)],
+          primaryLabel: 'View Details',
+          secondaryLabel: 'Back To Home',
+          primaryBorder: const Color(0xFFE85A2C),
+          primaryText: const Color(0xFFE85A2C),
+          message: (amount) =>
+              '₹${_formatCoins(amount)} withdrawal request received.\nThe amount will be credited within 24\nhours.',
+        );
+    }
   }
 }

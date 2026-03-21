@@ -6,10 +6,16 @@ class ProfileModel {
     this.email,
     this.address,
     this.isVerified = false,
+    this.isKycVerified = false,
     this.isEmailVerified = false,
     this.walletBalance = 0.0,
     this.dailyFreeSpin = 0,
     this.normalSpinRemaining = 0,
+    this.isPushNotification = true,
+    this.aadhaarMasked,
+    this.panMasked,
+    this.permanentAddress,
+    this.dob,
     this.createdAt,
     this.updatedAt,
     this.profilePhotoUrl,
@@ -23,6 +29,7 @@ class ProfileModel {
       email: json['email'] as String?,
       address: json['address'] as String?,
       isVerified: json['is_verified'] == '1',
+      isKycVerified: _parseBool(json['is_kyc_verified']),
       isEmailVerified: json['is_email_verified'] == 'VERIFIED',
       walletBalance:
           double.tryParse(json['wallet_balance']?.toString() ?? '') ?? 0.0,
@@ -30,6 +37,12 @@ class ProfileModel {
           int.tryParse(json['daily_free_spin']?.toString() ?? '') ?? 0,
       normalSpinRemaining:
           int.tryParse(json['normal_spin_remaining']?.toString() ?? '') ?? 0,
+      isPushNotification: _parseBool(json['is_push_notification']),
+      aadhaarMasked: json['aadhaar_masked'] as String?,
+      panMasked: json['pan_masked'] as String?,
+      permanentAddress: (json['permanant_address'] ?? json['permanent_address'])
+          as String?,
+      dob: json['dob'] as String?,
       createdAt: json['created_at'] as String?,
       updatedAt: json['updated_at'] as String?,
       profilePhotoUrl: json['profile_photo_url'] as String?,
@@ -42,10 +55,16 @@ class ProfileModel {
   final String? email;
   final String? address;
   final bool isVerified;
+  final bool isKycVerified;
   final bool isEmailVerified;
   final double walletBalance;
   final int dailyFreeSpin;
   final int normalSpinRemaining;
+  final bool isPushNotification;
+  final String? aadhaarMasked;
+  final String? panMasked;
+  final String? permanentAddress;
+  final String? dob;
   final String? createdAt;
   final String? updatedAt;
   final String? profilePhotoUrl;
@@ -56,5 +75,12 @@ class ProfileModel {
       return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
     }
     return name.isNotEmpty ? name[0].toUpperCase() : '';
+  }
+
+  static bool _parseBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value == 1;
+    final text = value?.toString().trim().toLowerCase();
+    return text == '1' || text == 'true' || text == 'verified' || text == 'yes';
   }
 }

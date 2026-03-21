@@ -5,9 +5,12 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../constants/app_colors.dart';
-import '../../../widgets/custom_elevated_button.dart';
+import '../../../widgets/app_snackbar.dart';
+import '../../../widgets/k_dialog.dart';
 import '../../refer_and_earn/components/refer_and_earn_app_bar.dart';
+import '../../refer_and_earn/repositories/bank_account_repository.dart';
 import '../../refer_and_earn/views/add_bank_account_view.dart';
+import '../../refer_and_earn/views/select_bank_view.dart';
 import '../repositories/bank_accounts_repository.dart';
 
 class BankAccountsView extends HookWidget {
@@ -23,27 +26,44 @@ class BankAccountsView extends HookWidget {
     );
     final snapshot = useFuture(future);
 
-    Future<void> openAddBank() async {
-      await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const AddBankAccountView()),
-      );
+    Future<void> openAddBank([BankAccountEntry? account]) async {
+      if (account == null) {
+        final selected = await Navigator.of(context).push<BankListItem>(
+          MaterialPageRoute(
+            builder: (_) => const SelectBankView(),
+          ),
+        );
+        if (selected == null) return;
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) =>
+                AddBankAccountView(selectedBankName: selected.bankName),
+          ),
+        );
+      } else {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => AddBankAccountView(existingAccount: account),
+          ),
+        );
+      }
       refreshKey.value += 1;
     }
 
     return Scaffold(
       backgroundColor: Colors.white,
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 18.h),
-          child: CustomElevatedButton(
-            label: 'Add New Bank Account',
-            onPressed: openAddBank,
-            height: 52.h,
-            uppercaseLabel: false,
-          ),
-        ),
-      ),
+      // bottomNavigationBar: SafeArea(
+      //   top: false,
+      //   child: Padding(
+      //     padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 18.h),
+      //     child: CustomElevatedButton(
+      //       label: 'Add New Bank Account',
+      //       onPressed: openAddBank,
+      //       height: 52.h,
+      //       uppercaseLabel: false,
+      //     ),
+      //   ),
+      // ),
       body: Stack(
         children: [
           Column(
@@ -67,7 +87,12 @@ class BankAccountsView extends HookWidget {
               ),
               child: Padding(
                 padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 12.h),
-                child: _buildBody(context, snapshot, openAddBank),
+                child: _buildBody(
+                  context,
+                  snapshot,
+                  openAddBank,
+                  () => refreshKey.value += 1,
+                ),
               ),
             ),
           ),
@@ -80,7 +105,8 @@ class BankAccountsView extends HookWidget {
 Widget _buildBody(
   BuildContext context,
   AsyncSnapshot<List<BankAccountEntry>> snapshot,
-  VoidCallback onAddBank,
+  void Function([BankAccountEntry?]) onAddBank,
+  VoidCallback refresh,
 ) {
   if (snapshot.connectionState == ConnectionState.waiting) {
     return const Center(child: CircularProgressIndicator.adaptive());
@@ -95,11 +121,12 @@ Widget _buildBody(
   }
 
   final accounts = snapshot.data ?? const <BankAccountEntry>[];
+  final existingAccount = accounts.isNotEmpty ? accounts.first : null;
   return SingleChildScrollView(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (accounts.isEmpty)
+        if (existingAccount == null)
           Text(
             'No bank accounts added yet.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -107,10 +134,43 @@ Widget _buildBody(
                 ),
           )
         else
-          ...accounts.map((account) => _BankAccountCard(account: account)),
+          _BankAccountCard(
+            account: existingAccount,
+            onDelete: () async {
+              if (existingAccount.id == null) {
+                AppSnackbar.show('Unable to delete bank account.');
+                return;
+              }
+
+              final dialog = _ConfirmDeleteBankDialog(
+                bankName: existingAccount.bankName,
+                onCancel: () => Navigator.of(context).pop(),
+                onConfirm: () async {
+                  Navigator.of(context).pop();
+                  try {
+                    final response = await BankAccountsRepository()
+                        .deleteBank(bankId: existingAccount.id!);
+                    if (response.status) {
+                      AppSnackbar.show(response.message.isEmpty
+                          ? 'Bank account deleted successfully.'
+                          : response.message);
+                      refresh();
+                    } else {
+                      AppSnackbar.show(response.message.isEmpty
+                          ? 'Failed to delete bank account.'
+                          : response.message);
+                    }
+                  } catch (e) {
+                    AppSnackbar.show('Failed to delete bank account.');
+                  }
+                },
+              );
+              await KDialog.instance.openDialog(dialog: dialog);
+            },
+          ),
         SizedBox(height: 14.h),
         InkWell(
-          onTap: onAddBank,
+          onTap: () => onAddBank(existingAccount),
           borderRadius: BorderRadius.circular(12.r),
           child: Row(
             children: [
@@ -127,7 +187,9 @@ Widget _buildBody(
               ),
               SizedBox(width: 12.w),
               Text(
-                'Add New Bank Account',
+                existingAccount == null
+                    ? 'Add New Bank Account'
+                    : 'Edit Bank Account',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w700,
@@ -142,9 +204,13 @@ Widget _buildBody(
 }
 
 class _BankAccountCard extends HookWidget {
-  const _BankAccountCard({required this.account});
+  const _BankAccountCard({
+    required this.account,
+    required this.onDelete,
+  });
 
   final BankAccountEntry account;
+  final Future<void> Function() onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -216,8 +282,94 @@ class _BankAccountCard extends HookWidget {
               ],
             ),
           ),
-          const Icon(Icons.more_vert, size: 18),
+          IconButton(
+            icon: const Icon(Icons.more_vert, size: 18),
+            onPressed: onDelete,
+            splashRadius: 20,
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _ConfirmDeleteBankDialog extends StatelessWidget {
+  const _ConfirmDeleteBankDialog({
+    required this.bankName,
+    required this.onCancel,
+    required this.onConfirm,
+  });
+
+  final String bankName;
+  final VoidCallback onCancel;
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFECE8),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.account_balance,
+                size: 40,
+                color: Color(0xFFE85A2C),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Delete Bank Account',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Are you sure you want to delete $bankName?',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textPrimary.withOpacity(0.75),
+                  ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onCancel,
+                    child: const Text(
+                      'No',
+                      style: TextStyle(color: AppColors.textPrimary),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: onConfirm,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE85A2C),
+                    ),
+                    child: const Text('Yes',
+                        style: TextStyle(color: AppColors.white)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

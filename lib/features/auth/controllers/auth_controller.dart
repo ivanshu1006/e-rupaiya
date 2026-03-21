@@ -1,6 +1,9 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../utils/utils.dart';
+import '../../../constants/storage_keys.dart';
+import '../../refer_and_earn/repositories/referral_repository.dart';
+import '../../../services/logger_service.dart';
 import '../models/auth_flow.dart';
 import '../models/auth_state.dart';
 import '../repositories/auth_repository.dart';
@@ -98,6 +101,7 @@ class AuthController extends StateNotifier<AuthState> {
         pendingMobile: null,
         errorMessage: null,
       );
+      await _handlePendingReferral();
       return true;
     } catch (e) {
       state = state.copyWith(
@@ -198,6 +202,7 @@ class AuthController extends StateNotifier<AuthState> {
         pendingMobile: null,
         errorMessage: null,
       );
+      await _handlePendingReferral();
       return message;
     } catch (e) {
       state = state.copyWith(
@@ -286,5 +291,35 @@ class AuthController extends StateNotifier<AuthState> {
       );
       return null;
     }
+  }
+
+  Future<void> _handlePendingReferral() async {
+    try {
+      final code =
+          await _repository.secureStorage.read(key: StorageKeys.pendingReferralCode);
+      if (code == null || code.trim().isEmpty) {
+        logger.debug('Referral: no pending code');
+        return;
+      }
+      final userId = await _repository.secureStorage.read(key: 'userId');
+      if (userId == null || userId.trim().isEmpty) {
+        logger.debug('Referral: missing userId, skip register');
+        return;
+      }
+      logger.debug('Referral: registering pending code=$code userId=$userId');
+      final response = await ReferralRepository().registerReferral(
+        newUserId: userId,
+        referralCode: code.trim(),
+      );
+      logger.debug(
+        'Referral: register response status=${response.status} message=${response.message}',
+      );
+      if (response.status) {
+        await _repository.secureStorage.delete(
+          key: StorageKeys.pendingReferralCode,
+        );
+        logger.debug('Referral: cleared pending code');
+      }
+    } catch (_) {}
   }
 }

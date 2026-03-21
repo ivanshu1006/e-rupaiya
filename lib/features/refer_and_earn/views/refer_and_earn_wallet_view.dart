@@ -149,13 +149,18 @@ class _MilestoneCard extends HookWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Unlock Your Next Milestone',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
+              Expanded(
+                child: Text(
+                  'Unlock Your Next Milestone',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
               ),
+              SizedBox(width: 8.w),
               GestureDetector(
                 onTap: () {
                   Navigator.of(context).push(
@@ -319,7 +324,7 @@ class _TrackReferralsCard extends HookWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14.r),
       child: Container(
-        height: 74.h,
+        constraints: BoxConstraints(minHeight: 74.h),
         padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 12.h),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -377,7 +382,7 @@ class _EarningsCard extends HookWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 74.h,
+      constraints: BoxConstraints(minHeight: 74.h),
       padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 12.h),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF7F2),

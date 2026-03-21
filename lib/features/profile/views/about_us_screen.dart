@@ -72,7 +72,7 @@ class _AboutHeader extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Text(
-            'About E-Rupaiya',
+            'About E-Rupiya',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: Colors.black,
                   fontWeight: FontWeight.w700,
@@ -93,59 +93,45 @@ class _AboutBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _AboutParagraph(
-          "E-Rupaiya Is India’s Own Smart And Secure Digital "
-          "Payments App, Designed To Make Your Everyday Bill "
-          "Payments Simple, Fast, And Reliable. Whether It’s "
-          "Electricity, Water, Gas, Mobile Recharge, Or DTH — "
-          "E-Rupaiya Helps You Pay All Your Bills In One Place, "
-          "Within Seconds.",
+          "E-Rupiya is your all-in-one mobile solution for fast, easy, and "
+          "secure bill payments. Designed for today’s on-the-go lifestyle, "
+          "our app lets you manage and pay all your bills anytime, anywhere "
+          "— right from your smartphone.",
         ),
         SizedBox(height: 16),
         _AboutParagraph(
-          "Our Goal Is To Bring Convenience And Trust "
-          "Together — Giving Every User A Smooth Payment "
-          "Experience With Complete Control And Transparency.",
+          "From mobile recharges and utility bills to everyday payments, "
+          "E-Rupiya brings everything into one simple, user-friendly app. "
+          "With a focus on speed, security, and convenience, we ensure every "
+          "transaction is smooth and reliable.",
         ),
         SizedBox(height: 22),
-        _AboutSectionTitle('Fast Payments'),
-        SizedBox(height: 10),
         _AboutParagraph(
-          "No More Waiting Or Switching Between Apps. With "
-          "E-Rupaiya, Your Bills Are Paid Instantly Through A "
-          "Few Quick Taps — Saving Your Time And Effort Every "
-          "Month.",
+          "Our mission is to make digital payments effortless and accessible "
+          "for everyone by combining smart technology with a seamless mobile "
+          "experience.",
         ),
         SizedBox(height: 22),
-        _AboutSectionTitle('Safe & Secure'),
+        _AboutSectionTitle('Why E-Rupiya?'),
         SizedBox(height: 10),
         _AboutParagraph(
-          "Your Data And Transactions Are Fully Protected With "
-          "Advanced Encryption And Multi-Layer Security. "
-          "E-Rupaiya Follows Strict Privacy Standards To Ensure "
-          "Your Money And Information Remain Completely Safe.",
+          "• Quick and hassle-free payments",
         ),
-        SizedBox(height: 22),
-        _AboutSectionTitle('User-Focused Experience'),
         SizedBox(height: 10),
         _AboutParagraph(
-          "Built For Every Indian User, E-Rupaiya Offers A Clean, "
-          "Easy-To-Use Interface That Works Seamlessly On All "
-          "Devices. From Earning Coins To Tracking Your Payments "
-          "— Everything Is Designed To Give You More Value And "
-          "A Better Experience.",
+          "• Secure and reliable transactions",
         ),
-        SizedBox(height: 22),
-        _AboutSectionTitle('Why We Created E-Rupaiya'),
         SizedBox(height: 10),
         _AboutParagraph(
-          "We Believe Paying Bills Shouldn’t Be Complicated. "
-          "E-Rupaiya Was Created To Simplify Digital Payments "
-          "For Everyone — Secure, Accessible, And Rewarding.",
+          "• Simple and intuitive mobile interface",
+        ),
+        SizedBox(height: 10),
+        _AboutParagraph(
+          "• All your bills in one place",
         ),
         SizedBox(height: 20),
         _AboutTagline(
-          "One App For All Your Payments\n"
-          "Fast, Safe, And Truly Indian.",
+          "Experience smarter payments with E-Rupiya—anytime, anywhere.",
         ),
       ],
     );
