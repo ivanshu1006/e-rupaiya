@@ -1,3 +1,4 @@
+import 'credit_card_item.dart';
 import 'quick_action_model.dart';
 import 'quick_actions_model.dart';
 
@@ -20,7 +21,7 @@ class HomeState {
   final List<Data>? allQuickActions;
   final List<QuickActionCategory>? quickActions;
   // null = not yet fetched, [] = fetched & empty, [...] = has data
-  final List<Data>? creditCardActions;
+  final List<CreditCardItem>? creditCardActions;
   final List<Data>? rechargeActions;
 
   static const _sentinel = Object();
@@ -49,7 +50,7 @@ class HomeState {
           : quickActions as List<QuickActionCategory>?,
       creditCardActions: creditCardActions == _sentinel
           ? this.creditCardActions
-          : creditCardActions as List<Data>?,
+          : creditCardActions as List<CreditCardItem>?,
       rechargeActions: rechargeActions == _sentinel
           ? this.rechargeActions
           : rechargeActions as List<Data>?,

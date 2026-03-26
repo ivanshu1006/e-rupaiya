@@ -16,6 +16,9 @@ class RouteConstants {
   static const String creditCardIntro = '/credit-card';
   static const String creditCardListing = '/credit-card/billers';
   static const String creditCardMyCards = '/credit-card/cards';
+  static const String creditCardTransactions = '/credit-card/transactions';
+  static const String creditCardTransactionDetail =
+      '/credit-card/transactions/detail';
   static const String spinAndWin = '/spin-and-win';
   static const String mobilePrepaid = '/mobile-prepaid';
   static const String mobileRecentRecharges = '/mobile-prepaid/recent';

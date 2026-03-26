@@ -1,18 +1,11 @@
 import 'dart:typed_data';
 
-import 'package:printing/printing.dart';
+import '../services/receipt_file_service.dart';
 
 class ReceiptHtmlRenderer {
   const ReceiptHtmlRenderer._();
 
   static Future<Uint8List> toPdfBytes(String html) async {
-    return Printing.convertHtml(html: html).timeout(
-      const Duration(seconds: 12),
-      onTimeout: () {
-        throw Exception(
-          'Receipt rendering timed out. Please update Android System WebView and try again.',
-        );
-      },
-    );
+    return ReceiptFileService.buildPdfBytesFromHtml(html);
   }
 }

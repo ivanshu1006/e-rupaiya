@@ -45,14 +45,14 @@ class AddBankAccountView extends HookWidget {
 
     useEffect(() {
       if (isEdit && existingAccount != null) {
-        accountController.text = existingAccount!.accountNumber;
+        accountController.text = '';
         ifscController.text = existingAccount!.ifsc ?? '';
         nameController.text = existingAccount!.accountHolderName;
         bankNameController.text = existingAccount!.bankName;
         referenceId.value = existingAccount!.referenceId ?? '';
         step.value = _BankStep.verify;
-      } else if (selectedBankName != null &&
-          selectedBankName!.trim().isNotEmpty) {
+      }
+      if (selectedBankName != null && selectedBankName!.trim().isNotEmpty) {
         bankNameController.text = selectedBankName!.trim();
       }
       return null;

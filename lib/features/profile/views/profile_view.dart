@@ -491,9 +491,11 @@ class UpdateProfileView extends HookConsumerWidget {
     final currentFullName = fullNameController.text.trim();
     final currentAddress = addressController.text.trim();
     final currentMobile = mobileController.text.trim();
+    final hasCommunicationChange = currentAddress != initialAddress;
     final hasNonEmailChanges = currentFullName != initialFullName ||
-        currentAddress != initialAddress ||
-        currentMobile != initialMobile;
+        currentMobile != initialMobile ||
+        hasCommunicationChange;
+    final canSave = hasNonEmailChanges && (canEdit || hasCommunicationChange);
 
     useEffect(() {
       final updatedEmail = state.profile?.email ?? '';
@@ -549,215 +551,359 @@ class UpdateProfileView extends HookConsumerWidget {
         centerTitle: false,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 42,
-                      backgroundColor: AppColors.primary,
-                      child: ClipOval(
-                        child: pickedImage.value != null
-                            ? Image.file(
-                                pickedImage.value!,
-                                width: 84,
-                                height: 84,
-                                fit: BoxFit.cover,
-                              )
-                            : profile.profilePhotoUrl?.isNotEmpty == true
-                                ? AppNetworkImage(
-                                    url: profile.profilePhotoUrl,
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 42,
+                          backgroundColor: AppColors.primary,
+                          child: ClipOval(
+                            child: pickedImage.value != null
+                                ? Image.file(
+                                    pickedImage.value!,
                                     width: 84,
                                     height: 84,
                                     fit: BoxFit.cover,
-                                    showShimmer: false,
                                   )
-                                : Text(
-                                    profile.initials,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleLarge
-                                        ?.copyWith(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                  ),
-                      ),
-                    ),
-                    Positioned(
-                      right: 0,
-                      bottom: 0,
-                      child: GestureDetector(
-                        onTap: canEdit
-                            ? () {
-                                KDialog.instance.openSheet(
-                                  dialog: ProfileImagePickerSheet(
-                                    onCamera: () async {
-                                      navigatorKey.currentState?.pop();
-                                      final image = await ImagePickerHelper
-                                          .pickFromCamera();
-                                      if (image == null) return;
-                                      pickedImage.value = image;
-                                      await controller.updateProfileImage(
-                                        image,
-                                      );
-                                    },
-                                    onGallery: () async {
-                                      navigatorKey.currentState?.pop();
-                                      final image = await ImagePickerHelper
-                                          .pickFromGallery();
-                                      if (image == null) return;
-                                      pickedImage.value = image;
-                                      await controller.updateProfileImage(
-                                        image,
-                                      );
-                                    },
-                                  ),
-                                );
-                              }
-                            : null,
-                        child: Container(
-                          height: 24,
-                          width: 24,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.12),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.camera_alt_outlined,
-                            size: 14,
-                            color: AppColors.primary,
+                                : profile.profilePhotoUrl?.isNotEmpty == true
+                                    ? AppNetworkImage(
+                                        url: profile.profilePhotoUrl,
+                                        width: 84,
+                                        height: 84,
+                                        fit: BoxFit.cover,
+                                        showShimmer: false,
+                                      )
+                                    : Text(
+                                        profile.initials,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge
+                                            ?.copyWith(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                      ),
                           ),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              ProfileField(
-                label: 'Full Name (as per PAN)',
-                controller: fullNameController,
-                enabled: canEdit,
-              ),
-              const SizedBox(height: 16),
-              ProfileField(
-                label: 'Mobile Number',
-                controller: mobileController,
-                enabled: false,
-                // trailingText: 'Change',
-                // onTrailingTap: () {
-                //   KDialog.instance.openSheet(
-                //     dialog: _MobileUpdateSheet(
-                //       currentMobile: mobileController.text.trim(),
-                //     ),
-                //   );
-                // },
-              ),
-              const SizedBox(height: 16),
-              ProfileField(
-                label: 'Email ID',
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                enabled: canEdit && !latestProfile.isEmailVerified,
-                trailingText:
-                    latestProfile.isEmailVerified ? 'VERIFIED' : 'VERIFY',
-                onTrailingTap: latestProfile.isEmailVerified || !canEdit
-                    ? null
-                    : () {
-                        KDialog.instance.openSheet(
-                          dialog: _EmailUpdateSheet(
-                            currentEmail: emailController.text.trim(),
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: GestureDetector(
+                            onTap: () {
+                              KDialog.instance.openSheet(
+                                dialog: ProfileImagePickerSheet(
+                                  onCamera: () async {
+                                    navigatorKey.currentState?.pop();
+                                    final image =
+                                        await ImagePickerHelper.pickFromCamera();
+                                    if (image == null) return;
+                                    pickedImage.value = image;
+                                    final ok =
+                                        await controller.updateProfileImage(
+                                      image,
+                                    );
+                                    if (!ok) {
+                                      pickedImage.value = null;
+                                    }
+                                  },
+                                  onGallery: () async {
+                                    navigatorKey.currentState?.pop();
+                                    final image =
+                                        await ImagePickerHelper.pickFromGallery();
+                                    if (image == null) return;
+                                    pickedImage.value = image;
+                                    final ok =
+                                        await controller.updateProfileImage(
+                                      image,
+                                    );
+                                    if (!ok) {
+                                      pickedImage.value = null;
+                                    }
+                                  },
+                                ),
+                              );
+                            },
+                            child: Container(
+                              height: 24,
+                              width: 24,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.12),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt_outlined,
+                                size: 14,
+                                color: AppColors.primary,
+                              ),
+                            ),
                           ),
-                        );
-                      },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ProfileField(
+                    label: 'Full Name (as per PAN)',
+                    controller: fullNameController,
+                    enabled: canEdit,
+                  ),
+                  const SizedBox(height: 16),
+                  ProfileField(
+                    label: 'Mobile Number',
+                    controller: mobileController,
+                    enabled: false,
+                    // trailingText: 'Change',
+                    // onTrailingTap: () {
+                    //   KDialog.instance.openSheet(
+                    //     dialog: _MobileUpdateSheet(
+                    //       currentMobile: mobileController.text.trim(),
+                    //     ),
+                    //   );
+                    // },
+                  ),
+                  const SizedBox(height: 16),
+                  ProfileField(
+                    label: 'Email ID',
+                    controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    enabled: canEdit && !latestProfile.isEmailVerified,
+                    trailingText:
+                        latestProfile.isEmailVerified ? 'VERIFIED' : 'VERIFY',
+                    onTrailingTap: latestProfile.isEmailVerified || !canEdit
+                        ? null
+                        : () {
+                            KDialog.instance.openSheet(
+                              dialog: _EmailUpdateSheet(
+                                currentEmail: emailController.text.trim(),
+                              ),
+                            );
+                          },
+                  ),
+                  const SizedBox(height: 16),
+                  ProfileField(
+                    label: 'Aadhaar Number',
+                    controller: aadhaarController,
+                    enabled: false,
+                  ),
+                  const SizedBox(height: 16),
+                  ProfileField(
+                    label: 'PAN Number',
+                    controller: panController,
+                    enabled: false,
+                  ),
+                  const SizedBox(height: 16),
+                  ProfileField(
+                    label: 'Permanent address',
+                    controller: permanentAddressController,
+                    maxLines: 2,
+                    enabled: false,
+                  ),
+                  const SizedBox(height: 16),
+                  ProfileField(
+                    label: 'Communication Address',
+                    controller: addressController,
+                    maxLines: 2,
+                    enabled: true,
+                  ),
+                  const SizedBox(height: 16),
+                  ProfileField(
+                    label: 'Date of Birth',
+                    controller: dobController,
+                    enabled: false,
+                  ),
+                  const SizedBox(height: 24),
+                  CustomElevatedButton(
+                    onPressed: state.isUpdating || !canSave
+                        ? null
+                        : () async {
+                            final name = fullNameController.text.trim();
+                            if (name.isEmpty) {
+                              AppSnackbar.show('Please enter your full name.');
+                              return;
+                            }
+                            final address = addressController.text.trim();
+                            final email = state.profile?.email ??
+                                profile.email ??
+                                emailController.text.trim();
+                            final ok = await controller.updateProfile(
+                              name: name,
+                              email: email,
+                              address: address,
+                            );
+                            if (!context.mounted) return;
+                            if (ok) {
+                              await controller.fetchProfile();
+                              if (!context.mounted) return;
+                              AppSnackbar.show('Profile updated successfully.');
+                              Navigator.of(context).pop();
+                            } else {
+                              AppSnackbar.show(
+                                state.updateErrorMessage ??
+                                    'Failed to update profile.',
+                                backgroundColor: Colors.red,
+                                textColor: Colors.white,
+                              );
+                            }
+                          },
+                    label: state.isUpdating ? 'Saving...' : 'Save & Update',
+                    uppercaseLabel: false,
+                    showArrow: false,
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              ProfileField(
-                label: 'Address (Optional)',
-                controller: addressController,
-                maxLines: 2,
-                enabled: canEdit,
-              ),
-              const SizedBox(height: 16),
-              ProfileField(
-                label: 'Aadhaar Number',
-                controller: aadhaarController,
-                enabled: false,
-              ),
-              const SizedBox(height: 16),
-              ProfileField(
-                label: 'PAN Number',
-                controller: panController,
-                enabled: false,
-              ),
-              const SizedBox(height: 16),
-              ProfileField(
-                label: 'Permanent Address',
-                controller: permanentAddressController,
-                maxLines: 2,
-                enabled: false,
-              ),
-              const SizedBox(height: 16),
-              ProfileField(
-                label: 'Date of Birth',
-                controller: dobController,
-                enabled: false,
-              ),
-              const SizedBox(height: 24),
-              CustomElevatedButton(
-                onPressed: state.isUpdating || !hasNonEmailChanges || !canEdit
-                    ? null
-                    : () async {
-                        final name = fullNameController.text.trim();
-                        if (name.isEmpty) {
-                          AppSnackbar.show('Please enter your full name.');
-                          return;
-                        }
-                        final address = addressController.text.trim();
-                        final email = state.profile?.email ??
-                            profile.email ??
-                            emailController.text.trim();
-                        final ok = await controller.updateProfile(
-                          name: name,
-                          email: email,
-                          address: address,
-                        );
-                        if (!context.mounted) return;
-                        if (ok) {
-                          await controller.fetchProfile();
-                          if (!context.mounted) return;
-                          AppSnackbar.show('Profile updated successfully.');
-                          Navigator.of(context).pop();
-                        } else {
-                          AppSnackbar.show(
-                            state.updateErrorMessage ??
-                                'Failed to update profile.',
-                            backgroundColor: Colors.red,
-                            textColor: Colors.white,
-                          );
-                        }
-                      },
-                label: state.isUpdating ? 'Saving...' : 'Save & Update',
-                uppercaseLabel: false,
-                showArrow: false,
-              ),
-            ],
+            ),
+            if (state.isUpdating) const _UpdateProfileLoading(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UpdateProfileLoading extends StatefulWidget {
+  const _UpdateProfileLoading();
+
+  @override
+  State<_UpdateProfileLoading> createState() => _UpdateProfileLoadingState();
+}
+
+class _UpdateProfileLoadingState extends State<_UpdateProfileLoading>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AbsorbPointer(
+      child: Container(
+        color: Colors.white.withOpacity(0.75),
+        child: Center(
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) {
+              final value = _controller.value * 3 - 1;
+              return ShaderMask(
+                shaderCallback: (rect) {
+                  return LinearGradient(
+                    colors: [
+                      AppColors.lightBorder.withOpacity(0.2),
+                      AppColors.lightBorder.withOpacity(0.6),
+                      AppColors.lightBorder.withOpacity(0.2),
+                    ],
+                    stops: const [0.25, 0.5, 0.75],
+                    begin: const Alignment(-1, -0.3),
+                    end: const Alignment(1, 0.3),
+                    transform: _SlidingGradientTransform(value),
+                  ).createShader(rect);
+                },
+                blendMode: BlendMode.srcATop,
+                child: Container(
+                  width: 260,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 18,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        height: 36,
+                        width: 36,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                        ),
+                        child: const Icon(
+                          Icons.cloud_upload_outlined,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Updating profile',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        height: 10,
+                        width: 140,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        height: 10,
+                        width: 110,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ),
     );
+  }
+}
+
+class _SlidingGradientTransform extends GradientTransform {
+  const _SlidingGradientTransform(this.slidePercent);
+
+  final double slidePercent;
+
+  @override
+  Matrix4 transform(Rect bounds, {TextDirection? textDirection}) {
+    return Matrix4.translationValues(bounds.width * slidePercent, 0, 0);
   }
 }
 

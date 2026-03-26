@@ -50,6 +50,24 @@ class BankAccountsView extends HookWidget {
       refreshKey.value += 1;
     }
 
+    Future<void> openEditBank(BankAccountEntry account) async {
+      final selected = await Navigator.of(context).push<BankListItem>(
+        MaterialPageRoute(
+          builder: (_) => const SelectBankView(),
+        ),
+      );
+      if (selected == null) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => AddBankAccountView(
+            existingAccount: account,
+            selectedBankName: selected.bankName,
+          ),
+        ),
+      );
+      refreshKey.value += 1;
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       // bottomNavigationBar: SafeArea(
@@ -91,6 +109,7 @@ class BankAccountsView extends HookWidget {
                   context,
                   snapshot,
                   openAddBank,
+                  openEditBank,
                   () => refreshKey.value += 1,
                 ),
               ),
@@ -106,6 +125,7 @@ Widget _buildBody(
   BuildContext context,
   AsyncSnapshot<List<BankAccountEntry>> snapshot,
   void Function([BankAccountEntry?]) onAddBank,
+  Future<void> Function(BankAccountEntry) onEditBank,
   VoidCallback refresh,
 ) {
   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -136,6 +156,7 @@ Widget _buildBody(
         else
           _BankAccountCard(
             account: existingAccount,
+            onEdit: () => onEditBank(existingAccount),
             onDelete: () async {
               if (existingAccount.id == null) {
                 AppSnackbar.show('Unable to delete bank account.');
@@ -168,36 +189,36 @@ Widget _buildBody(
               await KDialog.instance.openDialog(dialog: dialog);
             },
           ),
-        SizedBox(height: 14.h),
-        InkWell(
-          onTap: () => onAddBank(existingAccount),
-          borderRadius: BorderRadius.circular(12.r),
-          child: Row(
-            children: [
-              Container(
-                width: 52.w,
-                height: 52.w,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.textPrimary.withOpacity(0.4),
-                  ),
-                ),
-                child: const Icon(Icons.account_balance_outlined),
-              ),
-              SizedBox(width: 12.w),
-              Text(
-                existingAccount == null
-                    ? 'Add New Bank Account'
-                    : 'Edit Bank Account',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
+        if (existingAccount == null) ...[
+          SizedBox(height: 14.h),
+          InkWell(
+            onTap: () => onAddBank(),
+            borderRadius: BorderRadius.circular(12.r),
+            child: Row(
+              children: [
+                Container(
+                  width: 52.w,
+                  height: 52.w,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.textPrimary.withOpacity(0.4),
                     ),
-              ),
-            ],
+                  ),
+                  child: const Icon(Icons.account_balance_outlined),
+                ),
+                SizedBox(width: 12.w),
+                Text(
+                  'Add New Bank Account',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ],
     ),
   );
@@ -206,10 +227,12 @@ Widget _buildBody(
 class _BankAccountCard extends HookWidget {
   const _BankAccountCard({
     required this.account,
+    required this.onEdit,
     required this.onDelete,
   });
 
   final BankAccountEntry account;
+  final VoidCallback onEdit;
   final Future<void> Function() onDelete;
 
   @override
@@ -282,16 +305,37 @@ class _BankAccountCard extends HookWidget {
               ],
             ),
           ),
-          IconButton(
+          PopupMenuButton<_BankAccountMenuAction>(
             icon: const Icon(Icons.more_vert, size: 18),
-            onPressed: onDelete,
             splashRadius: 20,
+            onSelected: (value) async {
+              switch (value) {
+                case _BankAccountMenuAction.edit:
+                  onEdit();
+                  break;
+                case _BankAccountMenuAction.delete:
+                  await onDelete();
+                  break;
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: _BankAccountMenuAction.edit,
+                child: Text('Edit Bank'),
+              ),
+              PopupMenuItem(
+                value: _BankAccountMenuAction.delete,
+                child: Text('Delete Bank'),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 }
+
+enum _BankAccountMenuAction { edit, delete }
 
 class _ConfirmDeleteBankDialog extends StatelessWidget {
   const _ConfirmDeleteBankDialog({

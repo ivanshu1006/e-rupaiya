@@ -33,8 +33,9 @@ class _TransactionFilterScreenState extends State<TransactionFilterScreen> {
   void initState() {
     super.initState();
     final initial = widget.initialFilter;
-    _status = initial?.status;
-    _paymentType = initial?.paymentType;
+    _status = initial?.status == 'ALL' ? null : initial?.status;
+    _paymentType =
+        initial?.paymentType == 'ALL' ? null : initial?.paymentType;
     _month = initial?.month;
     _fromDate = initial?.fromDate;
     _toDate = initial?.toDate;
@@ -149,6 +150,11 @@ class _TransactionFilterScreenState extends State<TransactionFilterScreen> {
                       runSpacing: 10.h,
                       children: [
                         _ChoiceChip(
+                          label: 'All',
+                          selected: _status == null,
+                          onTap: () => setState(() => _status = null),
+                        ),
+                        _ChoiceChip(
                           label: 'Success',
                           selected: _status == 'SUCCESS',
                           onTap: () => setState(() => _status = 'SUCCESS'),
@@ -172,6 +178,11 @@ class _TransactionFilterScreenState extends State<TransactionFilterScreen> {
                       spacing: 10.w,
                       runSpacing: 10.h,
                       children: [
+                        _ChoiceChip(
+                          label: 'All',
+                          selected: _paymentType == null,
+                          onTap: () => setState(() => _paymentType = null),
+                        ),
                         _ChoiceChip(
                           label: 'UPI',
                           selected: _paymentType == 'UPI',

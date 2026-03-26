@@ -12,9 +12,10 @@ class HomeIconTile extends StatelessWidget {
     super.key,
     required this.label,
     this.onTap,
-    this.iconSize = 35,
+    this.iconSize = 24,
     this.asset,
     this.offer,
+    this.labelSpacing,
   });
 
   final String label;
@@ -22,32 +23,34 @@ class HomeIconTile extends StatelessWidget {
   final double iconSize;
   final String? asset;
   final int? offer;
+  final double? labelSpacing;
 
   @override
   Widget build(BuildContext context) {
     final isSingleWord =
         !label.contains(' ') && !label.contains('\n') && label.length > 6;
+    final labelTextStyle = AppTextStyles.bodySmallSemibold(context);
     return InkWell(
       borderRadius: BorderRadius.circular(12.r),
       onTap: onTap,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Stack(
             clipBehavior: Clip.none,
             children: [
               Container(
-                height: 64.r,
-                width: 64.r,
-                decoration: BoxDecoration(
+                height: 40.r,
+                width: 40.r,
+                decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.primary.withOpacity(0.4),
-                    width: 1.4,
-                  ),
-                  color: Colors.white,
-                  boxShadow: const [
+                  // border: Border.all(
+                  //   color: AppColors.primary.withOpacity(0.4),
+                  //   width: 1.4,
+                  // ),
+                  color: Color(0xffDEDEDE),
+                  boxShadow: [
                     BoxShadow(
                       color: AppColors.cardShadow,
                       blurRadius: 10,
@@ -76,7 +79,7 @@ class HomeIconTile extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
-                      'Up To ₹$offer',
+                      '₹$offer',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 8,
@@ -87,9 +90,9 @@ class HomeIconTile extends StatelessWidget {
                 ),
             ],
           ),
-          SizedBox(height: 8.h),
+          SizedBox(height: labelSpacing ?? 6.h),
           SizedBox(
-            width: 64.r,
+            width: 68.r,
             child: isSingleWord
                 ? FittedBox(
                     fit: BoxFit.scaleDown,
@@ -100,7 +103,7 @@ class HomeIconTile extends StatelessWidget {
                       softWrap: false,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
-                      style: AppTextStyles.bodySmallSemibold(context),
+                      style: labelTextStyle,
                     ),
                   )
                 : Text(
@@ -109,7 +112,7 @@ class HomeIconTile extends StatelessWidget {
                     softWrap: true,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
-                    style: AppTextStyles.bodySmallSemibold(context),
+                    style: labelTextStyle,
                   ),
           ),
         ],

@@ -190,6 +190,8 @@ void _openPaymentResultFlow(
                   emphasizeSubtitle: outcome == _PaymentOutcome.failure ||
                       outcome == _PaymentOutcome.insufficient,
                   showFailureActions: isFailure,
+                  showRatingSheet: outcome == _PaymentOutcome.success,
+                  transactionId: txId,
                   continueText:
                       isFailure ? 'Retry Payment' : 'Continue to Home',
                   playSound: outcome == _PaymentOutcome.success,
@@ -219,6 +221,8 @@ void _openPaymentResultFlow(
           emphasizeSubtitle: outcome == _PaymentOutcome.failure ||
               outcome == _PaymentOutcome.insufficient,
           showFailureActions: isFailure,
+          showRatingSheet: outcome == _PaymentOutcome.success,
+          transactionId: txId,
           continueText: isFailure ? 'Retry Payment' : 'Continue to Home',
           playSound: false,
           onContinue: onContinue,
@@ -330,12 +334,14 @@ class _PaymentBottomSheetState extends ConsumerState<PaymentBottomSheet> {
       latestState.payResponse,
       latestState.payErrorMessage,
     );
+    final responseTransactionId = latestState.payResponse?.transactionId ?? '';
     _openPaymentResultFlow(
       context,
       outcome: outcome,
       amount: amount,
       billerName: billerName,
-      txId: paymentId,
+      txId:
+          responseTransactionId.isNotEmpty ? responseTransactionId : paymentId,
     );
     if (!ok && latestState.payResponse == null) {
       AppSnackbar.show(

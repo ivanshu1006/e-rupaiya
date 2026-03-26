@@ -36,16 +36,8 @@ class ImagePickerHelper {
       }
       return status.isGranted;
     }
-    final photos = await Permission.photos.request();
-    if (photos.isGranted) return true;
-    if (photos.isPermanentlyDenied) {
-      await openAppSettings();
-      return false;
-    }
-    final storage = await Permission.storage.request();
-    if (storage.isPermanentlyDenied) {
-      await openAppSettings();
-    }
-    return storage.isGranted;
+    // On Android, rely on the system photo picker (no runtime permission needed
+    // for one-time access to user-selected images).
+    return true;
   }
 }

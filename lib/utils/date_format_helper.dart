@@ -46,6 +46,16 @@ class DateFormatHelper {
     return null;
   }
 
+  /// Parses an ISO-like date time string (e.g. "2026-03-21 18:47:18").
+  static DateTime? parseDateTime(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty) return null;
+    final normalized = value.contains(' ') ? value.replaceFirst(' ', 'T') : value;
+    final iso = DateTime.tryParse(normalized);
+    if (iso != null) return iso;
+    return parseDate(value);
+  }
+
   /// Formats a date string into a human-readable form, e.g. "12 March".
   /// Returns [raw] unchanged if it cannot be parsed.
   static String formatDisplayDate(String raw) {
@@ -56,6 +66,18 @@ class DateFormatHelper {
       'July', 'August', 'September', 'October', 'November', 'December',
     ];
     return '${date.day} ${months[date.month - 1]}';
+  }
+
+  /// Formats a date time string into a human-readable form, e.g. "21 Mar 2026".
+  /// Returns [raw] unchanged if it cannot be parsed.
+  static String formatDisplayDateWithYear(String raw) {
+    final date = parseDateTime(raw);
+    if (date == null) return raw;
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 
   /// Formats [date] using the given [pattern].

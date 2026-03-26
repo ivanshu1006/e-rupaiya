@@ -4,23 +4,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
 import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/k_dialog.dart';
+import '../../profile/controllers/profile_controller.dart';
 import '../../profile/repositories/bank_accounts_repository.dart';
 import '../components/refer_and_earn_app_bar.dart';
 import '../repositories/referral_wallet_repository.dart';
 import 'add_bank_account_view.dart';
 
-class WithdrawECoinsView extends HookWidget {
+class WithdrawECoinsView extends HookConsumerWidget {
   const WithdrawECoinsView({super.key, required this.walletBalance});
 
   final String walletBalance;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final totalBalanceDouble = _parseAmount(walletBalance);
     final totalBalance = totalBalanceDouble.floor();
     final controller = useTextEditingController();
@@ -495,7 +497,7 @@ String _formatAmount(double value) {
   return '${_formatCoins(int.tryParse(parts[0]) ?? 0)}.${parts[1]}';
 }
 
-class _WithdrawConfirmSheet extends HookWidget {
+class _WithdrawConfirmSheet extends HookConsumerWidget {
   const _WithdrawConfirmSheet({
     required this.amount,
     required this.accounts,
@@ -505,7 +507,7 @@ class _WithdrawConfirmSheet extends HookWidget {
   final List<BankAccountEntry> accounts;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = useState(0);
     final isSubmitting = useState(false);
     final repository = useMemoized(() => ReferralWalletRepository());
@@ -531,6 +533,11 @@ class _WithdrawConfirmSheet extends HookWidget {
           await repository.fetchSummary();
         } catch (_) {}
         final status = _resolveWithdrawStatus(response.message);
+        if (status == _WithdrawStatus.success) {
+          try {
+            await ref.read(profileControllerProvider.notifier).fetchProfile();
+          } catch (_) {}
+        }
         _closeTopRoute();
         await _openWithdrawStatusDialog(
           status: status,
@@ -843,7 +850,7 @@ class _WithdrawStatusDialog extends StatelessWidget {
       insetPadding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 24.h),
       backgroundColor: Colors.transparent,
       child: Container(
-        padding: EdgeInsets.fromLTRB(18.w, 20.h, 18.w, 18.h),
+        padding: EdgeInsets.fromLTRB(18.w, 24.h, 18.w, 22.h),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: config.gradient,
@@ -856,8 +863,8 @@ class _WithdrawStatusDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 64.w,
-              height: 64.w,
+              width: 76.w,
+              height: 76.w,
               decoration: BoxDecoration(
                 color: config.iconBackground,
                 shape: BoxShape.circle,
@@ -865,8 +872,8 @@ class _WithdrawStatusDialog extends StatelessWidget {
               child: Center(
                 child: Image.asset(
                   config.iconAsset,
-                  width: 30.w,
-                  height: 30.w,
+                  width: 50.w,
+                  height: 50.w,
                 ),
               ),
             ),
@@ -877,6 +884,7 @@ class _WithdrawStatusDialog extends StatelessWidget {
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
+                    fontSize: 16.sp,
                   ),
             ),
             SizedBox(height: 10.h),
@@ -886,6 +894,7 @@ class _WithdrawStatusDialog extends StatelessWidget {
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.white.withOpacity(0.9),
                     height: 1.4,
+                    fontSize: 12.sp,
                   ),
             ),
             SizedBox(height: 18.h),
@@ -970,7 +979,7 @@ class _WithdrawStatusConfig {
         return _WithdrawStatusConfig(
           title: 'Withdrawal Successful',
           iconAsset: FileConstants.withdrawSuccess,
-          iconBackground: const Color(0xFF0F9D58),
+          iconBackground: Colors.transparent,
           gradient: const [Color(0xFFF38B6B), Color(0xFF052E6F)],
           primaryLabel: 'View Details',
           secondaryLabel: 'Back To Home',
@@ -983,7 +992,7 @@ class _WithdrawStatusConfig {
         return _WithdrawStatusConfig(
           title: 'Withdrawal Failed',
           iconAsset: FileConstants.withdrawFailed,
-          iconBackground: const Color(0xFFB91C1C),
+          iconBackground: Colors.transparent,
           gradient: const [Color(0xFF5C1200), Color(0xFF052E6F)],
           primaryLabel: 'Contact Support',
           secondaryLabel: 'Retry',
@@ -996,7 +1005,7 @@ class _WithdrawStatusConfig {
         return _WithdrawStatusConfig(
           title: 'Withdrawal Requested',
           iconAsset: FileConstants.withdrawRequested,
-          iconBackground: const Color(0xFFF59E0B),
+          iconBackground: Colors.transparent,
           gradient: const [Color(0xFFF59E0B), Color(0xFF052E6F)],
           primaryLabel: 'View Details',
           secondaryLabel: 'Back To Home',

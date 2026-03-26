@@ -3,6 +3,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../services/logger_service.dart';
 import '../models/home_state.dart';
+import '../models/credit_card_item.dart';
+import '../models/quick_actions_model.dart';
 import '../repositories/home_repository.dart';
 
 final homeRepositoryProvider = Provider<HomeRepository>(
@@ -87,7 +89,7 @@ class HomeController extends StateNotifier<HomeState> {
       );
       state = state.copyWith(
         isFetchingCreditCards: false,
-        creditCardActions: [],
+        creditCardActions: const <CreditCardItem>[],
       );
     }
   }
@@ -112,8 +114,35 @@ class HomeController extends StateNotifier<HomeState> {
       );
       state = state.copyWith(
         isFetchingRecharge: false,
-        rechargeActions: [],
+        rechargeActions: const <Data>[],
       );
+    }
+  }
+
+  Future<bool> removeCreditCard(String maskedIdentifier) async {
+    if (maskedIdentifier.trim().isEmpty) return false;
+    state = state.copyWith(isFetchingCreditCards: true);
+    try {
+      final ok = await _repository.removeCreditCard(maskedIdentifier);
+      if (ok) {
+        final userId = await Utils.getUserId() ?? '';
+        final data = await _repository.fetchCreditCardActions(userId);
+        state = state.copyWith(
+          isFetchingCreditCards: false,
+          creditCardActions: data,
+        );
+      } else {
+        state = state.copyWith(isFetchingCreditCards: false);
+      }
+      return ok;
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to remove credit card',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      state = state.copyWith(isFetchingCreditCards: false);
+      return false;
     }
   }
 }

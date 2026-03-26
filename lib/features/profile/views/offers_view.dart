@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../constants/app_colors.dart';
 import '../../../utils/utils.dart';
 import '../../../widgets/my_app_bar.dart';
+import '../../../widgets/screen_wrapper.dart';
 import '../../home/controllers/home_tab_controller.dart';
 import '../components/offer_card.dart';
 import '../models/offer_model.dart';
@@ -79,15 +80,16 @@ class OffersView extends HookConsumerWidget {
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
                         children: [
-                          Text(
-                            'No offers available right now.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                          ScreenWrapper(
+                            isFetching: false,
+                            isEmpty: true,
+                            emptyMessage: 'No offers right now',
+                            description:
+                                'Check back soon for fresh deals and rewards.',
+                            imageAsset:
+                                'assets/images/png/home_icon/offers.png',
+                            height: MediaQuery.of(context).size.height * 0.6,
+                            child: const SizedBox.shrink(),
                           ),
                         ],
                       )

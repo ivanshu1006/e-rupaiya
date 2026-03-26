@@ -6,6 +6,7 @@ import 'package:e_rupaiya/features/home/models/quick_actions_model.dart';
 import '../../../constants/api_constants.dart';
 import '../../../services/dio_service.dart';
 import '../../../services/logger_service.dart';
+import '../models/credit_card_item.dart';
 import '../models/quick_action_model.dart';
 
 class HomeRepository {
@@ -41,7 +42,7 @@ class HomeRepository {
     try {
       final response = await _dio.get(
         ApiConstants.quickActionsDueEndpoint,
-        queryParameters: {'user_id': 1},
+        queryParameters: {'user_id': userId},
       );
 
       final payload = response.data;
@@ -60,13 +61,54 @@ class HomeRepository {
     }
   }
 
-  Future<List<Data>> fetchCreditCardActions(String userId) async {
+  Future<List<CreditCardItem>> fetchCreditCardActions(String userId) async {
     try {
-      final response = await _dio.get(
-        ApiConstants.quickActionsDueEndpoint,
-        queryParameters: {
-          'user_id': 1,
-          'payment_type': 'Credit Card',
+      final response = await _dio.get(ApiConstants.myCardsEndpoint);
+      final payload = response.data;
+      Map<String, dynamic> json;
+      if (payload is String) {
+        json = jsonDecode(payload) as Map<String, dynamic>;
+      } else if (payload is Map<String, dynamic>) {
+        json = payload;
+      } else {
+        json = Map<String, dynamic>.from(payload as Map);
+      }
+      final dataList = json['data'];
+      if (dataList is List) {
+        return dataList
+            .whereType<Map<String, dynamic>>()
+            .map(CreditCardItem.fromJson)
+            .toList();
+      }
+      if (dataList is Map<String, dynamic>) {
+        final nested = dataList['cards'];
+        if (nested is List) {
+          return nested
+              .whereType<Map<String, dynamic>>()
+              .map(CreditCardItem.fromJson)
+              .toList();
+        }
+      }
+      final alt = json['cards'];
+      if (alt is List) {
+        return alt
+            .whereType<Map<String, dynamic>>()
+            .map(CreditCardItem.fromJson)
+            .toList();
+      }
+      return const <CreditCardItem>[];
+    } catch (e) {
+      logger.error('Failed to fetch credit card actions: $e', error: e);
+      rethrow;
+    }
+  }
+
+  Future<bool> removeCreditCard(String maskedIdentifier) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.removeCardEndpoint,
+        data: {
+          'masked_identifier': maskedIdentifier,
         },
       );
       final payload = response.data;
@@ -78,9 +120,9 @@ class HomeRepository {
       } else {
         json = Map<String, dynamic>.from(payload as Map);
       }
-      return QuickActionModel.fromJson(json).data ?? [];
+      return json['success'] == true;
     } catch (e) {
-      logger.error('Failed to fetch credit card actions: $e', error: e);
+      logger.error('Failed to remove credit card: $e', error: e);
       rethrow;
     }
   }
@@ -90,7 +132,7 @@ class HomeRepository {
       final response = await _dio.get(
         ApiConstants.quickActionsDueEndpoint,
         queryParameters: {
-          'user_id': 1,
+          'user_id': userId,
           'payment_type': 'RECHARGE',
         },
       );

@@ -37,6 +37,9 @@ import 'features/services/views/biller_listing_view.dart';
 import 'features/services/views/credit_card_intro_view.dart';
 import 'features/services/views/credit_card_listing_view.dart';
 import 'features/services/views/credit_card_my_cards_view.dart';
+import 'features/services/views/credit_card_transaction_detail_screen.dart';
+import 'features/services/views/credit_card_transactions_screen.dart';
+import 'features/services/models/credit_card_transaction.dart';
 import 'features/spinandear/views/spin_and_win_view.dart';
 import 'services/logger_service.dart';
 import 'widgets/k_dialog.dart';
@@ -172,6 +175,18 @@ final routerProvider = Provider<GoRouter>(
         GoRoute(
           path: RouteConstants.creditCardMyCards,
           builder: (context, state) => const CreditCardMyCardsView(),
+        ),
+        GoRoute(
+          path: RouteConstants.creditCardTransactions,
+          builder: (context, state) => CreditCardTransactionsScreen(
+            maskedIdentifier: state.extra as String? ?? '',
+          ),
+        ),
+        GoRoute(
+          path: RouteConstants.creditCardTransactionDetail,
+          builder: (context, state) => CreditCardTransactionDetailScreen(
+            transaction: state.extra as CreditCardTransaction?,
+          ),
         ),
         GoRoute(
           path: RouteConstants.spinAndWin,

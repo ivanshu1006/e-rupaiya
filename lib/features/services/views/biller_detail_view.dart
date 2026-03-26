@@ -1,5 +1,7 @@
 // ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
+import 'dart:developer';
+
 import 'package:e_rupaiya/features/services/models/biller_detail_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
@@ -41,12 +43,15 @@ class BillerDetailView extends HookConsumerWidget {
     final detail = detailState.billerDetail;
     final bill = detailState.billResponse;
     final customerParamsInput = detailState.customerParamsInput ?? {};
-    final inputControllers = <String, TextEditingController>{};
+    final inputControllers =
+        useMemoized(() => <String, TextEditingController>{});
     final billAmountController = useTextEditingController();
     final selectedAmountType = useState(_PaymentAmountType.totalOutstanding);
     final permissionService = useMemoized(() => const PermissionService());
     final isCreditCardFlow = args?.isCreditCard ?? false;
     final bottomInset = MediaQuery.of(context).viewPadding.bottom;
+    final mobilePrefill = args?.mobileNumber?.trim();
+    final last4Prefill = args?.cardLast4?.trim();
     final isGasCylinder = useMemoized(
       () => _isGasCylinderBiller(biller?.billerName ?? ''),
       [biller?.billerName],
@@ -111,13 +116,92 @@ class BillerDetailView extends HookConsumerWidget {
     if (detail != null) {
       for (final param in detail.customerParams) {
         if (param.visibility) {
+          log(
+            'Biller param: name=${param.paramName} '
+            'type=${param.dataType} '
+            'min=${param.minLength} '
+            'max=${param.maxLength}',
+          );
           inputControllers.putIfAbsent(
             param.paramName,
-            () => useTextEditingController(),
+            () => TextEditingController(),
           );
+          final tc = inputControllers[param.paramName];
+          if (tc != null && tc.text.isEmpty) {
+            final isMobileField = _isMobileParam(param.paramName) ||
+                (isCreditCardFlow &&
+                    param.dataType.toUpperCase() == 'NUMERIC' &&
+                    param.maxLength == 10 &&
+                    !_isLastFourParam(param.paramName));
+            final isLastFourField = _isLastFourParam(param.paramName) ||
+                (isCreditCardFlow &&
+                    param.dataType.toUpperCase() == 'NUMERIC' &&
+                    param.maxLength == 4);
+            log(
+              'Prefill check: name=${param.paramName} '
+              'mobile=$mobilePrefill last4=$last4Prefill '
+              'isMobile=$isMobileField isLast4=$isLastFourField',
+            );
+            if (mobilePrefill != null &&
+                mobilePrefill.isNotEmpty &&
+                isMobileField) {
+              tc.text = _sanitizePhone(mobilePrefill);
+              log(
+                'Prefilled mobile for ${param.paramName}: ${tc.text}',
+              );
+            } else if (last4Prefill != null &&
+                last4Prefill.isNotEmpty &&
+                isLastFourField) {
+              final digits = last4Prefill.replaceAll(RegExp(r'[^0-9]'), '');
+              tc.text = digits.length > 4
+                  ? digits.substring(digits.length - 4)
+                  : digits;
+              log(
+                'Prefilled last4 for ${param.paramName}: ${tc.text}',
+              );
+            }
+          }
         }
       }
     }
+
+    useEffect(() {
+      return () {
+        for (final controller in inputControllers.values) {
+          controller.dispose();
+        }
+      };
+    }, const []);
+
+    useEffect(() {
+      if (detail == null) return null;
+      for (final param in detail.customerParams) {
+        if (!param.visibility) continue;
+        final tc = inputControllers[param.paramName];
+        if (tc == null || tc.text.isNotEmpty) continue;
+        final isMobileField = _isMobileParam(param.paramName) ||
+            (isCreditCardFlow &&
+                param.dataType.toUpperCase() == 'NUMERIC' &&
+                param.maxLength == 10 &&
+                !_isLastFourParam(param.paramName));
+        final isLastFourField = _isLastFourParam(param.paramName) ||
+            (isCreditCardFlow &&
+                param.dataType.toUpperCase() == 'NUMERIC' &&
+                param.maxLength == 4);
+        if (mobilePrefill != null &&
+            mobilePrefill.isNotEmpty &&
+            isMobileField) {
+          tc.text = _sanitizePhone(mobilePrefill);
+        } else if (last4Prefill != null &&
+            last4Prefill.isNotEmpty &&
+            isLastFourField) {
+          final digits = last4Prefill.replaceAll(RegExp(r'[^0-9]'), '');
+          tc.text =
+              digits.length > 4 ? digits.substring(digits.length - 4) : digits;
+        }
+      }
+      return null;
+    }, [detail, mobilePrefill, last4Prefill]);
 
     return PopScope(
       canPop: detailState.billResponse == null,
@@ -484,9 +568,19 @@ class BillerDetailView extends HookConsumerWidget {
                                           }
                                           fieldErrors.value = {};
 
+                                          if (isGasCylinder &&
+                                              visibleParams.isNotEmpty &&
+                                              values.isEmpty) {
+                                            AppSnackbar.show(
+                                              'Please enter either Registered Contact Number or LPG ID.',
+                                            );
+                                            return;
+                                          }
+
                                           if (values.isNotEmpty) {
                                             controller.fetchBill(
-                                                customerParams: values);
+                                              customerParams: values,
+                                            );
                                           }
                                         } else if (!detailState
                                             .showFullDetails) {

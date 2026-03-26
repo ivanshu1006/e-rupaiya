@@ -8,11 +8,17 @@ class QuickActionModel {
   QuickActionModel.fromJson(Map<String, dynamic> json) {
     status = json['status'];
     message = json['message'];
-    if (json['data'] != null) {
-      data = <Data>[];
-      json['data'].forEach((v) {
-        data!.add(Data.fromJson(v));
-      });
+    final rawData = json['data'];
+    if (rawData is List) {
+      data = rawData
+          .whereType<Map<String, dynamic>>()
+          .map((v) => Data.fromJson(v))
+          .toList();
+    } else if (rawData is Map) {
+      data = rawData.values
+          .whereType<Map<String, dynamic>>()
+          .map((v) => Data.fromJson(v))
+          .toList();
     }
   }
 
@@ -51,7 +57,8 @@ class Data {
     paymentType = json['payment_type'];
     billerName = json['biller_name'];
     billerId = json['biller_id'];
-    amount = json['amount'];
+    final rawAmount = json['amount'];
+    amount = rawAmount == null ? null : rawAmount.toString();
     desc = json['desc'];
     nextDue = json['next_due'];
     daysLeft = json['days_left'];

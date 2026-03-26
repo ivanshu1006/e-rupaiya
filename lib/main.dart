@@ -43,6 +43,7 @@ class MyApp extends HookConsumerWidget {
       minTextAdapt: true,
       splitScreenMode: true,
       child: MaterialApp.router(
+        debugShowCheckedModeBanner: false,
         builder: (context, child) {
           return Listener(
             behavior: HitTestBehavior.translucent,

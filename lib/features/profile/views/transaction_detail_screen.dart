@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:e_rupaiya/widgets/app_divider.dart';
@@ -719,19 +720,32 @@ Future<void> _handleReceiptAction(
       );
     }
     if (Platform.isAndroid) {
+      log('[Receipt] Android flow start: $transactionId');
       final html = await _fetchReceiptHtml(transactionId);
+      log('[Receipt] HTML fetched (${html.length} chars)');
       _hideLoading(dialogContext);
-      final pdfBytes = await ReceiptFileService.buildPdfBytesFromHtml(html);
       if (action == _ReceiptAction.share) {
-        final imageFile = await ReceiptFileService.savePngFromPdfBytes(
+        log('[Receipt] Converting HTML to PDF for sharing');
+        final pdfBytes = await ReceiptFileService.buildSimplePdfFromHtml(html);
+        final pdfFile = await ReceiptFileService.savePdfToTemp(
           pdfBytes: pdfBytes,
           transactionId: transactionId,
         );
+        log('[Receipt] PDF saved: ${pdfFile.path}');
         await Share.shareXFiles(
-          [XFile(imageFile.path)],
+          [
+            XFile(
+              pdfFile.path,
+              mimeType: 'application/pdf',
+              name: 'receipt_$transactionId.pdf',
+            ),
+          ],
           text: 'Payment Receipt',
         );
+        log('[Receipt] Share sheet invoked');
       } else {
+        final pdfBytes = await ReceiptFileService.buildPdfBytesFromHtml(html);
+        log('[Receipt] PDF bytes generated (${pdfBytes.length} bytes)');
         final file = await ReceiptFileService.savePdfToDownloads(
           pdfBytes: pdfBytes,
           transactionId: transactionId,
@@ -741,24 +755,36 @@ Future<void> _handleReceiptAction(
       return;
     }
 
+    log('[Receipt] Non-Android flow start: $transactionId');
     final pdfBytes = await _fetchReceiptPdfBytes(transactionId);
-    final file = await _saveReceiptPdf(
-      bytes: pdfBytes,
-      transactionId: transactionId,
-    );
-
+    log('[Receipt] PDF bytes generated (${pdfBytes.length} bytes)');
     _hideLoading(dialogContext);
-
     if (action == _ReceiptAction.share) {
+      final pdfFile = await ReceiptFileService.savePdfToTemp(
+        pdfBytes: pdfBytes,
+        transactionId: transactionId,
+      );
+      log('[Receipt] PDF saved: ${pdfFile.path}');
       await Share.shareXFiles(
-        [XFile(file.path)],
+        [
+          XFile(
+            pdfFile.path,
+            mimeType: 'application/pdf',
+            name: 'receipt_$transactionId.pdf',
+          ),
+        ],
         text: 'Payment Receipt',
       );
+      log('[Receipt] Share sheet invoked');
     } else {
+      final file = await _saveReceiptPdf(
+        bytes: pdfBytes,
+        transactionId: transactionId,
+      );
       AppSnackbar.show('Receipt saved to ${file.path}');
     }
   } catch (e, t) {
-    print('Receipt generation error: $e');
+    log('Receipt generation error: $e');
     print(t);
     _hideLoading(dialogContext);
     AppSnackbar.show(e.toString());
@@ -815,7 +841,7 @@ Future<void> _openReceiptViewer(
       ),
     );
   } catch (e, t) {
-    print('Receipt view error: $e');
+    log('Receipt view error: $e');
     print(t);
     _hideLoading(dialogContext);
     AppSnackbar.show(e.toString());
