@@ -1,0 +1,511 @@
+// ignore_for_file: deprecated_member_use
+
+import 'package:e_rupaiya/widgets/custom_elevated_button.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+
+import '../../../constants/app_colors.dart';
+import '../../../constants/file_constants.dart';
+import '../../../constants/routes_constant.dart';
+import '../../../widgets/app_snackbar.dart';
+import '../../../widgets/k_dialog.dart';
+import '../../profile/models/transaction_history_entry.dart';
+import '../../paymentgateway/razorpay_service.dart';
+import '../components/education_payment_sheets.dart';
+import '../controllers/education_fees_controller.dart';
+import '../models/education_fees_responses.dart';
+
+class EducationFeesPaymentView extends HookConsumerWidget {
+  const EducationFeesPaymentView({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(educationFeesControllerProvider);
+    final repository = ref.read(educationFeesRepositoryProvider);
+    final amount = _parseAmount(state.amountInput);
+    final selectedCard = useState<EducationCard?>(null);
+    final cardsAsync = useMemoized(
+      () => repository.fetchCardList(),
+      [repository],
+    );
+    final cardsFuture = useFuture(cardsAsync);
+    final showPayNow = cardsFuture.connectionState == ConnectionState.done &&
+        (cardsFuture.data?.cards.isEmpty ?? true);
+
+    void openSummary() {
+      KDialog.instance.openSheet(
+        dialog: EducationPaymentSummarySheet(
+          amount: amount,
+          onPayNow: (payable) async {
+            await RazorpayService.instance.openCheckout(
+              amount: payable,
+              name: state.recipientName.isEmpty
+                  ? 'Education Fees'
+                  : state.recipientName,
+              description: 'Tuition fee payment',
+              onSuccess: (paymentId) async {
+                final card = selectedCard.value;
+                try {
+                  await repository.reportPaymentSuccess(
+                    recipientName: state.recipientName,
+                    accountNo: state.accountNumber,
+                    ifsc: state.ifsc,
+                    amount: payable,
+                    paymentId: paymentId,
+                    status: 'success',
+                    cardToken: card?.cardToken ?? '',
+                    last4: card?.last4 ?? '',
+                    cardNetwork: card?.cardNetwork ?? '',
+                    expiryMonth: card?.expiryMonth ?? '',
+                    expiryYear: card?.expiryYear ?? '',
+                  );
+                } catch (e) {
+                  AppSnackbar.show(
+                    e.toString(),
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                  );
+                }
+                if (context.mounted) {
+                  context.push(
+                    RouteConstants.transactionDetail,
+                    extra: _buildEducationSuccessEntry(
+                      recipientName: state.recipientName,
+                      maskedAccount: _maskAccount(state.accountNumber),
+                      amount: payable,
+                      paymentId: paymentId,
+                    ),
+                  );
+                }
+              },
+              onFailure: (message) {
+                AppSnackbar.show(
+                  message,
+                  backgroundColor: Colors.red,
+                  textColor: Colors.white,
+                );
+              },
+            );
+          },
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          'Select Payment Method',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          onPressed: () => Navigator.of(context).maybePop(),
+        ),
+        actions: [
+          Image.asset(
+            FileConstants.bharatConnectColor,
+            height: 20.h,
+            fit: BoxFit.contain,
+          ),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.help_outline, color: AppColors.textPrimary),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 20.h),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Paying To',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    SizedBox(height: 10.h),
+                    _PayingToCard(
+                      name: state.recipientName,
+                      maskedAccount: _maskAccount(state.accountNumber),
+                      amount: amount,
+                    ),
+                    SizedBox(height: 26.h),
+                    Text(
+                      'My Cards / Recent Cards',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    SizedBox(height: 12.h),
+                    _CardListSection(
+                      amount: amount,
+                      cardsFuture: cardsFuture,
+                      selectedCard: selectedCard,
+                      onViewAndPay: openSummary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 20.h),
+              child: showPayNow
+                  ? CustomElevatedButton(
+                      onPressed: openSummary,
+                      label: 'Pay Now',
+                      uppercaseLabel: false,
+                      showArrow: false,
+                      height: 42.h,
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PayingToCard extends StatelessWidget {
+  const _PayingToCard({
+    required this.name,
+    required this.maskedAccount,
+    required this.amount,
+  });
+
+  final String name;
+  final String maskedAccount;
+  final double amount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColors.lightBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name.isEmpty ? 'Recipient' : name,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                SizedBox(height: 6.h),
+                Row(
+                  children: [
+                    Container(
+                      height: 18.r,
+                      width: 18.r,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6.r),
+                      ),
+                      child: Icon(
+                        Icons.account_balance,
+                        size: 12.r,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    SizedBox(width: 6.w),
+                    Text(
+                      maskedAccount,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textPrimary.withOpacity(0.7),
+                          ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '₹${amount.toStringAsFixed(2)}',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CardListSection extends StatelessWidget {
+  const _CardListSection({
+    required this.amount,
+    required this.cardsFuture,
+    required this.selectedCard,
+    required this.onViewAndPay,
+  });
+
+  final double amount;
+  final AsyncSnapshot<EducationCardListResponse> cardsFuture;
+  final ValueNotifier<EducationCard?> selectedCard;
+  final VoidCallback onViewAndPay;
+
+  @override
+  Widget build(BuildContext context) {
+    if (cardsFuture.connectionState == ConnectionState.waiting) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (cardsFuture.hasError) {
+      return Text(
+        'Failed to load cards.',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Colors.red,
+              fontWeight: FontWeight.w600,
+            ),
+      );
+    }
+    final response = cardsFuture.data;
+    final cards = response?.cards ?? const <EducationCard>[];
+    if (cards.isEmpty) {
+      return SizedBox(
+        height: 260.h,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                FileConstants.creditCardGif,
+                height: 140.h,
+                fit: BoxFit.contain,
+              ),
+              SizedBox(height: 16.h),
+              Text(
+                'Add Your Credit Card For\nPayment',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                'Use Your VISA/Mastercard/Rupay CC\nFor This Payment',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textPrimary.withOpacity(0.6),
+                    ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    final card = selectedCard.value ?? cards.first;
+    if (selectedCard.value == null) {
+      selectedCard.value = cards.first;
+    }
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColors.lightBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          ...cards.map((item) {
+            final isSelected = selectedCard.value?.cardId == item.cardId;
+            return InkWell(
+              onTap: () => selectedCard.value = item,
+              child: Padding(
+                padding: EdgeInsets.only(bottom: 10.h),
+                child: Row(
+                  children: [
+                    Container(
+                      height: 40.r,
+                      width: 40.r,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10.r),
+                        border: Border.all(color: AppColors.lightBorder),
+                        color: Colors.white,
+                      ),
+                      child: Center(
+                        child: Image.asset(
+                          FileConstants.bharatConnectColor,
+                          height: 22.r,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.cardNetwork.isEmpty
+                                ? 'Card'
+                                : item.cardNetwork,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            item.last4.isNotEmpty
+                                ? '****${item.last4}'
+                                : item.cardNumber,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: AppColors.textPrimary.withOpacity(0.6),
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      height: 18.r,
+                      width: 18.r,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.lightBorder,
+                          width: 2,
+                        ),
+                      ),
+                      child: Center(
+                        child: Container(
+                          height: 8.r,
+                          width: 8.r,
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppColors.primary
+                                : Colors.transparent,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+          SizedBox(height: 12.h),
+          const Divider(height: 1, color: AppColors.lightBorder),
+          SizedBox(height: 12.h),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '₹${amount.toStringAsFixed(2)}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ),
+              SizedBox(
+                height: 36.h,
+                child: ElevatedButton(
+                  onPressed: onViewAndPay,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18.r),
+                    ),
+                    elevation: 0,
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
+                  ),
+                  child: Text(
+                    'View And Pay',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _maskAccount(String value) {
+  final digits = value.replaceAll(RegExp(r'\D'), '');
+  if (digits.length <= 4) return '****';
+  final suffix = digits.substring(digits.length - 4);
+  return '****$suffix';
+}
+
+double _parseAmount(String value) {
+  final amount = double.tryParse(value.replaceAll(RegExp(r'\D'), '')) ?? 0;
+  return amount.toDouble();
+}
+
+TransactionHistoryEntry _buildEducationSuccessEntry({
+  required String recipientName,
+  required String maskedAccount,
+  required double amount,
+  required String paymentId,
+}) {
+  final now = DateTime.now().toIso8601String();
+  return TransactionHistoryEntry(
+    paymentStatus: 'SUCCESS',
+    paymentType: 'Education Fees',
+    billerName: recipientName.isEmpty ? 'Recipient' : recipientName,
+    maskedIdentifier: maskedAccount.isEmpty ? '****' : maskedAccount,
+    amount: amount.toStringAsFixed(2),
+    platformFees: '',
+    totalAmountCharged: amount.toStringAsFixed(2),
+    customerMobile: '',
+    iconUrl: '',
+    transactionId: paymentId,
+    bankReferenceId: '',
+    referenceId: paymentId,
+    transactionTime: now,
+    method: 'Card',
+    methodIcon: '',
+    paymentMode: 'Card',
+    vpa: '',
+    rrn: '',
+  );
+}

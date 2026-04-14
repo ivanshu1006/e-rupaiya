@@ -55,8 +55,8 @@ class MyApp extends HookConsumerWidget {
         title: 'E-Rupaiya',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          textTheme: GoogleFonts.plusJakartaSansTextTheme(),
-          fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
+          textTheme: GoogleFonts.bricolageGrotesqueTextTheme(),
+          fontFamily: GoogleFonts.bricolageGrotesque().fontFamily,
           useMaterial3: true,
         ),
         routerConfig: router,

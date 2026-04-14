@@ -2,17 +2,15 @@ import 'package:e_rupaiya/constants/file_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-import '../constants/app_colors.dart';
-
 class MyAppBar extends StatelessWidget {
   const MyAppBar({
     super.key,
     required this.title,
     this.onBack,
-    this.showHelp = false,
+    this.showHelp = true,
     this.onHelp,
     this.trailing,
-    this.height = 175,
+    this.height = 150,
     this.backgroundColor,
   });
 
@@ -26,55 +24,108 @@ class MyAppBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Old design (kept for reference)
+    // return SizedBox(
+    //   height: height,
+    //   child: Stack(
+    //     children: [
+    //       Positioned.fill(
+    //         child: Container(
+    //           decoration: BoxDecoration(
+    //             gradient: backgroundColor == null
+    //                 ? AppColors.onboardingBackground
+    //                 : LinearGradient(
+    //                     colors: [
+    //                       backgroundColor!,
+    //                       backgroundColor!.withOpacity(0.92),
+    //                     ],
+    //                     begin: Alignment.topCenter,
+    //                     end: Alignment.bottomCenter,
+    //                   ),
+    //             borderRadius: const BorderRadius.vertical(
+    //               bottom: Radius.circular(28),
+    //             ),
+    //           ),
+    //         ),
+    //       ),
+    //       Positioned(
+    //         left: 0,
+    //         right: 0,
+    //         bottom: -1,
+    //         child: Container(
+    //           height: 32,
+    //           decoration: const BoxDecoration(
+    //             color: Colors.white,
+    //             borderRadius: BorderRadius.vertical(
+    //               top: Radius.circular(28),
+    //             ),
+    //           ),
+    //         ),
+    //       ),
+    //       SafeArea(
+    //         bottom: false,
+    //         child: Padding(
+    //           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+    //           child: Row(
+    //             children: [
+    //               IconButton(
+    //                 icon: Icon(
+    //                   Icons.arrow_back,
+    //                   color: backgroundColor == null
+    //                       ? AppColors.textPrimary
+    //                       : Colors.white,
+    //                 ),
+    //                 onPressed: onBack ?? () => Navigator.of(context).maybePop(),
+    //               ),
+    //               const SizedBox(width: 4),
+    //               Expanded(
+    //                 child: Text(
+    //                   title,
+    //                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
+    //                         color: backgroundColor == null
+    //                             ? AppColors.textPrimary
+    //                             : Colors.white,
+    //                         fontWeight: FontWeight.w700,
+    //                       ),
+    //                 ),
+    //               ),
+    //               if (trailing != null) trailing!,
+    //               if (trailing == null && showHelp)
+    //                 Image.asset(
+    //                   FileConstants.bharatConnectColor,
+    //                   height: 15.h,
+    //                   width: 50.w,
+    //                 )
+    //               // IconButton(
+    //               //   icon: const Icon(Icons.help_outline,
+    //               //       color: AppColors.textPrimary),
+    //               //   onPressed: onHelp,
+    //               // ),
+    //             ],
+    //           ),
+    //         ),
+    //       ),
+    //     ],
+    //   ),
+    // );
+
     return SizedBox(
       height: height,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: backgroundColor == null
-                    ? AppColors.onboardingBackground
-                    : LinearGradient(
-                        colors: [
-                          backgroundColor!,
-                          backgroundColor!.withOpacity(0.92),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(28),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: -1,
-            child: Container(
-              height: 32,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(28),
-                ),
-              ),
-            ),
-          ),
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Container(
+        margin: EdgeInsets.only(
+            bottom: backgroundColor == null ? 20.h : 0, top: 35.h),
+        color: backgroundColor ?? Colors.white,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: Row(
                 children: [
                   IconButton(
                     icon: Icon(
                       Icons.arrow_back,
-                      color: backgroundColor == null
-                          ? AppColors.textPrimary
-                          : Colors.white,
+                      color:
+                          backgroundColor == null ? Colors.black : Colors.white,
                     ),
                     onPressed: onBack ?? () => Navigator.of(context).maybePop(),
                   ),
@@ -84,29 +135,39 @@ class MyAppBar extends StatelessWidget {
                       title,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             color: backgroundColor == null
-                                ? AppColors.textPrimary
+                                ? Colors.black
                                 : Colors.white,
                             fontWeight: FontWeight.w700,
                           ),
                     ),
                   ),
                   if (trailing != null) trailing!,
-                  if (trailing == null && showHelp)
+                  if (showHelp) ...[
                     Image.asset(
                       FileConstants.bharatConnectColor,
                       height: 15.h,
                       width: 50.w,
-                    )
-                  // IconButton(
-                  //   icon: const Icon(Icons.help_outline,
-                  //       color: AppColors.textPrimary),
-                  //   onPressed: onHelp,
-                  // ),
+                    ),
+                    IconButton(
+                      onPressed: onHelp ?? () {},
+                      icon: Icon(
+                        Icons.help_outline,
+                        color: backgroundColor == null
+                            ? Colors.black
+                            : Colors.white,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
-          ),
-        ],
+            Divider(
+              height: 1,
+              thickness: 1,
+              color: Colors.black.withOpacity(0.08),
+            ),
+          ],
+        ),
       ),
     );
   }

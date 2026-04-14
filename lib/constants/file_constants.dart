@@ -1,5 +1,6 @@
 class FileConstants {
   static String loginLogo = 'assets/images/svg/erupaiya_logo.svg';
+  static String indiaFlag = 'assets/images/png/indiaFlag.png';
   static String logo = 'assets/images/png/logo.png';
   static String ennglish = 'assets/images/png/english.png';
   static String pan = 'assets/images/png/pan.png';
@@ -18,13 +19,18 @@ class FileConstants {
   static String ellipse14 = 'assets/images/png/Ellipse 14.png';
   static String ellipse7 = 'assets/images/png/Ellipse 7.png';
   static String sampleBill = 'assets/images/png/sample_bill.png';
+
+  // GIFS
   static String loadingGif = 'assets/images/png/loading.gif';
   static String gasGif = 'assets/gif/gasGif.gif';
   static String digitalSilver = 'assets/gif/gasGif.gif';
   static String homeBannerGif = 'assets/gif/homeBanner.gif';
+  static String creditCardGif = 'assets/gif/creditcard.gif';
+  static String splashGif = 'assets/gif/splash_gif.gif';
+  static String giftGif = 'assets/gif/gift.gif';
 
   //home icons
-  static String mobile = 'assets/images/png/home_icon/mobile.png';
+  static String mobile = 'assets/images/png/home_icon/mobile_new.png';
   static String referandearn = 'assets/images/png/home_icon/referandearn.png';
   static String postpaid = 'assets/images/png/home_icon/postpaid_icon.png';
   static String landline = 'assets/images/png/home_icon/land_line.png';
@@ -33,6 +39,11 @@ class FileConstants {
   static String cable = 'assets/images/png/home_icon/cable_tv.png';
   static String water = 'assets/images/png/home_icon/water_icon.png';
   static String pipegas = 'assets/images/png/home_icon/pipe_gas.png';
+  static String bookLpgStrip = 'assets/images/png/home_icon/bookLpgStrip.png';
+  static String homeIconSection =
+      'assets/images/png/home_icon/homeIconSection.png';
+  static String bottomOrangeCurve =
+      'assets/images/png/home_icon/bottomOrangeCurve.png';
   static String electricity =
       'assets/images/png/home_icon/electricity_icon.png';
   static String iphone = 'assets/images/png/home_icon/iphone.png';
@@ -67,12 +78,13 @@ class FileConstants {
   static String gym = 'assets/images/png/home_icon/gym.png';
 //   static String educationFees = 'assets/images/png/home_icon/educationFees.png';
   static String generalInsurance =
-      'assets/images/png/home_icon/healthInsurance.png';
+      'assets/images/png/home_icon/genInsurance.png';
   static String healthInsurance =
       'assets/images/png/home_icon/healthInsurance.png';
   static String curve = 'assets/images/png/home_icon/curve.png';
   static String creditcard = 'assets/images/png/credit_icon.png';
   static String spin = 'assets/images/png/spin.png';
+  static String spinBlast = 'assets/images/png/spin_blast.png';
   static String subscriptions = 'assets/images/png/home_icon/subscriptions.png';
   static String housing = 'assets/images/png/home_icon/housing_society.png';
   static String agentCollection =
@@ -81,6 +93,7 @@ class FileConstants {
   static String nps = 'assets/images/png/home_icon/nps.png';
   static String donation = 'assets/images/png/home_icon/donation.png';
   static String education = 'assets/images/png/home_icon/education.png';
+  static String rLogo = 'assets/images/png/home_icon/r_logo.png';
   static String wallet = 'assets/images/png/home_icon/wallet.png';
   static String metro = 'assets/images/png/home_icon/metro.png';
   static String preCard = 'assets/images/png/home_icon/pre_card.png';
@@ -100,6 +113,7 @@ class FileConstants {
   static String faqIcon = 'assets/images/png/home_icon/faq.png';
   static String digitalSilverGif = 'assets/gif/silver.gif';
   static String digitalGoldGif = 'assets/gif/gold.gif';
+  static String spinRewardGif = 'assets/gif/spinrewardGif.gif';
   static String spincoin = 'assets/images/png/home_icon/spincoin.png';
   static String digitalsGold = 'assets/images/png/home_icon/digital_gold.png';
   static String homeBanner2 = 'assets/images/png/home_icon/home_banner2.png';
@@ -107,6 +121,7 @@ class FileConstants {
   static String errorBanner = 'assets/images/png/home_icon/error_banner.png';
   static String goldArrow = 'assets/images/png/home_icon/gold_arrow.png';
   static String silverArrow = 'assets/images/png/home_icon/silver_arrow.png';
+  static String suggestedCardImage = 'assets/images/png/suggestedCardImage.png';
 
   //profile
   static String qr = 'assets/images/png/qr.png';
@@ -145,4 +160,23 @@ class FileConstants {
   static String scanUser = 'assets/images/png/home_icon/scan.png';
   static String history = 'assets/images/png/home_icon/history.png';
   static String profile = 'assets/images/png/home_icon/profile.png';
+
+  //Education
+  static String greenBanner = 'assets/images/tutionFeesBanner.png';
+  static String tutionFeesBanner = 'assets/images/tutionFeesBanner.png';
+  static String amountBanner = 'assets/images/amountBanner.png';
+
+  //Digital Gold & Silver
+  static String mmtcPamp = 'assets/images/png/digital_gold_silver/mmtcPamp.png';
+  static String viewGold = 'assets/images/png/digital_gold_silver/viewGold.png';
+  static String buyMore = 'assets/images/png/digital_gold_silver/buyMore.png';
+  static String pngReva = 'assets/images/png/digital_gold_silver/pngReva.png';
+  static String designBottomRight =
+      'assets/images/png/digital_gold_silver/designBottomRight.png';
+  static String designTopLeft =
+      'assets/images/png/digital_gold_silver/designTopLeft.png';
+  static String digitalCoin =
+      'assets/images/png/digital_gold_silver/digitalCoin.png';
+  static String designTop =
+      'assets/images/png/digital_gold_silver/designTop.png';
 }

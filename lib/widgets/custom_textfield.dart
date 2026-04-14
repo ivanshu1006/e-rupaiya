@@ -16,6 +16,10 @@ class CustomTextField extends StatelessWidget {
   final bool isMandatory;
   final int? maxLines;
   final int? minLines;
+  final bool showBorder;
+  final Color? fillColor;
+  final BorderRadius? borderRadius;
+  final EdgeInsetsGeometry? contentPadding;
 
   const CustomTextField({
     super.key,
@@ -33,6 +37,10 @@ class CustomTextField extends StatelessWidget {
     this.isMandatory = false,
     this.maxLines = 1,
     this.minLines = 1,
+    this.showBorder = true,
+    this.fillColor,
+    this.borderRadius,
+    this.contentPadding,
   });
 
   @override
@@ -54,13 +62,20 @@ class CustomTextField extends StatelessWidget {
   }
 
   InputDecoration _inputDecoration() {
+    final radius = borderRadius ?? BorderRadius.circular(8.0);
+    final border = showBorder
+        ? OutlineInputBorder(borderRadius: radius)
+        : InputBorder.none;
     return InputDecoration(
       labelText: isMandatory ? '$labelText *' : labelText,
       floatingLabelBehavior: FloatingLabelBehavior.always,
       filled: true,
-      fillColor: Colors.white,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+      fillColor: fillColor ?? Colors.white,
+      border: border,
+      enabledBorder: border,
+      focusedBorder: border,
       suffixIcon: suffixIcon,
+      contentPadding: contentPadding,
     );
   }
 }

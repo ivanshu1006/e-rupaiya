@@ -1,8 +1,10 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../constants/file_constants.dart';
 import '../models/spin_reward.dart';
 
 class SpinResultDialog extends StatelessWidget {
@@ -34,18 +36,26 @@ class SpinResultDialog extends StatelessWidget {
             ? 'Rock this chance and earn e-Coins for real\nuse. Spin now and boost your wallet!'
             : 'Use your earned e-Coins for real-world\nbenefits like mobile recharges, electricity\nbills, or credit card payments. Spin now\nand boost your wallet!';
 
-    final buttonLabel =
-        isBetterLuck || isExtraSpin ? 'Try Again' : 'Claim Now';
+    final buttonLabel = isBetterLuck || isExtraSpin ? 'Try Again' : 'Claim Now';
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+        padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Center(
+              child: Image.asset(
+                FileConstants.coin_3d,
+                width: 58.w,
+                height: 58.h,
+                fit: BoxFit.contain,
+              ),
+            ),
+            const SizedBox(height: 14),
             Text(
-              title,
+              title.replaceAll('e-Coins', 'E-Coins'),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
@@ -54,7 +64,7 @@ class SpinResultDialog extends StatelessWidget {
                         : AppColors.textPrimary,
                   ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Text(
               subtitle,
               textAlign: TextAlign.center,
@@ -63,10 +73,10 @@ class SpinResultDialog extends StatelessWidget {
                     height: 1.4,
                   ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
             SizedBox(
               width: double.infinity,
-              height: 42,
+              height: 44,
               child: ElevatedButton(
                 onPressed: onPrimaryTap,
                 style: ElevatedButton.styleFrom(
@@ -74,7 +84,7 @@ class SpinResultDialog extends StatelessWidget {
                       isBetterLuck ? Colors.grey.shade500 : AppColors.primary,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(26),
                   ),
                   elevation: 0,
                 ),

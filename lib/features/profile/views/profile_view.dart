@@ -3,14 +3,12 @@
 import 'dart:io';
 
 import 'package:e_rupaiya/features/auth/controllers/auth_controller.dart';
-import 'package:e_rupaiya/features/refer_and_earn/views/refer_and_earn_wallet_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:pinput/pinput.dart';
 
 import '../../../constants/app_colors.dart';
@@ -23,8 +21,6 @@ import '../../../widgets/custom_textfield.dart';
 import '../../../widgets/image_picker_helper.dart';
 import '../../../widgets/k_dialog.dart';
 import '../../../widgets/profile_image_picker_sheet.dart';
-import '../../home/components/quick_action_card.dart';
-import '../../kyc/views/complete_kyc_view.dart';
 import '../components/profile_field.dart';
 import '../components/profile_shimmer.dart';
 import '../controllers/profile_controller.dart';
@@ -46,6 +42,7 @@ class ProfileView extends HookConsumerWidget {
       return null;
     }, const []);
 
+    /*
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -53,277 +50,172 @@ class ProfileView extends HookConsumerWidget {
             ? const ProfileShimmer()
             : Column(
                 children: [
-                  // Header: Avatar + Name + Close button
+                  // Old design code commented as requested.
+                ],
+              ),
+      ),
+    );
+    */
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: profileState.isFetching && profile == null
+            ? const ProfileShimmer()
+            : Column(
+                children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                    padding: EdgeInsets.fromLTRB(12.w, 6.h, 12.w, 4.h),
                     child: Row(
                       children: [
-                        CircleAvatar(
-                          radius: 24,
-                          backgroundColor: AppColors.gradientStart,
-                          child: profile?.profilePhotoUrl?.isNotEmpty == true
-                              ? AppNetworkImage(
-                                  url: profile!.profilePhotoUrl,
-                                  width: 48,
-                                  height: 48,
-                                  fit: BoxFit.cover,
-                                  borderRadius: BorderRadius.circular(24),
-                                  showShimmer: false,
-                                )
-                              : Text(
-                                  profile?.initials ?? '',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                ),
+                        IconButton(
+                          onPressed: () {
+                            final navigator = Navigator.of(context);
+                            if (navigator.canPop()) {
+                              navigator.pop();
+                            }
+                          },
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
-                        const SizedBox(width: 14),
                         Expanded(
                           child: Text(
-                            profile?.name ?? '',
+                            'My Profile',
                             style: Theme.of(context)
                                 .textTheme
-                                .titleLarge
+                                .titleMedium
                                 ?.copyWith(
-                                  fontWeight: FontWeight.w700,
                                   color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w700,
                                 ),
                           ),
                         ),
-                        // GestureDetector(
-                        //   onTap: () => context.pop(),
-                        //   child: const Icon(
-                        //     Icons.close,
-                        //     color: AppColors.textPrimary,
-                        //     size: 24,
-                        //   ),
-                        // ),
+                        IconButton(
+                          onPressed: () {},
+                          icon: const Icon(
+                            Icons.help_outline,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: 20),
-
-                  // My QR Code card
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: QuickActionCard(
-                      title: 'My QR Code',
-                      subtitle: '',
-                      amount: '',
-                      buttonLabel: '',
-                      imageAsset: FileConstants.qr,
-                      onTap: () {
-                        context.push(RouteConstants.myQr);
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Menu items
+                  const Divider(height: 1, color: AppColors.lightBorder),
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: EdgeInsets.fromLTRB(0, 16.h, 0, 24.h),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _ProfileMenuItem(
-                            icon: Icons.person_outline,
-                            label: 'Profile',
-                            trailing: (profile?.isKycVerified ?? false)
-                                ? const _VerifiedBadge()
-                                : GestureDetector(
-                                    onTap: () {
-                                      PersistentNavBarNavigator.pushNewScreen(
-                                        context,
-                                        screen: const CompleteKycView(),
-                                        withNavBar: false,
-                                      );
-                                    },
-                                    child: const _KycBadge(),
-                                  ),
-                            onTap: () {
-                              if (profile == null) return;
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => UpdateProfileView(
-                                    profile: profile,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                          _ProfileMenuItem(
-                            icon: Icons.local_offer_outlined,
-                            label: 'Offers',
-                            onTap: () => context.push(RouteConstants.offers),
-                          ),
-                          _ProfileMenuItem(
-                            icon: Icons.account_balance_wallet_outlined,
-                            label: 'My Wallet',
-                            onTap: () {
-                              // Navigator.of(context).push(
-                              //   MaterialPageRoute(
-                              //     builder: (_) =>
-                              //         const ReferAndEarnWalletView(),
-                              //   ),
-                              // );
-                              PersistentNavBarNavigator.pushNewScreen(
-                                context,
-                                screen: const ReferAndEarnWalletView(),
-                                withNavBar: false,
-                              );
-                            },
-                          ),
-                          _ProfileMenuItem(
-                            icon: Icons.account_balance_outlined,
-                            label: 'Bank Account',
-                            onTap: () {
-                              PersistentNavBarNavigator.pushNewScreen(
-                                context,
-                                screen: const BankAccountsView(),
-                                withNavBar: false,
-                              );
-                            },
-                          ),
-                          _ProfileMenuItem(
-                            icon: Icons.swap_horiz,
-                            label: 'Transactions',
-                            onTap: () {
-                              context.push(RouteConstants.transactions);
-                            },
-                          ),
-                          _ProfileMenuItem(
-                            icon: Icons.settings_outlined,
-                            label: 'Settings',
-                            onTap: () {
-                              context.push(RouteConstants.settings);
-                            },
-                          ),
-                          _ProfileMenuItem(
-                            icon: Icons.support_agent_outlined,
-                            label: 'Help, Support & Contact Us',
-                            onTap: () {
-                              context.push(RouteConstants.helpSupport);
-                            },
-                          ),
-                          _ProfileMenuItem(
-                            icon: Icons.help_outline,
-                            label: 'FAQs',
-                            onTap: () {
-                              context.push(RouteConstants.faq);
-                            },
-                          ),
-                          _ProfileMenuItem(
-                            icon: Icons.privacy_tip_outlined,
-                            label: 'Legal & Policy Document',
-                            onTap: () {
-                              context.push(RouteConstants.termsPrivacy);
-                            },
-                          ),
-                          _ProfileMenuItem(
-                            icon: Icons.policy_outlined,
-                            label: 'Privacy Policy',
-                            onTap: () {
-                              context.push(RouteConstants.privacyPolicy);
-                            },
-                          ),
-                          _ProfileMenuItem(
-                            icon: Icons.info_outline,
-                            label: 'About Us',
-                            onTap: () {
-                              context.push(RouteConstants.aboutUs);
-                            },
-                          ),
-                          _ProfileMenuItem(
-                            icon: Icons.logout,
-                            label: 'Logout',
-                            onTap: () {
-                              KDialog.instance.openDialog(
-                                dialog: AlertDialog(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  title: const Text('Logout'),
-                                  content: const Text(
-                                    'Are you sure you want to logout?',
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          navigatorKey.currentState?.pop(),
-                                      child: Text(
-                                        'Cancel',
-                                        style: TextStyle(
-                                          color: AppColors.textPrimary
-                                              .withOpacity(0.6),
-                                        ),
-                                      ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.w),
+                            child: _ProfileHeaderCard(
+                              profile: profile,
+                              onEdit: () {
+                                if (profile == null) return;
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => UpdateProfileView(
+                                      profile: profile,
                                     ),
-                                    TextButton(
-                                      onPressed: () async {
-                                        navigatorKey.currentState?.pop();
-                                        await ref
-                                            .read(
-                                                authControllerProvider.notifier)
-                                            .logout();
-                                        if (context.mounted) {
-                                          context.go(RouteConstants.login);
-                                        }
-                                      },
-                                      child: const Text(
-                                        'Logout',
-                                        style: TextStyle(
-                                          color: AppColors.primary,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          SizedBox(height: 16.h),
+                          _InviteEarnCard(
+                            onInvite: () =>
+                                context.push(RouteConstants.referAndEarn),
+                          ),
+                          SizedBox(height: 20.h),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.w),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const _ProfileSectionTitle(title: 'Settings'),
+                                SizedBox(height: 12.h),
+                                _ProfileActionTile(
+                                  icon: Icons.tune,
+                                  title: 'Preferences',
+                                  subtitle: 'Languages, Permissions, Reminders',
+                                  onTap: () =>
+                                      context.push(RouteConstants.settings),
                                 ),
-                              );
-                            },
+                                const Divider(
+                                    height: 1, color: AppColors.lightBorder),
+                                _ProfileActionTile(
+                                  icon: Icons.security,
+                                  title: 'Security',
+                                  subtitle: 'Screen Lock, Passcode',
+                                  onTap: () =>
+                                      context.push(RouteConstants.settings),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: 20.h),
+                          // Padding(
+                          //   padding: EdgeInsets.symmetric(horizontal: 16.w),
+                          //   child: _ProfilePromoCard(
+                          //     onStart: () =>
+                          //         context.push(RouteConstants.referAndEarn),
+                          //   ),
+                          // ),
+                          // SizedBox(height: 20.h),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.w),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const _ProfileSectionTitle(title: 'Support'),
+                                SizedBox(height: 12.h),
+                                _ProfileActionTile(
+                                  icon: Icons.support_agent_outlined,
+                                  title: 'Help & Support',
+                                  onTap: () =>
+                                      context.push(RouteConstants.helpSupport),
+                                ),
+                                const Divider(
+                                    height: 1, color: AppColors.lightBorder),
+                                _ProfileActionTile(
+                                  icon: Icons.info_outline,
+                                  title: 'About e-Rupaiya',
+                                  onTap: () =>
+                                      context.push(RouteConstants.policies),
+                                ),
+                                const Divider(
+                                    height: 1, color: AppColors.lightBorder),
+                                _ProfileLogoutTile(
+                                  onTap: () {
+                                    KDialog.instance.openSheet(
+                                      dialog: _LogoutBottomSheet(
+                                        onLogout: () async {
+                                          navigatorKey.currentState?.pop();
+                                          await ref
+                                              .read(authControllerProvider
+                                                  .notifier)
+                                              .logout();
+                                          if (context.mounted) {
+                                            context.go(RouteConstants.login);
+                                          }
+                                        },
+                                        onStay: () =>
+                                            navigatorKey.currentState?.pop(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
-
-                  // // Footer: Version
-                  // Padding(
-                  //   padding: const EdgeInsets.only(bottom: 16, top: 8),
-                  //   child: FutureBuilder<String>(
-                  //     future: Utils.getAppVersion(),
-                  //     builder: (context, snapshot) {
-                  //       final version = snapshot.data ?? '';
-                  //       return Row(
-                  //         mainAxisAlignment: MainAxisAlignment.center,
-                  //         children: [
-                  //           Image.asset(
-                  //             FileConstants.appLogo,
-                  //             height: 22,
-                  //             width: 22,
-                  //           ),
-                  //           const SizedBox(width: 8),
-                  //           Text(
-                  //             'Version $version',
-                  //             style: Theme.of(context)
-                  //                 .textTheme
-                  //                 .bodyMedium
-                  //                 ?.copyWith(
-                  //                   color:
-                  //                       AppColors.textPrimary.withOpacity(0.6),
-                  //                 ),
-                  //           ),
-                  //         ],
-                  //       );
-                  //     },
-                  //   ),
-                  // ),
                 ],
               ),
       ),
@@ -370,6 +262,486 @@ class _ProfileMenuItem extends StatelessWidget {
             if (trailing != null) trailing!,
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ProfileHeaderCard extends StatelessWidget {
+  const _ProfileHeaderCard({
+    required this.profile,
+    required this.onEdit,
+  });
+
+  final ProfileModel? profile;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = profile?.name ?? '';
+    final rawMobile = profile?.mobile ?? '';
+    final mobile = rawMobile.startsWith('+') ? rawMobile : '+91$rawMobile';
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 26.r,
+          backgroundColor: AppColors.primary,
+          child: profile?.profilePhotoUrl?.isNotEmpty == true
+              ? ClipOval(
+                  child: AppNetworkImage(
+                    url: profile!.profilePhotoUrl,
+                    width: 52.r,
+                    height: 52.r,
+                    fit: BoxFit.cover,
+                    showShimmer: false,
+                  ),
+                )
+              : Text(
+                  profile?.initials ?? '',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+        ),
+        SizedBox(width: 12.w),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              SizedBox(height: 2.h),
+              Text(
+                mobile,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textPrimary.withOpacity(0.7),
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
+          ),
+        ),
+        GestureDetector(
+          onTap: onEdit,
+          child: Row(
+            children: [
+              // const Icon(Icons.edit, size: 18, color: AppColors.primary),
+              // SizedBox(width: 4.w),
+              Text(
+                'Manage',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                      decoration: TextDecoration.underline,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InviteEarnCard extends StatelessWidget {
+  const _InviteEarnCard({required this.onInvite});
+
+  final VoidCallback onInvite;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFDE7DD),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54.r,
+            height: 54.r,
+            decoration: const BoxDecoration(
+              color: Color(0xFF1A56A1),
+              shape: BoxShape.circle,
+            ),
+            child: ClipOval(
+              child: Padding(
+                padding: EdgeInsets.all(8.r),
+                child: Image.asset(
+                  FileConstants.referAndEarn,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Invite & Earn E-Coins Daily',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  'Refer Your First Friend And Unlock Bonus Rewards',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textPrimary.withOpacity(0.7),
+                      ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 8.w),
+          SizedBox(
+            height: 34.h,
+            child: ElevatedButton(
+              onPressed: onInvite,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18.r),
+                ),
+                padding: EdgeInsets.symmetric(horizontal: 14.w),
+                elevation: 0,
+              ),
+              child: Text(
+                'Invite Now',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileSectionTitle extends StatelessWidget {
+  const _ProfileSectionTitle({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w800,
+          ),
+    );
+  }
+}
+
+class _ProfileActionTile extends StatelessWidget {
+  const _ProfileActionTile({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 10.h),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: AppColors.textPrimary, size: 22.r),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  if (subtitle != null && subtitle!.isNotEmpty) ...[
+                    SizedBox(height: 2.h),
+                    Text(
+                      subtitle!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textPrimary.withOpacity(0.6),
+                          ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: AppColors.textPrimary.withOpacity(0.7),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfilePromoCard extends StatelessWidget {
+  const _ProfilePromoCard({required this.onStart});
+
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20.r),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFFDE2C7), Color(0xFFF7C59B)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        border: Border.all(color: const Color(0xFFE4B286)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 52.r,
+            height: 52.r,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.7),
+              shape: BoxShape.circle,
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(10.r),
+              child: Image.asset(
+                FileConstants.goldcoin,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Text(
+              'Earn Coins Just By\nSharing Your Thoughts',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ),
+          SizedBox(
+            height: 34.h,
+            child: ElevatedButton(
+              onPressed: onStart,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFE87938),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18.r),
+                ),
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                elevation: 0,
+              ),
+              child: Text(
+                'Start Now',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileLogoutTile extends StatelessWidget {
+  const _ProfileLogoutTile({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: 12.h),
+        child: Row(
+          children: [
+            const Icon(Icons.logout, color: Colors.red),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Text(
+                'Log Out',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.red,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileTabChip extends StatelessWidget {
+  const _ProfileTabChip({
+    required this.icon,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFFFDE7DD) : Colors.white,
+          borderRadius: BorderRadius.circular(14.r),
+          border: Border.all(
+            color: isActive
+                ? AppColors.primary.withOpacity(0.7)
+                : AppColors.lightBorder,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 16.r,
+              color: AppColors.textPrimary,
+            ),
+            SizedBox(width: 6.w),
+            Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LogoutBottomSheet extends StatelessWidget {
+  const _LogoutBottomSheet({
+    required this.onLogout,
+    required this.onStay,
+  });
+
+  final VoidCallback onLogout;
+  final VoidCallback onStay;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 24.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Log Out Of Your Account?',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+          ),
+          SizedBox(height: 6.h),
+          Text(
+            "You'll Need To Sign In Again To Access Your Account.",
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textPrimary.withOpacity(0.6),
+                ),
+          ),
+          SizedBox(height: 18.h),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onLogout,
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.primary),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28.r),
+                    ),
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                  ),
+                  child: Text(
+                    'Log Out',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: onStay,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28.r),
+                    ),
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                  ),
+                  child: Text(
+                    'Stay loged in',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -453,6 +825,9 @@ class UpdateProfileView extends HookConsumerWidget {
     final controller = ref.read(profileControllerProvider.notifier);
     final state = ref.watch(profileControllerProvider);
     final latestProfile = state.profile ?? profile;
+    final initialFullNameState = useState(profile.name.trim());
+    final initialAddressState = useState((profile.address ?? '').trim());
+    final initialEmailState = useState((profile.email ?? '').trim());
     final pickedImage = useState<File?>(null);
     final fullNameController = useTextEditingController();
     final emailController = useTextEditingController(
@@ -468,12 +843,28 @@ class UpdateProfileView extends HookConsumerWidget {
     final panController = useTextEditingController(
       text: profile.panMasked ?? '',
     );
-    final permanentAddressController = useTextEditingController(
-      text: profile.permanentAddress ?? '',
-    );
     final dobController = useTextEditingController(
       text: profile.dob ?? '',
     );
+    final permanentAddressController = useTextEditingController();
+    final deliveryAddressSummaryController = useTextEditingController();
+    final billingAddress1Controller = useTextEditingController();
+    final billingAddress2Controller = useTextEditingController();
+    final billingCountryController = useTextEditingController();
+    final billingStateController = useTextEditingController();
+    final billingCityController = useTextEditingController();
+    final billingStateCodeController = useTextEditingController();
+    final billingZipController = useTextEditingController();
+    final billingMobileController = useTextEditingController();
+
+    final deliveryAddress1Controller = useTextEditingController();
+    final deliveryAddress2Controller = useTextEditingController();
+    final deliveryCountryController = useTextEditingController();
+    final deliveryStateController = useTextEditingController();
+    final deliveryCityController = useTextEditingController();
+    final deliveryStateCodeController = useTextEditingController();
+    final deliveryZipController = useTextEditingController();
+    final deliveryMobileController = useTextEditingController();
     useListenable(fullNameController);
     useListenable(addressController);
     useListenable(mobileController);
@@ -484,18 +875,117 @@ class UpdateProfileView extends HookConsumerWidget {
     }, const []);
 
     final canEdit = !latestProfile.isKycVerified;
-    final initialFullName = profile.name.trim();
-    final initialAddress = (profile.address ?? '').trim();
+    final initialFullName = initialFullNameState.value;
+    final initialAddress = initialAddressState.value;
     final initialMobile = profile.mobile.trim();
+    final initialEmail = initialEmailState.value;
 
     final currentFullName = fullNameController.text.trim();
     final currentAddress = addressController.text.trim();
     final currentMobile = mobileController.text.trim();
+    final currentEmail = emailController.text.trim();
     final hasCommunicationChange = currentAddress != initialAddress;
     final hasNonEmailChanges = currentFullName != initialFullName ||
         currentMobile != initialMobile ||
         hasCommunicationChange;
+    final hasEmailChange = canEdit &&
+        !latestProfile.isEmailVerified &&
+        currentEmail != initialEmail;
     final canSave = hasNonEmailChanges && (canEdit || hasCommunicationChange);
+    final hasUnsavedChanges = hasNonEmailChanges || hasEmailChange;
+
+    final selectedTab = useState<int>(0);
+    final deliveryScrollController = useScrollController();
+    final deliverySectionKey = useMemoized(() => GlobalKey(), const []);
+    final deliveryFirstFieldKey = useMemoized(() => GlobalKey(), const []);
+
+    Future<void> saveDeliveryInfo() async {
+      final ok = await controller.updateDeliveryInfo(
+        billingAddressLine1: billingAddress1Controller.text.trim(),
+        billingAddressLine2: billingAddress2Controller.text.trim(),
+        billingCity: billingCityController.text.trim(),
+        billingState: billingStateController.text.trim(),
+        billingZip: billingZipController.text.trim(),
+        billingCountry: billingCountryController.text.trim(),
+        billingMobile: billingMobileController.text.trim(),
+        deliveryAddressLine1: deliveryAddress1Controller.text.trim(),
+        deliveryAddressLine2: deliveryAddress2Controller.text.trim(),
+        deliveryCity: deliveryCityController.text.trim(),
+        deliveryState: deliveryStateController.text.trim(),
+        deliveryZip: deliveryZipController.text.trim(),
+        deliveryCountry: deliveryCountryController.text.trim(),
+        deliveryMobile: deliveryMobileController.text.trim(),
+      );
+      if (!context.mounted) return;
+      if (ok) {
+        await controller.fetchProfile();
+        if (!context.mounted) return;
+        AppSnackbar.show(
+          'Delivery information updated successfully.',
+          type: AppSnackbarType.success,
+        );
+      } else {
+        AppSnackbar.show(
+          state.updateErrorMessage ?? 'Failed to update delivery info.',
+          type: AppSnackbarType.error,
+        );
+      }
+    }
+
+    void openDeliverySection() {
+      selectedTab.value = 2;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final ctx = deliveryFirstFieldKey.currentContext ??
+            deliverySectionKey.currentContext;
+        if (ctx == null) return;
+        Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeInOut,
+          alignment: 0.1,
+        );
+      });
+    }
+
+    Future<bool> confirmDiscard() async {
+      if (!hasUnsavedChanges) return true;
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Text('Discard changes?'),
+            content: const Text(
+              'You have unsaved changes. Are you sure you want to leave?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color: AppColors.textPrimary.withOpacity(0.7),
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text(
+                  'Discard',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+      return result ?? false;
+    }
 
     useEffect(() {
       final updatedEmail = state.profile?.email ?? '';
@@ -506,8 +996,15 @@ class UpdateProfileView extends HookConsumerWidget {
     }, [state.profile?.email]);
 
     useEffect(() {
+      if (state.isUpdating) return null;
       final updatedProfile = state.profile;
       if (updatedProfile == null) return null;
+      void setIfNotEmpty(TextEditingController controller, String value) {
+        if (value.isNotEmpty || controller.text.isEmpty) {
+          controller.text = value;
+        }
+      }
+
       final updatedAadhaar = updatedProfile.aadhaarMasked ?? '';
       if (aadhaarController.text != updatedAadhaar) {
         aadhaarController.text = updatedAadhaar;
@@ -516,220 +1013,623 @@ class UpdateProfileView extends HookConsumerWidget {
       if (panController.text != updatedPan) {
         panController.text = updatedPan;
       }
-      final updatedPermanent = updatedProfile.permanentAddress ?? '';
-      if (permanentAddressController.text != updatedPermanent) {
-        permanentAddressController.text = updatedPermanent;
-      }
       final updatedDob = updatedProfile.dob ?? '';
       if (dobController.text != updatedDob) {
         dobController.text = updatedDob;
+      }
+      permanentAddressController.text = updatedProfile.permanentAddress ?? '';
+      final billingEntry = updatedProfile.billingAddressEntry;
+      final deliveryEntry = updatedProfile.deliveryAddressEntry;
+      setIfNotEmpty(
+          billingAddress1Controller, billingEntry?.addressLine1 ?? '');
+      setIfNotEmpty(
+          billingAddress2Controller, billingEntry?.addressLine2 ?? '');
+      setIfNotEmpty(billingCountryController, billingEntry?.country ?? '');
+      setIfNotEmpty(billingStateController, billingEntry?.state ?? '');
+      setIfNotEmpty(billingCityController, billingEntry?.city ?? '');
+      setIfNotEmpty(billingStateCodeController, billingEntry?.stateCode ?? '');
+      setIfNotEmpty(billingZipController, billingEntry?.zip ?? '');
+      setIfNotEmpty(billingMobileController, billingEntry?.mobile ?? '');
+
+      setIfNotEmpty(
+          deliveryAddress1Controller, deliveryEntry?.addressLine1 ?? '');
+      setIfNotEmpty(
+          deliveryAddress2Controller, deliveryEntry?.addressLine2 ?? '');
+      setIfNotEmpty(deliveryCountryController, deliveryEntry?.country ?? '');
+      setIfNotEmpty(deliveryStateController, deliveryEntry?.state ?? '');
+      setIfNotEmpty(deliveryCityController, deliveryEntry?.city ?? '');
+      setIfNotEmpty(
+          deliveryStateCodeController, deliveryEntry?.stateCode ?? '');
+      setIfNotEmpty(deliveryZipController, deliveryEntry?.zip ?? '');
+      setIfNotEmpty(deliveryMobileController, deliveryEntry?.mobile ?? '');
+
+      if (deliveryEntry != null) {
+        final parts = [
+          deliveryEntry.addressLine1,
+          deliveryEntry.addressLine2,
+          deliveryEntry.city,
+          deliveryEntry.state,
+          deliveryEntry.zip,
+          deliveryEntry.country,
+        ].where((part) => part.trim().isNotEmpty).toList();
+        deliveryAddressSummaryController.text = parts.join(', ');
+      } else {
+        deliveryAddressSummaryController.text = '';
       }
       return null;
     }, [
       state.profile?.aadhaarMasked,
       state.profile?.panMasked,
-      state.profile?.permanentAddress,
       state.profile?.dob,
+      state.profile?.billingAddress,
+      state.profile?.addresses,
+      state.isUpdating,
     ]);
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
+    final headerHeight = 170.h;
+
+    /*
+    return WillPopScope(
+      onWillPop: confirmDiscard,
+      child: Scaffold(
         backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-          onPressed: () => Navigator.of(context).pop(),
+        body: SafeArea(
+          child: Stack(
+            children: [
+              // Old update profile design commented as requested.
+            ],
+          ),
         ),
-        title: Text(
-          'Update Profile',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-        ),
-        centerTitle: false,
       ),
-      body: SafeArea(
-        child: Stack(
+    );
+    */
+
+    return WillPopScope(
+      onWillPop: confirmDiscard,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: Stack(
           children: [
-            SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Stack(
-                      children: [
-                        CircleAvatar(
-                          radius: 42,
-                          backgroundColor: AppColors.primary,
-                          child: ClipOval(
-                            child: pickedImage.value != null
-                                ? Image.file(
-                                    pickedImage.value!,
-                                    width: 84,
-                                    height: 84,
-                                    fit: BoxFit.cover,
-                                  )
-                                : profile.profilePhotoUrl?.isNotEmpty == true
-                                    ? AppNetworkImage(
-                                        url: profile.profilePhotoUrl,
-                                        width: 84,
-                                        height: 84,
-                                        fit: BoxFit.cover,
-                                        showShimmer: false,
-                                      )
-                                    : Text(
-                                        profile.initials,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleLarge
-                                            ?.copyWith(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                      ),
-                          ),
-                        ),
-                        Positioned(
-                          right: 0,
-                          bottom: 0,
-                          child: GestureDetector(
-                            onTap: () {
-                              KDialog.instance.openSheet(
-                                dialog: ProfileImagePickerSheet(
-                                  onCamera: () async {
-                                    navigatorKey.currentState?.pop();
-                                    final image =
-                                        await ImagePickerHelper.pickFromCamera();
-                                    if (image == null) return;
-                                    pickedImage.value = image;
-                                    final ok =
-                                        await controller.updateProfileImage(
-                                      image,
-                                    );
-                                    if (!ok) {
-                                      pickedImage.value = null;
-                                    }
-                                  },
-                                  onGallery: () async {
-                                    navigatorKey.currentState?.pop();
-                                    final image =
-                                        await ImagePickerHelper.pickFromGallery();
-                                    if (image == null) return;
-                                    pickedImage.value = image;
-                                    final ok =
-                                        await controller.updateProfileImage(
-                                      image,
-                                    );
-                                    if (!ok) {
-                                      pickedImage.value = null;
-                                    }
-                                  },
+            Column(
+              children: [
+                Container(
+                  height: headerHeight,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primary, AppColors.primaryDark],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                    borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(22.r),
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              IconButton(
+                                onPressed: () async {
+                                  final okToLeave = await confirmDiscard();
+                                  if (!context.mounted || !okToLeave) return;
+                                  Navigator.of(context).pop();
+                                },
+                                icon: const Icon(
+                                  Icons.arrow_back,
+                                  color: Colors.white,
                                 ),
-                              );
-                            },
-                            child: Container(
-                              height: 24,
-                              width: 24,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.12),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  'My Profile',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () {},
+                                icon: const Icon(
+                                  Icons.help_outline,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 10.h),
+                          Row(
+                            children: [
+                              Stack(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 26.r,
+                                    backgroundColor:
+                                        Colors.white.withOpacity(0.25),
+                                    child: ClipOval(
+                                      child: pickedImage.value != null
+                                          ? Image.file(
+                                              pickedImage.value!,
+                                              width: 52.r,
+                                              height: 52.r,
+                                              fit: BoxFit.cover,
+                                            )
+                                          : profile.profilePhotoUrl
+                                                      ?.isNotEmpty ==
+                                                  true
+                                              ? AppNetworkImage(
+                                                  url: profile.profilePhotoUrl,
+                                                  width: 52.r,
+                                                  height: 52.r,
+                                                  fit: BoxFit.cover,
+                                                  showShimmer: false,
+                                                )
+                                              : Text(
+                                                  profile.initials,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .titleMedium
+                                                      ?.copyWith(
+                                                        color: Colors.white,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                      ),
+                                                ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    right: 0,
+                                    bottom: 0,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        KDialog.instance.openSheet(
+                                          dialog: ProfileImagePickerSheet(
+                                            onCamera: () async {
+                                              navigatorKey.currentState?.pop();
+                                              final image =
+                                                  await ImagePickerHelper
+                                                      .pickFromCamera();
+                                              if (image == null) return;
+                                              pickedImage.value = image;
+                                              final ok = await controller
+                                                  .updateProfileImage(
+                                                image,
+                                              );
+                                              if (ok) {
+                                                await controller.fetchProfile();
+                                              } else {
+                                                pickedImage.value = null;
+                                              }
+                                            },
+                                            onGallery: () async {
+                                              navigatorKey.currentState?.pop();
+                                              final image =
+                                                  await ImagePickerHelper
+                                                      .pickFromGallery();
+                                              if (image == null) return;
+                                              pickedImage.value = image;
+                                              final ok = await controller
+                                                  .updateProfileImage(
+                                                image,
+                                              );
+                                              if (ok) {
+                                                await controller.fetchProfile();
+                                              } else {
+                                                pickedImage.value = null;
+                                              }
+                                            },
+                                          ),
+                                        );
+                                      },
+                                      child: Container(
+                                        height: 20.r,
+                                        width: 20.r,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black
+                                                  .withOpacity(0.15),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.camera_alt_outlined,
+                                          size: 12,
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
-                              child: const Icon(
-                                Icons.camera_alt_outlined,
-                                size: 14,
-                                color: AppColors.primary,
+                              SizedBox(width: 12.w),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    latestProfile.name,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                  ),
+                                  SizedBox(height: 2.h),
+                                  Text(
+                                    latestProfile.mobile.startsWith('+')
+                                        ? latestProfile.mobile
+                                        : '+91${latestProfile.mobile}',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                          color: Colors.white.withOpacity(0.85),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                ],
                               ),
-                            ),
+                            ],
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  ProfileField(
-                    label: 'Full Name (as per PAN)',
-                    controller: fullNameController,
-                    enabled: canEdit,
+                ),
+                Expanded(child: Container(color: Colors.white)),
+              ],
+            ),
+            Positioned.fill(
+              top: headerHeight - 22.h,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(22.r),
                   ),
-                  const SizedBox(height: 16),
-                  ProfileField(
-                    label: 'Mobile Number',
-                    controller: mobileController,
-                    enabled: false,
-                    // trailingText: 'Change',
-                    // onTrailingTap: () {
-                    //   KDialog.instance.openSheet(
-                    //     dialog: _MobileUpdateSheet(
-                    //       currentMobile: mobileController.text.trim(),
-                    //     ),
-                    //   );
-                    // },
-                  ),
-                  const SizedBox(height: 16),
-                  ProfileField(
-                    label: 'Email ID',
-                    controller: emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    enabled: canEdit && !latestProfile.isEmailVerified,
-                    trailingText:
-                        latestProfile.isEmailVerified ? 'VERIFIED' : 'VERIFY',
-                    onTrailingTap: latestProfile.isEmailVerified || !canEdit
-                        ? null
-                        : () {
-                            KDialog.instance.openSheet(
-                              dialog: _EmailUpdateSheet(
-                                currentEmail: emailController.text.trim(),
+                ),
+                child: Column(
+                  children: [
+                    SizedBox(height: 14.h),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16.w),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _ProfileTabChip(
+                              icon: Icons.person_outline,
+                              label: 'Personal information',
+                              isActive: selectedTab.value == 0,
+                              onTap: () => selectedTab.value = 0,
+                            ),
+                            SizedBox(width: 10.w),
+                            _ProfileTabChip(
+                              icon: Icons.account_balance_outlined,
+                              label: 'Banking information',
+                              isActive: selectedTab.value == 1,
+                              onTap: () => selectedTab.value = 1,
+                            ),
+                            SizedBox(width: 10.w),
+                            _ProfileTabChip(
+                              icon: Icons.local_shipping_outlined,
+                              label: 'Delivery Information',
+                              isActive: selectedTab.value == 2,
+                              onTap: () => selectedTab.value = 2,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    Expanded(
+                      child: selectedTab.value == 0
+                          ? SingleChildScrollView(
+                              padding:
+                                  EdgeInsets.fromLTRB(16.w, 4.h, 16.w, 90.h),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Personal information',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          color: AppColors.textPrimary,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                  ),
+                                  SizedBox(height: 14.h),
+                                  ProfileField(
+                                    label: 'Full Name (as per PAN)',
+                                    controller: fullNameController,
+                                    enabled: canEdit,
+                                  ),
+                                  SizedBox(height: 14.h),
+                                  ProfileField(
+                                    label: 'Mobile Number',
+                                    controller: mobileController,
+                                    enabled: false,
+                                  ),
+                                  SizedBox(height: 14.h),
+                                  ProfileField(
+                                    label: 'Email ID',
+                                    controller: emailController,
+                                    keyboardType: TextInputType.emailAddress,
+                                    enabled: canEdit &&
+                                        !latestProfile.isEmailVerified,
+                                    trailingText: latestProfile.isEmailVerified
+                                        ? 'VERIFIED'
+                                        : 'VERIFY',
+                                    onTrailingTap: latestProfile
+                                                .isEmailVerified ||
+                                            !canEdit
+                                        ? null
+                                        : () {
+                                            KDialog.instance.openSheet(
+                                              dialog: _EmailUpdateSheet(
+                                                currentEmail:
+                                                    emailController.text.trim(),
+                                              ),
+                                            );
+                                          },
+                                  ),
+                                  SizedBox(height: 14.h),
+                                  ProfileField(
+                                    label: 'Adhaar Number',
+                                    controller: aadhaarController,
+                                    enabled: false,
+                                  ),
+                                  SizedBox(height: 14.h),
+                                  ProfileField(
+                                    label: 'PAN Number',
+                                    controller: panController,
+                                    enabled: false,
+                                  ),
+                                  SizedBox(height: 14.h),
+                                  ProfileField(
+                                    label: 'Date Of Birth',
+                                    controller: dobController,
+                                    enabled: false,
+                                  ),
+                                  SizedBox(height: 14.h),
+                                  ProfileField(
+                                    label: 'Permanent Address',
+                                    controller: permanentAddressController,
+                                    maxLines: 2,
+                                    enabled: false,
+                                  ),
+                                  SizedBox(height: 14.h),
+                                  ProfileField(
+                                    label: 'Delivery Address',
+                                    controller:
+                                        deliveryAddressSummaryController,
+                                    maxLines: 2,
+                                    enabled: false,
+                                    trailingIcon: Icons.edit,
+                                    onTrailingTap: openDeliverySection,
+                                    onTap: openDeliverySection,
+                                    textColor: AppColors.textPrimary,
+                                  ),
+                                ],
                               ),
-                            );
-                          },
-                  ),
-                  const SizedBox(height: 16),
-                  ProfileField(
-                    label: 'Aadhaar Number',
-                    controller: aadhaarController,
-                    enabled: false,
-                  ),
-                  const SizedBox(height: 16),
-                  ProfileField(
-                    label: 'PAN Number',
-                    controller: panController,
-                    enabled: false,
-                  ),
-                  const SizedBox(height: 16),
-                  ProfileField(
-                    label: 'Permanent address',
-                    controller: permanentAddressController,
-                    maxLines: 2,
-                    enabled: false,
-                  ),
-                  const SizedBox(height: 16),
-                  ProfileField(
-                    label: 'Communication Address',
-                    controller: addressController,
-                    maxLines: 2,
-                    enabled: true,
-                  ),
-                  const SizedBox(height: 16),
-                  ProfileField(
-                    label: 'Date of Birth',
-                    controller: dobController,
-                    enabled: false,
-                  ),
-                  const SizedBox(height: 24),
-                  CustomElevatedButton(
-                    onPressed: state.isUpdating || !canSave
+                            )
+                          : selectedTab.value == 1
+                              ? Column(
+                                  children: [
+                                    Padding(
+                                      padding: EdgeInsets.fromLTRB(
+                                          16.w, 4.h, 16.w, 6.h),
+                                      child: Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Text(
+                                          'Banking Information',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium
+                                              ?.copyWith(
+                                                color: AppColors.textPrimary,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: BankAccountsSection(
+                                        padding: EdgeInsets.fromLTRB(
+                                            16.w, 0, 16.w, 12.h),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : SingleChildScrollView(
+                                  controller: deliveryScrollController,
+                                  padding: EdgeInsets.fromLTRB(
+                                      16.w, 4.h, 16.w, 90.h),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Billing Address Details',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(
+                                              color: AppColors.textPrimary,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                      ),
+                                      SizedBox(height: 12.h),
+                                      ProfileField(
+                                        label: 'Billing Address Line 1',
+                                        controller: billingAddress1Controller,
+                                        enabled: true,
+                                      ),
+                                      SizedBox(height: 14.h),
+                                      ProfileField(
+                                        label: 'Billing Address Line 2',
+                                        controller: billingAddress2Controller,
+                                        enabled: true,
+                                      ),
+                                      SizedBox(height: 14.h),
+                                      ProfileField(
+                                        label: 'Billing Country',
+                                        controller: billingCountryController,
+                                        enabled: true,
+                                      ),
+                                      SizedBox(height: 14.h),
+                                      ProfileField(
+                                        label: 'Billing State',
+                                        controller: billingStateController,
+                                        enabled: true,
+                                      ),
+                                      SizedBox(height: 14.h),
+                                      ProfileField(
+                                        label: 'Billing City',
+                                        controller: billingCityController,
+                                        enabled: true,
+                                      ),
+                                      SizedBox(height: 14.h),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: ProfileField(
+                                              label: 'Billing State Code',
+                                              controller:
+                                                  billingStateCodeController,
+                                              enabled: true,
+                                            ),
+                                          ),
+                                          SizedBox(width: 12.w),
+                                          Expanded(
+                                            child: ProfileField(
+                                              label: 'Billing Zip Code',
+                                              controller: billingZipController,
+                                              enabled: true,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: 14.h),
+                                      ProfileField(
+                                        label: 'Billing Mobile Number',
+                                        controller: billingMobileController,
+                                        enabled: true,
+                                      ),
+                                      SizedBox(height: 18.h),
+                                      Text(
+                                        'Delivery Address Details',
+                                        key: deliverySectionKey,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(
+                                              color: AppColors.textPrimary,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                      ),
+                                      SizedBox(height: 12.h),
+                                      ProfileField(
+                                        key: deliveryFirstFieldKey,
+                                        label: 'Delivery Address Line 1',
+                                        controller: deliveryAddress1Controller,
+                                        enabled: true,
+                                      ),
+                                      SizedBox(height: 14.h),
+                                      ProfileField(
+                                        label: 'Delivery Address Line 2',
+                                        controller: deliveryAddress2Controller,
+                                        enabled: true,
+                                      ),
+                                      SizedBox(height: 14.h),
+                                      ProfileField(
+                                        label: 'Delivery Country',
+                                        controller: deliveryCountryController,
+                                        enabled: true,
+                                      ),
+                                      SizedBox(height: 14.h),
+                                      ProfileField(
+                                        label: 'Delivery State',
+                                        controller: deliveryStateController,
+                                        enabled: true,
+                                      ),
+                                      SizedBox(height: 14.h),
+                                      ProfileField(
+                                        label: 'Delivery City',
+                                        controller: deliveryCityController,
+                                        enabled: true,
+                                      ),
+                                      SizedBox(height: 14.h),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: ProfileField(
+                                              label: 'Delivery State Code',
+                                              controller:
+                                                  deliveryStateCodeController,
+                                              enabled: true,
+                                            ),
+                                          ),
+                                          SizedBox(width: 12.w),
+                                          Expanded(
+                                            child: ProfileField(
+                                              label: 'Delivery Zip Code',
+                                              controller: deliveryZipController,
+                                              enabled: true,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: 14.h),
+                                      ProfileField(
+                                        label: 'Delivery Mobile Number',
+                                        controller: deliveryMobileController,
+                                        enabled: true,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (state.isUpdating) const _UpdateProfileLoading(),
+          ],
+        ),
+        bottomNavigationBar: (selectedTab.value == 0 || selectedTab.value == 2)
+            ? SafeArea(
+                top: false,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 16.h),
+                  child: CustomElevatedButton(
+                    onPressed: state.isUpdating ||
+                            (selectedTab.value == 0 && !canSave)
                         ? null
                         : () async {
+                            FocusScope.of(context).unfocus();
+                            if (selectedTab.value == 2) {
+                              await saveDeliveryInfo();
+                              return;
+                            }
                             final name = fullNameController.text.trim();
                             if (name.isEmpty) {
                               AppSnackbar.show('Please enter your full name.');
@@ -748,27 +1648,34 @@ class UpdateProfileView extends HookConsumerWidget {
                             if (ok) {
                               await controller.fetchProfile();
                               if (!context.mounted) return;
-                              AppSnackbar.show('Profile updated successfully.');
-                              Navigator.of(context).pop();
+                              final refreshed =
+                                  ref.read(profileControllerProvider).profile;
+                              initialFullNameState.value =
+                                  (refreshed?.name ?? name).trim();
+                              initialAddressState.value =
+                                  (refreshed?.address ?? address).trim();
+                              initialEmailState.value =
+                                  (refreshed?.email ?? email).trim();
+                              AppSnackbar.show(
+                                'Profile updated successfully.',
+                                type: AppSnackbarType.success,
+                              );
                             } else {
                               AppSnackbar.show(
                                 state.updateErrorMessage ??
                                     'Failed to update profile.',
-                                backgroundColor: Colors.red,
-                                textColor: Colors.white,
+                                type: AppSnackbarType.error,
                               );
                             }
                           },
                     label: state.isUpdating ? 'Saving...' : 'Save & Update',
                     uppercaseLabel: false,
                     showArrow: false,
+                    height: 42.h,
                   ),
-                ],
-              ),
-            ),
-            if (state.isUpdating) const _UpdateProfileLoading(),
-          ],
-        ),
+                ),
+              )
+            : null,
       ),
     );
   }

@@ -2,14 +2,14 @@
 
 import 'dart:math' as math;
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
-import '../../../constants/routes_constant.dart';
+import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/k_dialog.dart';
 import '../../profile/controllers/profile_controller.dart';
 import '../components/spin_result_dialog.dart';
@@ -37,6 +37,7 @@ class SpinAndWinView extends HookConsumerWidget {
 
     final spinCount = useState(totalSpins);
     final isSpinning = useState(false);
+    final isExitDialogOpen = useState(false);
 
     final spinOptionsState = ref.watch(spinOptionsControllerProvider);
 
@@ -103,10 +104,37 @@ class SpinAndWinView extends HookConsumerWidget {
           rewardValue = jackpotValues[rng.nextInt(jackpotValues.length)];
         }
 
-        spinRepository
-            .recordSpin(spinType: spinType, rewardValue: rewardValue)
-            .then((_) => profileController.fetchProfile())
-            .catchError((_) {});
+        try {
+          await spinRepository.recordSpin(
+            spinType: spinType,
+            rewardValue: rewardValue,
+          );
+          await profileController.fetchProfile();
+        } catch (error) {
+          String message = 'Something went wrong';
+          if (error is DioException) {
+            final data = error.response?.data;
+            if (data is Map<String, dynamic>) {
+              final messages = data['messages'];
+              if (messages is Map<String, dynamic>) {
+                final apiMessage = messages['error']?.toString();
+                if (apiMessage != null && apiMessage.isNotEmpty) {
+                  message = apiMessage;
+                }
+              }
+            }
+          }
+          AppSnackbar.show(
+            message,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+          );
+        }
+      }
+
+      if (isExitDialogOpen.value && context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop(false);
+        isExitDialogOpen.value = false;
       }
 
       KDialog.instance.openDialog(
@@ -119,7 +147,6 @@ class SpinAndWinView extends HookConsumerWidget {
               spinCount.value += 1;
             } else {
               profileController.fetchProfile();
-              context.go(RouteConstants.home);
             }
           },
         ),
@@ -128,160 +155,271 @@ class SpinAndWinView extends HookConsumerWidget {
       isSpinning.value = false;
     }
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final headerHeight = constraints.maxHeight * 0.52;
-          final curveHeight = headerHeight * 0.7;
-          return Stack(
-            children: [
-              Positioned(
-                left: 0,
-                right: 0,
-                top: 0,
-                child: Image.asset(
-                  FileConstants.curve,
-                  height: curveHeight,
-                  fit: BoxFit.cover,
+    Future<bool> showExitDuringSpinDialog() async {
+      isExitDialogOpen.value = true;
+      final result = await showGeneralDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        barrierLabel: 'Exit spin',
+        barrierColor: Colors.black.withOpacity(0.45),
+        transitionDuration: const Duration(milliseconds: 260),
+        pageBuilder: (dialogContext, animation, secondaryAnimation) {
+          return Center(
+            child: _SpinExitDialog(
+              onWait: () => Navigator.of(dialogContext).pop(false),
+              onExit: () => Navigator.of(dialogContext).pop(true),
+            ),
+          );
+        },
+        transitionBuilder: (context, animation, secondaryAnimation, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutBack,
+            reverseCurve: Curves.easeInCubic,
+          );
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.92, end: 1).animate(curved),
+              child: child,
+            ),
+          );
+        },
+      );
+      isExitDialogOpen.value = false;
+      return result ?? false;
+    }
+
+    Future<bool> handleBackNavigation() async {
+      if (!isSpinning.value) return true;
+      return showExitDuringSpinDialog();
+    }
+
+    return WillPopScope(
+      onWillPop: handleBackNavigation,
+      child: Scaffold(
+        backgroundColor: const Color(0xFF255E60),
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final wheelSize = math.min(constraints.maxWidth * 0.72, 280.0);
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Color(0xFF2F6E70),
+                          Color(0xFF1E5153),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: SafeArea(
-                  bottom: false,
+                Positioned(
+                  top: -20,
+                  bottom: -20,
+                  left: -20,
+                  right: -20,
+                  child: Image.asset(
+                    FileConstants.spinRewardGif,
+                    fit: BoxFit.cover,
+                    width: constraints.maxWidth + 40,
+                    color: const Color(0xFF387C80).withOpacity(0.35),
+                    colorBlendMode: BlendMode.srcATop,
+                  ),
+                ),
+                SafeArea(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        IconButton(
-                          icon:
-                              const Icon(Icons.arrow_back, color: Colors.white),
-                          onPressed: () => context.pop(),
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.arrow_back,
+                                color: Colors.white,
+                              ),
+                              onPressed: () async {
+                                final ok = await handleBackNavigation();
+                                if (!context.mounted || !ok) return;
+                                context.pop();
+                              },
+                            ),
+                            const Spacer(),
+                            Container(
+                              height: 36,
+                              width: 36,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.16),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.help_outline,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                            ),
+                          ],
                         ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Spin The Wheel',
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'And Add More Points To Your Wallet',
+                          textAlign: TextAlign.center,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.white.withOpacity(0.9),
+                                    height: 1.4,
+                                  ),
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.16),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.3),
+                            ),
+                          ),
+                          child: Text(
+                            'Daily Spin Remaining ${spinCount.value}',
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Expanded(
+                          child: Center(
+                            child: SizedBox(
+                              width: wheelSize * 1.3,
+                              height: wheelSize * 1.3,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: wheelSize,
+                                    height: wheelSize,
+                                    child: spinOptionsState.isLoading
+                                        ? _SpinWheelShimmer(size: wheelSize)
+                                        : spinOptionsState.errorMessage != null
+                                            ? Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(
+                                                    Icons.error_outline,
+                                                    color: Colors.white,
+                                                    size: 40,
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  Text(
+                                                    'Failed to load.\nPlease try again.',
+                                                    textAlign: TextAlign.center,
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .bodySmall
+                                                        ?.copyWith(
+                                                          color: Colors.white,
+                                                        ),
+                                                  ),
+                                                  const SizedBox(height: 10),
+                                                  TextButton(
+                                                    onPressed: () => ref
+                                                        .read(
+                                                          spinOptionsControllerProvider
+                                                              .notifier,
+                                                        )
+                                                        .fetchSpinOptions(),
+                                                    child: const Text(
+                                                      'Retry',
+                                                      style: TextStyle(
+                                                          color: Colors.white),
+                                                    ),
+                                                  ),
+                                                ],
+                                              )
+                                            : SpinWheel(
+                                                rewards: _buildRewards(
+                                                    spinOptionsState.options),
+                                                rotation: targetRotation.value *
+                                                    animValue,
+                                                size: wheelSize,
+                                              ),
+                                  ),
+                                  Positioned.fill(
+                                    child: Image.asset(
+                                      FileConstants.spinBlast,
+                                      fit: BoxFit.fill,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: constraints.maxWidth * 0.55,
+                          height: 46,
+                          child: ElevatedButton(
+                            onPressed: (isSpinning.value) ? null : handleSpin,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0B5E5A),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              isSpinning.value ? 'Spinning...' : 'Spin Now',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelLarge
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'You have ${spinCount.value} free spin${spinCount.value == 1 ? '' : 's'} left today.',
+                          textAlign: TextAlign.center,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.white.withOpacity(0.8),
+                                  ),
+                        ),
+                        const SizedBox(height: 12),
                       ],
                     ),
                   ),
                 ),
-              ),
-              Positioned(
-                left: 24,
-                right: 24,
-                top: 86,
-                child: Column(
-                  children: [
-                    Text(
-                      'Spin And Win',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Spin the wheel once a day and stand a\nchance to win cashback, coupons, or free\nrecharge.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withOpacity(0.9),
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                top: curveHeight - 80,
-                child: Center(
-                  child: SizedBox(
-                    width: 260,
-                    height: 260,
-                    child: spinOptionsState.isLoading
-                        ? const _SpinWheelShimmer(size: 260)
-                        : spinOptionsState.errorMessage != null
-                            ? Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.error_outline,
-                                    color: Colors.white,
-                                    size: 40,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Failed to load.\nPlease try again.',
-                                    textAlign: TextAlign.center,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(color: Colors.white),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  TextButton(
-                                    onPressed: () => ref
-                                        .read(spinOptionsControllerProvider
-                                            .notifier)
-                                        .fetchSpinOptions(),
-                                    child: const Text(
-                                      'Retry',
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : SpinWheel(
-                                rewards:
-                                    _buildRewards(spinOptionsState.options),
-                                rotation: targetRotation.value * animValue,
-                                size: 260,
-                              ),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 24,
-                right: 24,
-                bottom: 72,
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 46,
-                  child: ElevatedButton(
-                    onPressed: (isSpinning.value) ? null : handleSpin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      isSpinning.value ? 'Spinning...' : 'Spin Now',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 36,
-                child: Text(
-                  'You have ${spinCount.value} free spin${spinCount.value == 1 ? '' : 's'} left today.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textPrimary.withOpacity(0.7),
-                      ),
-                ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }
@@ -372,5 +510,172 @@ class _SpinShimmerTransform extends GradientTransform {
   @override
   Matrix4 transform(Rect bounds, {TextDirection? textDirection}) {
     return Matrix4.translationValues(bounds.width * slidePercent, 0, 0);
+  }
+}
+
+class _SpinExitDialog extends StatefulWidget {
+  const _SpinExitDialog({
+    required this.onWait,
+    required this.onExit,
+  });
+
+  final VoidCallback onWait;
+  final VoidCallback onExit;
+
+  @override
+  State<_SpinExitDialog> createState() => _SpinExitDialogState();
+}
+
+class _SpinExitDialogState extends State<_SpinExitDialog>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          final shimmer = _controller.value * 3 - 1;
+          return Container(
+            width: 320,
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF1F5E60),
+                  Color(0xFF2B7D7F),
+                ],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.28),
+                  blurRadius: 28,
+                  offset: const Offset(0, 16),
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: ShaderMask(
+                      shaderCallback: (rect) {
+                        return LinearGradient(
+                          colors: [
+                            Colors.white.withOpacity(0.05),
+                            Colors.white.withOpacity(0.22),
+                            Colors.white.withOpacity(0.05),
+                          ],
+                          stops: const [0.2, 0.5, 0.8],
+                          begin: const Alignment(-1, -0.2),
+                          end: const Alignment(1, 0.2),
+                          transform: _SpinShimmerTransform(shimmer),
+                        ).createShader(rect);
+                      },
+                      blendMode: BlendMode.srcATop,
+                      child: Container(color: Colors.white.withOpacity(0.04)),
+                    ),
+                  ),
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      height: 56,
+                      width: 56,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.16),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.25),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.casino_outlined,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Wheel is Spinning',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Leaving now may lose your reward.\nWant to exit anyway?',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.white.withOpacity(0.88),
+                            height: 1.4,
+                          ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: widget.onWait,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              side: BorderSide(
+                                color: Colors.white.withOpacity(0.5),
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                            ),
+                            child: const Text('Wait'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: widget.onExit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: const Color(0xFF0B5E5A),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                            ),
+                            child: const Text('Exit Anyway'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 }

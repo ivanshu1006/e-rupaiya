@@ -26,89 +26,94 @@ class ReferAndEarnWalletView extends HookWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              ReferAndEarnAppBar(
-                title: 'Wallet',
-                onHelp: () {},
-                height: 340,
-                body: Column(
-                  children: [
-                    _WalletHeaderBalance(snapshot: snapshot),
-                    SizedBox(height: 14.h),
-                    InkWell(
-                      onTap: () {
-                        final balance = snapshot.data?.walletBalance ?? '0';
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => WithdrawECoinsView(
-                              walletBalance: balance,
-                            ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
+          child: const ReferralShareActions(),
+        ),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            ReferAndEarnAppBar(
+              title: 'Wallet',
+              onHelp: () {},
+              height: 340,
+              body: Column(
+                children: [
+                  _WalletHeaderBalance(snapshot: snapshot),
+                  SizedBox(height: 14.h),
+                  InkWell(
+                    onTap: () {
+                      final balance = snapshot.data?.walletBalance ?? '0';
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => WithdrawECoinsView(
+                            walletBalance: balance,
                           ),
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(18.r),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 26.w,
-                          vertical: 8.h,
                         ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1D4E9E),
-                          borderRadius: BorderRadius.circular(18.r),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Image.asset(
-                              FileConstants.withdrawIcon,
-                              width: 16.w,
-                              height: 16.w,
-                            ),
-                            SizedBox(width: 8.w),
-                            Text(
-                              'Withdraw',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                            ),
-                          ],
-                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(18.r),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 26.w,
+                        vertical: 8.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1D4E9E),
+                        borderRadius: BorderRadius.circular(18.r),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.asset(
+                            FileConstants.withdrawIcon,
+                            width: 16.w,
+                            height: 16.w,
+                          ),
+                          SizedBox(width: 8.w),
+                          Text(
+                            'Withdraw',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              Expanded(child: Container(color: Colors.white)),
-            ],
-          ),
-          Positioned.fill(
-            top: 280.h,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(26.r),
+            ),
+            Transform.translate(
+              offset: Offset(0, -26.h),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(26.r),
+                  ),
                 ),
-              ),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 24.h),
-                child: _buildBody(
-                  context,
-                  snapshot,
-                  activeTab.value,
-                  (tab) => activeTab.value = tab,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 24.h),
+                  child: _buildBody(
+                    context,
+                    snapshot,
+                    activeTab.value,
+                    (tab) => activeTab.value = tab,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+            SizedBox(height: 8.h),
+          ],
+        ),
       ),
     );
   }
@@ -637,8 +642,7 @@ Widget _buildBody(
           ...recentReferrals
               .map((referral) => _RecentReferralTile(referral: referral)),
       ],
-      SizedBox(height: 12.h),
-      const ReferralShareActions(),
+      SizedBox(height: 70.h),
     ],
   );
 }

@@ -58,11 +58,13 @@ class BillerListingView extends HookConsumerWidget {
             title: 'Fetch Your Provider',
             showHelp: true,
             onBack: () => context.pop(),
-            onHelp: () {},
+            onHelp: () {
+              context.pop();
+            },
           ),
           // Search bar
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
             child: SearchTextfield(
               hintText: 'Search Service',
               controller: searchController,
@@ -188,8 +190,7 @@ class _BillerIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initial =
-        name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : '';
+    final initial = name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : '';
     final fallback = Center(
       child: Text(
         initial,

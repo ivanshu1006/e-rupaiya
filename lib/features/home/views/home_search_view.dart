@@ -166,12 +166,11 @@ class _CategorySection extends StatelessWidget {
                 runSpacing: 16,
                 children: List.generate(category.services.length, (index) {
                   final service = category.services[index];
-                  final icon = serviceIconMap[service.name];
                   return SizedBox(
                     width: itemWidth,
                     child: HomeIconTile(
                       label: displayServiceName(service.name),
-                      asset: icon,
+                      iconUrl: service.icon,
                       onTap: () => onServiceTap(service.name),
                     ),
                   );

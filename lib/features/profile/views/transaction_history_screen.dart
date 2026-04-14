@@ -840,7 +840,7 @@ class _TransactionTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border(
@@ -882,7 +882,7 @@ class _TransactionTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(item.paymentType, style: titleStyle),
-                  SizedBox(height: 4.h),
+                  SizedBox(height: 1.h),
                   Text(_formatTxnTime(item.transactionTime), style: subStyle),
                 ],
               ),
@@ -891,7 +891,7 @@ class _TransactionTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(displayAmount, style: amountStyle),
-                SizedBox(height: 4.h),
+                SizedBox(height: 1.h),
                 _StatusChip(
                   status: status,
                   methodIcon: item.methodIcon,
@@ -1353,14 +1353,13 @@ class _TransactionEmptyState extends StatelessWidget {
               width: 120.w,
               height: 120.w,
               child: DecoratedBox(
-                // ✅ DecoratedBox instead of Container for paint-only decoration
                 decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.08),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
                   child: Image.asset(
-                    FileConstants.erupaiya_3d,
+                    FileConstants.history,
                     width: 56.w,
                     fit: BoxFit.contain,
                   ),

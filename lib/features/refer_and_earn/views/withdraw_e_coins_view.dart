@@ -128,251 +128,249 @@ class WithdrawECoinsView extends HookConsumerWidget {
           ),
         ),
       ),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              ReferAndEarnAppBar(
-                title: 'Withdraw E-Coins',
-                onHelp: () {},
-                height: 300,
-                body: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 36.w,
-                          height: 36.w,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE85A2C),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 6,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Image.asset(
-                              FileConstants.coin_3d,
-                              width: 18.w,
-                              height: 18.w,
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            ReferAndEarnAppBar(
+              title: 'Withdraw E-Coins',
+              onHelp: () {},
+              height: 300,
+              body: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 36.w,
+                        height: 36.w,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE85A2C),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
                             ),
-                          ),
+                          ],
                         ),
-                        SizedBox(width: 10.w),
-                        Text(
-                          _formatAmount(totalBalanceDouble),
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineLarge
-                              ?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                              ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 6.h),
-                    Text(
-                      'Current Balance',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withOpacity(0.9),
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                    SizedBox(height: 12.h),
-                    Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(18.r),
-                        border:
-                            Border.all(color: Colors.white.withOpacity(0.4)),
-                      ),
-                      child: Text(
-                        '1 = ₹1 | Get Real Cash Instant',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(child: Container(color: Colors.white)),
-            ],
-          ),
-          Positioned.fill(
-            top: 240.h,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(26.r),
-                ),
-              ),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 12.h),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Enter Coins',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    SizedBox(height: 12.h),
-                    TextField(
-                      controller: controller,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      onChanged: handleAmountChange,
-                      decoration: InputDecoration(
-                        contentPadding: EdgeInsets.symmetric(
-                            horizontal: 14.w, vertical: 12.h),
-                        prefixIcon: Padding(
-                          padding: EdgeInsets.only(left: 12.w, right: 8.w),
+                        child: Center(
                           child: Image.asset(
                             FileConstants.coin_3d,
                             width: 18.w,
                             height: 18.w,
                           ),
                         ),
-                        prefixIconConstraints: BoxConstraints(
-                          minWidth: 32.w,
-                          minHeight: 32.w,
-                        ),
-                        suffixText: 'Coins',
-                        suffixStyle:
-                            Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14.r),
-                          borderSide:
-                              const BorderSide(color: AppColors.lightBorder),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14.r),
-                          borderSide:
-                              const BorderSide(color: Color(0xFF1A56A1)),
-                        ),
                       ),
+                      SizedBox(width: 10.w),
+                      Text(
+                        _formatAmount(totalBalanceDouble),
+                        style:
+                            Theme.of(context).textTheme.headlineLarge?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 6.h),
+                  Text(
+                    'Current Balance',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.white.withOpacity(0.9),
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  SizedBox(height: 12.h),
+                  Container(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(18.r),
+                      border: Border.all(color: Colors.white.withOpacity(0.4)),
                     ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      'Min: 100 Coins | Max: ${_formatAmount(totalBalanceDouble)} Coins',
+                    child: Text(
+                      '1 = ₹1 | Get Real Cash Instant',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textPrimary.withOpacity(0.6),
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
                           ),
                     ),
-                    SizedBox(height: 14.h),
-                    Row(
-                      children: [
-                        _PercentChip(
-                          label: '25%',
-                          active: selectedPercent.value == 25,
-                          onTap: () => handlePercentTap(25),
-                        ),
-                        SizedBox(width: 10.w),
-                        _PercentChip(
-                          label: '50%',
-                          active: selectedPercent.value == 50,
-                          onTap: () => handlePercentTap(50),
-                        ),
-                        SizedBox(width: 10.w),
-                        _PercentChip(
-                          label: '75%',
-                          active: selectedPercent.value == 75,
-                          onTap: () => handlePercentTap(75),
-                        ),
-                        SizedBox(width: 10.w),
-                        _PercentChip(
-                          label: '100%',
-                          active: selectedPercent.value == 100,
-                          onTap: () => handlePercentTap(100),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 18.h),
-                    Center(
-                      child: Text(
-                        'You Will Receive',
+                  ),
+                ],
+              ),
+            ),
+            Transform.translate(
+              offset: Offset(0, -26.h),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(26.r),
+                  ),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 12.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Enter Coins',
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                               color: AppColors.textPrimary,
                               fontWeight: FontWeight.w700,
                             ),
                       ),
-                    ),
-                    SizedBox(height: 12.h),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16.r),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Image.asset(
-                            FileConstants.withdrawBanner,
-                            height: 90.h,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
+                      SizedBox(height: 12.h),
+                      TextField(
+                        controller: controller,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ],
+                        onChanged: handleAmountChange,
+                        decoration: InputDecoration(
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 14.w, vertical: 12.h),
+                          prefixIcon: Padding(
+                            padding: EdgeInsets.only(left: 12.w, right: 8.w),
+                            child: Image.asset(
+                              FileConstants.coin_3d,
+                              width: 18.w,
+                              height: 18.w,
+                            ),
                           ),
-                          Text(
-                            '₹${amount.value}',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineLarge
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                ),
+                          prefixIconConstraints: BoxConstraints(
+                            minWidth: 32.w,
+                            minHeight: 32.w,
+                          ),
+                          suffixText: 'Coins',
+                          suffixStyle:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14.r),
+                            borderSide:
+                                const BorderSide(color: AppColors.lightBorder),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14.r),
+                            borderSide:
+                                const BorderSide(color: Color(0xFF1A56A1)),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        'Min: 100 Coins | Max: ${_formatAmount(totalBalanceDouble)} Coins',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.textPrimary.withOpacity(0.6),
+                            ),
+                      ),
+                      SizedBox(height: 14.h),
+                      Row(
+                        children: [
+                          _PercentChip(
+                            label: '25%',
+                            active: selectedPercent.value == 25,
+                            onTap: () => handlePercentTap(25),
+                          ),
+                          SizedBox(width: 10.w),
+                          _PercentChip(
+                            label: '50%',
+                            active: selectedPercent.value == 50,
+                            onTap: () => handlePercentTap(50),
+                          ),
+                          SizedBox(width: 10.w),
+                          _PercentChip(
+                            label: '75%',
+                            active: selectedPercent.value == 75,
+                            onTap: () => handlePercentTap(75),
+                          ),
+                          SizedBox(width: 10.w),
+                          _PercentChip(
+                            label: '100%',
+                            active: selectedPercent.value == 100,
+                            onTap: () => handlePercentTap(100),
                           ),
                         ],
                       ),
-                    ),
-                    SizedBox(height: 18.h),
-                    Text(
-                      'Note',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    SizedBox(height: 6.h),
-                    const _NoteItem(
-                      text: 'Minimum 100 E-Coins Required To Withdraw.',
-                    ),
-                    const _NoteItem(
-                      text:
-                          'Coins Will Be Converted To INR Based On The Current Conversion Rate.',
-                    ),
-                    const _NoteItem(
-                      text:
-                          'Withdrawals Are Processed Within 24-48 Hours After Confirmation.',
-                    ),
-                    const _NoteItem(
-                      text:
-                          'Ensure Your Bank Account And KYC Are Verified Before Withdrawing.',
-                    ),
-                    const _NoteItem(
-                      text:
-                          'Once A Withdrawal Request Is Submitted, It Cannot Be Cancelled.',
-                    ),
-                    SizedBox(height: 12.h),
-                  ],
+                      SizedBox(height: 18.h),
+                      Center(
+                        child: Text(
+                          'You Will Receive',
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                        ),
+                      ),
+                      SizedBox(height: 12.h),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16.r),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Image.asset(
+                              FileConstants.withdrawBanner,
+                              height: 90.h,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                            Text(
+                              '₹${amount.value}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineLarge
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 18.h),
+                      Text(
+                        'Note',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      SizedBox(height: 6.h),
+                      const _NoteItem(
+                        text: 'Minimum 100 E-Coins Required To Withdraw.',
+                      ),
+                      const _NoteItem(
+                        text:
+                            'Coins Will Be Converted To INR Based On The Current Conversion Rate.',
+                      ),
+                      const _NoteItem(
+                        text:
+                            'Withdrawals Are Processed Within 24-48 Hours After Confirmation.',
+                      ),
+                      const _NoteItem(
+                        text:
+                            'Ensure Your Bank Account And KYC Are Verified Before Withdrawing.',
+                      ),
+                      const _NoteItem(
+                        text:
+                            'Once A Withdrawal Request Is Submitted, It Cannot Be Cancelled.',
+                      ),
+                      SizedBox(height: 12.h),
+                    ],
+                  ),
                 ),
               ),
+              // SizedBox(height: 8.h),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -114,6 +114,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../constants/file_constants.dart';
 import '../../../widgets/custom_elevated_button.dart';
 import '../../../widgets/grey_text_form_field.dart';
 
@@ -161,20 +162,21 @@ class PhoneNumberInputCard extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 24.h),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               placeholder,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              textAlign: TextAlign.left,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w700,
+                    fontSize: 20.sp,
                     color: AppColors.textPrimary,
                   ),
             ),
             SizedBox(height: 4.h),
             Text(
               subtitle,
-              textAlign: TextAlign.center,
+              textAlign: TextAlign.left,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppColors.textPrimary.withOpacity(0.6),
                   ),
@@ -222,6 +224,19 @@ class PhoneNumberInputCard extends StatelessWidget {
               controller: controller,
               enabled: enabled,
               isNumber: true,
+              centerText: false,
+              prefixIcon: Padding(
+                padding: EdgeInsets.only(left: 16.w, right: 10.w),
+                child: Image.asset(
+                  FileConstants.indiaFlag,
+                  width: 20.w,
+                  height: 20.w,
+                ),
+              ),
+              contentPadding: EdgeInsets.symmetric(
+                vertical: 8.h,
+                horizontal: 4.w,
+              ),
               validator: (value) {
                 final trimmed = value?.trim() ?? '';
                 if (trimmed.isEmpty) {

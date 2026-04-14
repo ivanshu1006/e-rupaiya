@@ -237,75 +237,73 @@ class AddBankAccountView extends HookWidget {
           ),
         ),
       ),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              ReferAndEarnAppBar(
-                title: isEdit ? 'Edit Bank Account' : 'Add Bank Account',
-                onHelp: () {},
-                height: 300,
-                body: Column(
-                  children: [
-                    Container(
-                      width: 54.w,
-                      height: 54.w,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.account_balance,
-                        color: Colors.white,
-                      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            ReferAndEarnAppBar(
+              title: isEdit ? 'Edit Bank Account' : 'Add Bank Account',
+              onHelp: () {},
+              height: 300,
+              body: Column(
+                children: [
+                  Container(
+                    width: 54.w,
+                    height: 54.w,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
                     ),
-                    SizedBox(height: 10.h),
-                    Text(
-                      isEdit
-                          ? 'Edit your bank account details to keep withdrawals active.'
-                          : step.value == _BankStep.verify
-                              ? 'Select your bank to link it with your wallet for\nwithdrawals.'
-                              : 'Add your bank details to receive withdrawal\npayments securely.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withOpacity(0.9),
-                            fontWeight: FontWeight.w600,
-                            height: 1.4,
-                          ),
+                    child: const Icon(
+                      Icons.account_balance,
+                      color: Colors.white,
                     ),
-                  ],
-                ),
-              ),
-              Expanded(child: Container(color: Colors.white)),
-            ],
-          ),
-          Positioned.fill(
-            top: 240.h,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(26.r),
-                ),
-              ),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 12.h),
-                child: step.value == _BankStep.verify
-                    ? _VerifyBankForm(
-                        accountController: accountController,
-                        ifscController: ifscController,
-                      )
-                    : _ConfirmBankForm(
-                        nameController: nameController,
-                        accountController: accountController,
-                        ifscController: ifscController,
-                        branchController: branchController,
-                        bankNameController: bankNameController,
-                      ),
+                  ),
+                  SizedBox(height: 10.h),
+                  Text(
+                    isEdit
+                        ? 'Edit your bank account details to keep withdrawals active.'
+                        : step.value == _BankStep.verify
+                            ? 'Select your bank to link it with your wallet for\nwithdrawals.'
+                            : 'Add your bank details to receive withdrawal\npayments securely.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.white.withOpacity(0.9),
+                          fontWeight: FontWeight.w600,
+                          height: 1.4,
+                        ),
+                  ),
+                ],
               ),
             ),
-          ),
-        ],
+            Transform.translate(
+              offset: Offset(0, -26.h),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(26.r),
+                  ),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 12.h),
+                  child: step.value == _BankStep.verify
+                      ? _VerifyBankForm(
+                          accountController: accountController,
+                          ifscController: ifscController,
+                        )
+                      : _ConfirmBankForm(
+                          nameController: nameController,
+                          accountController: accountController,
+                          ifscController: ifscController,
+                          branchController: branchController,
+                          bankNameController: bankNameController,
+                        ),
+                ),
+              ),
+            ),
+            SizedBox(height: 8.h),
+          ],
+        ),
       ),
     );
   }

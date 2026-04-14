@@ -11,8 +11,12 @@ class RouteConstants {
   static const String panVerification = '/kyc/pan';
   static const String aadhaarVerification = '/kyc/aadhaar';
   static const String verificationResult = '/kyc/result';
+  static const String kycVerification = '/kyc/verification';
   static const String billerListing = '/billers';
   static const String billerDetail = '/billers/detail';
+  static const String educationFeesAmount = '/education-fees';
+  static const String educationFeesRecipient = '/education-fees/recipient';
+  static const String educationFeesPayment = '/education-fees/payment';
   static const String creditCardIntro = '/credit-card';
   static const String creditCardListing = '/credit-card/billers';
   static const String creditCardMyCards = '/credit-card/cards';
@@ -22,6 +26,9 @@ class RouteConstants {
   static const String spinAndWin = '/spin-and-win';
   static const String mobilePrepaid = '/mobile-prepaid';
   static const String mobileRecentRecharges = '/mobile-prepaid/recent';
+  static const String policies = '/policies';
+  static const String refundPolicy = '/refund-policy';
+  static const String grievance = '/grievance';
   static const String aboutUs = '/about-us';
   static const String termsPrivacy = '/terms-privacy';
   static const String privacyPolicy = '/privacy-policy';
@@ -36,4 +43,9 @@ class RouteConstants {
   static const String offers = '/offers';
   static const String settings = '/settings';
   static const String referral = '/referral';
+  static const String referAndEarn = '/refer-and-earn';
+  static const String digitalGold = '/digital-gold';
+  static const String digitalGoldDetails = '/digital-gold/details';
+  static const String digitalGoldSuccess = '/digital-gold/success';
+  static const String digitalGoldLocker = '/digital-gold/locker';
 }

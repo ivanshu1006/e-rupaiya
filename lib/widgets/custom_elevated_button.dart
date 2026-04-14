@@ -32,25 +32,17 @@ class CustomElevatedButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDisabled = onPressed == null;
-    final background = isDisabled
+    final background = backgroundColor != null
         ? LinearGradient(
-            colors: [
-              AppColors.primary.withOpacity(0.35),
-              AppColors.primary.withOpacity(0.4),
-            ],
+            colors: [backgroundColor!, backgroundColor!],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           )
-        : (backgroundColor != null
-            ? LinearGradient(
-                colors: [backgroundColor!, backgroundColor!],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              )
-            : const LinearGradient(
-                colors: [AppColors.primary, AppColors.primaryDark],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ));
+        : const LinearGradient(
+            colors: [AppColors.primary, AppColors.primaryDark],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          );
 
     return SizedBox(
       width: width,
@@ -65,14 +57,6 @@ class CustomElevatedButton extends StatelessWidget {
                   color: borderColor ?? AppColors.primary,
                 )
               : null,
-          boxShadow: [
-            if (!isDisabled && !isBorder)
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.35),
-                blurRadius: 14,
-                offset: const Offset(0, 8),
-              ),
-          ],
         ),
         child: ElevatedButton(
           onPressed: onPressed,

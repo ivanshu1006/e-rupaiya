@@ -1,4 +1,4 @@
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: prefer_const_constructors, deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -21,65 +21,63 @@ class SelectBankView extends HookWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              ReferAndEarnAppBar(
-                title: 'Add Bank Account',
-                onHelp: () {},
-                height: 300,
-                body: Column(
-                  children: [
-                    Container(
-                      width: 54.w,
-                      height: 54.w,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.account_balance,
-                        color: Colors.white,
-                      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            ReferAndEarnAppBar(
+              title: 'Add Bank Account',
+              onHelp: () {},
+              height: 300,
+              body: Column(
+                children: [
+                  Container(
+                    width: 54.w,
+                    height: 54.w,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
                     ),
-                    SizedBox(height: 10.h),
-                    Text(
-                      'Add Your Bank Details To Receive Withdrawal\nPayments Securely.',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.white.withOpacity(0.9),
-                            fontWeight: FontWeight.w600,
-                            height: 1.4,
-                          ),
+                    child: const Icon(
+                      Icons.account_balance,
+                      color: Colors.white,
                     ),
-                  ],
-                ),
+                  ),
+                  SizedBox(height: 10.h),
+                  Text(
+                    'Add Your Bank Details To Receive Withdrawal\nPayments Securely.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.white.withOpacity(0.9),
+                          fontWeight: FontWeight.w600,
+                          height: 1.4,
+                        ),
+                  ),
+                ],
               ),
-              Expanded(child: Container(color: Colors.white)),
-            ],
-          ),
-          Positioned.fill(
-            top: 240.h,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(26.r),
+            ),
+            Transform.translate(
+              offset: Offset(0, -26.h),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(26.r),
+                  ),
                 ),
-              ),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 16.h),
-                child: _buildBody(
-                  context,
-                  snapshot,
-                  query.value,
-                  (next) => query.value = next,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 16.h),
+                  child: _buildBody(
+                    context,
+                    snapshot,
+                    query.value,
+                    (next) => query.value = next,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+            SizedBox(height: 8.h),
+          ],
+        ),
       ),
     );
   }

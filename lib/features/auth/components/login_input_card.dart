@@ -46,23 +46,22 @@ class LoginInputCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Text(
-                'Welcome Back',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-              ),
+            Text(
+              'Welcome Back',
+              textAlign: TextAlign.left,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20.sp,
+                    color: AppColors.textPrimary,
+                  ),
             ),
             SizedBox(height: 4.h),
-            Center(
-              child: Text(
-                'Log in to continue earning rewards.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textPrimary.withOpacity(0.6),
-                    ),
-              ),
+            Text(
+              'Log in to continue earning rewards.',
+              textAlign: TextAlign.left,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textPrimary.withOpacity(0.6),
+                  ),
             ),
             SizedBox(height: 14.h),
             Text(

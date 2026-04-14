@@ -23,10 +23,30 @@ class ApiConstants {
   static const String profileEndpoint = '$baseUrl/api/user/profile';
   static const String profileUpdateEndpoint =
       '$baseUrl/api/user/profile/update';
+  static const String profileUpdateDeliveryInfoEndpoint =
+      '$baseUrl/api/user/profile/update-delivery-info';
   static const String profileUpdateDeviceTokenEndpoint =
       '$baseUrl/api/user/profile/update-device-token';
   static const String profileVerifyContactUpdateEndpoint =
       '$baseUrl/api/user/profile/verify-contact-update';
+  static const String educationValidateAmountEndpoint =
+      '$baseUrl/api/education/validate-amount';
+  static const String educationCheckMobileEndpoint =
+      '$baseUrl/api/education/check-mobile';
+  static const String educationVerifyPanEndpoint =
+      '$baseUrl/api/education/verify-pan';
+  static const String educationVerifyBankEndpoint =
+      '$baseUrl/api/education/verify-bank';
+  static const String educationCardListEndpoint =
+      '$baseUrl/api/education/card/list';
+  static const String educationBeneficiariesEndpoint =
+      '$baseUrl/api/education/get-beneficiaries';
+  static const String educationPaymentSummaryEndpoint =
+      '$baseUrl/api/education/payment-summary';
+  static const String educationPaymentSuccessEndpoint =
+      '$baseUrl/api/education/payment/success';
+  static const String educationSaveBeneficiaryEndpoint =
+      '$baseUrl/api/education/save-beneficiary';
   static const String logoutEndpoint = '$baseUrl/api/auth/logout';
   static const String billersEndpoint = '$baseUrl/api/billers';
   static const String billerDetailsEndpoint = '$baseUrl/api/biller/details';
@@ -64,6 +84,15 @@ class ApiConstants {
   static const String referralTrackEndpoint = '$baseUrl/api/referral/track';
   static const String referralWalletSummaryEndpoint =
       '$baseUrl/api/wallet/summary';
+  static const String digitalGoldProceedEndpoint =
+      '$baseUrl/api/digital-gold/proceed';
+  static const String digitalGoldCustomerCreateEndpoint =
+      '$baseUrl/api/digital-gold/customer/create';
+  static const String digitalGoldSendOtpEndpoint =
+      '$baseUrl/api/digital-gold/send-otp';
+  static const String digitalGoldBuyEndpoint = '$baseUrl/api/digital-gold/buy';
+  static const String digitalGoldRecentPurchasesEndpoint =
+      '$baseUrl/api/digital-gold/recent-purchases';
   static const String referralMilestonesEndpoint =
       '$baseUrl/api/referral/milestones';
   static const String withdrawEcoinsEndpoint =

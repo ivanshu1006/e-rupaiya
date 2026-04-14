@@ -44,96 +44,102 @@ class ReferAndEarnView extends HookConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              ReferAndEarnAppBar(
-                title: 'Refer Friends & Earn Coins',
-                onHelp: () {},
-                body: Column(
-                  children: [
-                    SizedBox(height: 46.h),
-                    Text(
-                      'Earn E-Coins Lifetime',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    SizedBox(height: 10.h),
-                    Image.asset(
-                      FileConstants.referAndEarn,
-                      height: 100.h,
-                      fit: BoxFit.contain,
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(child: Container(color: Colors.white)),
-            ],
-          ),
-          Positioned.fill(
-            top: 230.h,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(26.r),
-                ),
-              ),
-              child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 24.h),
-                child: Column(
-                  children: [
-                    _ReferSummarySection(),
-                    SizedBox(height: 14.h),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _ActionMiniCard(
-                            title: 'Track Your\nReferrals',
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const TrackReferralsView(),
-                                ),
-                              );
-                            },
-                          ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
+          child: const ReferralShareActions(),
+        ),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            ReferAndEarnAppBar(
+              title: 'Refer Friends & Earn Coins',
+              onHelp: () {},
+              body: Column(
+                children: [
+                  SizedBox(height: 46.h),
+                  Text(
+                    'Earn E-Coins Lifetime',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _ActionMiniCard(
-                            title: 'How It\nWorks ?',
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const ReferralWorksView(),
-                                ),
-                              );
-                            },
+                  ),
+                  SizedBox(height: 10.h),
+                  Image.asset(
+                    FileConstants.referAndEarn,
+                    height: 100.h,
+                    fit: BoxFit.contain,
+                  ),
+                ],
+              ),
+            ),
+            Transform.translate(
+              offset: Offset(0, -26.h),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(26.r),
+                  ),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 24.h),
+                  child: Column(
+                    children: [
+                      _ReferSummarySection(),
+                      SizedBox(height: 14.h),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _ActionMiniCard(
+                              title: 'Track Your\nReferrals',
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const TrackReferralsView(),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 18.h),
-                    const _SectionTitle('Invite Contacts'),
-                    SizedBox(height: 10.h),
-                    _ContactsStrip(
-                      hasPermission: hasPermission.value == true,
-                      contacts: contactsState.contacts,
-                    ),
-                    SizedBox(height: 16.h),
-                    _ReferForeverCard(),
-                    SizedBox(height: 16.h),
-                    const ReferralShareActions(),
-                  ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _ActionMiniCard(
+                              title: 'How It\nWorks ?',
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const ReferralWorksView(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 18.h),
+                      const _SectionTitle('Invite Contacts'),
+                      SizedBox(height: 10.h),
+                      _ContactsStrip(
+                        hasPermission: hasPermission.value == true,
+                        contacts: contactsState.contacts,
+                      ),
+                      SizedBox(height: 16.h),
+                      _ReferForeverCard(),
+                      SizedBox(height: 16.h),
+                      SizedBox(height: 70.h),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+            SizedBox(height: 8.h),
+          ],
+        ),
       ),
     );
   }

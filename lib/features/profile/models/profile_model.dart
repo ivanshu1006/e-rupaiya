@@ -5,6 +5,8 @@ class ProfileModel {
     required this.mobile,
     this.email,
     this.address,
+    this.billingAddress,
+    this.addresses = const [],
     this.isVerified = false,
     this.isKycVerified = false,
     this.isEmailVerified = false,
@@ -14,6 +16,7 @@ class ProfileModel {
     this.isPushNotification = true,
     this.aadhaarMasked,
     this.panMasked,
+    this.panNo,
     this.permanentAddress,
     this.dob,
     this.createdAt,
@@ -22,12 +25,44 @@ class ProfileModel {
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
+    final addressesJson = json['addresses'];
+    final parsedAddresses = addressesJson is List
+        ? addressesJson
+            .whereType<Map>()
+            .map((entry) => AddressEntry.fromJson(
+                  Map<String, dynamic>.from(entry),
+                ))
+            .toList()
+        : <AddressEntry>[];
+    final billingFromList = parsedAddresses
+        .where((entry) => entry.type == AddressType.billing)
+        .toList();
+    final billingEntry =
+        billingFromList.isNotEmpty ? billingFromList.first : null;
+
     return ProfileModel(
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
       mobile: json['mobile'] as String? ?? '',
       email: json['email'] as String?,
       address: json['address'] as String?,
+      billingAddress: billingEntry != null
+          ? BillingAddress(
+              addressLine1: billingEntry.addressLine1,
+              addressLine2: billingEntry.addressLine2,
+              city: billingEntry.city,
+              state: billingEntry.state,
+              stateCode: billingEntry.stateCode,
+              country: billingEntry.country,
+              pincode: billingEntry.zip,
+              billingMobile: billingEntry.mobile,
+            )
+          : json['billing_address'] is Map<String, dynamic>
+              ? BillingAddress.fromJson(
+                  json['billing_address'] as Map<String, dynamic>,
+                )
+              : null,
+      addresses: parsedAddresses,
       isVerified: json['is_verified'] == '1',
       isKycVerified: _parseBool(json['is_kyc_verified']),
       isEmailVerified: json['is_email_verified'] == 'VERIFIED',
@@ -40,8 +75,9 @@ class ProfileModel {
       isPushNotification: _parseBool(json['is_push_notification']),
       aadhaarMasked: json['aadhaar_masked'] as String?,
       panMasked: json['pan_masked'] as String?,
-      permanentAddress: (json['permanant_address'] ?? json['permanent_address'])
-          as String?,
+      panNo: json['pan_no'] as String?,
+      permanentAddress:
+          (json['permanant_address'] ?? json['permanent_address']) as String?,
       dob: json['dob'] as String?,
       createdAt: json['created_at'] as String?,
       updatedAt: json['updated_at'] as String?,
@@ -54,6 +90,8 @@ class ProfileModel {
   final String mobile;
   final String? email;
   final String? address;
+  final BillingAddress? billingAddress;
+  final List<AddressEntry> addresses;
   final bool isVerified;
   final bool isKycVerified;
   final bool isEmailVerified;
@@ -63,11 +101,34 @@ class ProfileModel {
   final bool isPushNotification;
   final String? aadhaarMasked;
   final String? panMasked;
+  final String? panNo;
   final String? permanentAddress;
   final String? dob;
   final String? createdAt;
   final String? updatedAt;
   final String? profilePhotoUrl;
+
+  AddressEntry? get billingAddressEntry =>
+      addresses.firstWhere((e) => e.type == AddressType.billing, orElse: () {
+        if (billingAddress == null) return AddressEntry.empty(AddressType.billing);
+        return AddressEntry(
+          type: AddressType.billing,
+          addressLine1: billingAddress!.addressLine1,
+          addressLine2: billingAddress!.addressLine2,
+          city: billingAddress!.city,
+          state: billingAddress!.state,
+          stateCode: billingAddress!.stateCode,
+          zip: billingAddress!.pincode,
+          country: billingAddress!.country,
+          mobile: billingAddress!.billingMobile,
+          isDefault: true,
+        );
+      });
+
+  AddressEntry? get deliveryAddressEntry =>
+      addresses.firstWhere((e) => e.type == AddressType.delivery, orElse: () {
+        return AddressEntry.empty(AddressType.delivery);
+      });
 
   String get initials {
     final parts = name.trim().split(RegExp(r'\s+'));
@@ -83,4 +144,104 @@ class ProfileModel {
     final text = value?.toString().trim().toLowerCase();
     return text == '1' || text == 'true' || text == 'verified' || text == 'yes';
   }
+}
+
+class BillingAddress {
+  const BillingAddress({
+    required this.addressLine1,
+    required this.addressLine2,
+    required this.city,
+    required this.state,
+    required this.stateCode,
+    required this.country,
+    required this.pincode,
+    required this.billingMobile,
+  });
+
+  factory BillingAddress.fromJson(Map<String, dynamic> json) {
+    return BillingAddress(
+      addressLine1: json['address_line1']?.toString() ?? '',
+      addressLine2: json['address_line2']?.toString() ?? '',
+      city: json['city']?.toString() ?? '',
+      state: json['state']?.toString() ?? '',
+      stateCode: json['state_code']?.toString() ?? '',
+      country: json['country']?.toString() ?? '',
+      pincode: (json['pincode'] ?? json['zip'])?.toString() ?? '',
+      billingMobile:
+          (json['billing_mobile'] ?? json['mobile'])?.toString() ?? '',
+    );
+  }
+
+  final String addressLine1;
+  final String addressLine2;
+  final String city;
+  final String state;
+  final String stateCode;
+  final String country;
+  final String pincode;
+  final String billingMobile;
+}
+
+enum AddressType { billing, delivery, other }
+
+class AddressEntry {
+  const AddressEntry({
+    required this.type,
+    required this.addressLine1,
+    required this.addressLine2,
+    required this.city,
+    required this.state,
+    required this.stateCode,
+    required this.zip,
+    required this.country,
+    required this.mobile,
+    required this.isDefault,
+  });
+
+  factory AddressEntry.empty(AddressType type) {
+    return AddressEntry(
+      type: type,
+      addressLine1: '',
+      addressLine2: '',
+      city: '',
+      state: '',
+      stateCode: '',
+      zip: '',
+      country: '',
+      mobile: '',
+      isDefault: false,
+    );
+  }
+
+  factory AddressEntry.fromJson(Map<String, dynamic> json) {
+    final rawType = (json['type'] ?? '').toString().toLowerCase();
+    final type = rawType == 'billing'
+        ? AddressType.billing
+        : rawType == 'delivery'
+            ? AddressType.delivery
+            : AddressType.other;
+    return AddressEntry(
+      type: type,
+      addressLine1: json['address_line1']?.toString() ?? '',
+      addressLine2: json['address_line2']?.toString() ?? '',
+      city: json['city']?.toString() ?? '',
+      state: json['state']?.toString() ?? '',
+      stateCode: (json['state_code'] ?? '').toString(),
+      zip: (json['zip'] ?? json['pincode'] ?? '').toString(),
+      country: json['country']?.toString() ?? '',
+      mobile: (json['mobile'] ?? json['billing_mobile'] ?? '').toString(),
+      isDefault: (json['is_default'] ?? '0').toString() == '1',
+    );
+  }
+
+  final AddressType type;
+  final String addressLine1;
+  final String addressLine2;
+  final String city;
+  final String state;
+  final String stateCode;
+  final String zip;
+  final String country;
+  final String mobile;
+  final bool isDefault;
 }

@@ -20,7 +20,7 @@ import '../../../widgets/app_network_image.dart';
 import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/custom_elevated_button.dart';
 import '../../../widgets/k_action_button.dart';
-import '../../../widgets/my_app_bar.dart';
+import '../../../widgets/transaction_status_app_bar.dart';
 import '../models/transaction_history_entry.dart';
 import '../repositories/receipt_repository.dart';
 import '../services/receipt_file_service.dart';
@@ -98,7 +98,7 @@ class TransactionDetailScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          MyAppBar(
+          TransactionStatusAppBar(
             title: statusMeta.label,
             height: 150,
             backgroundColor: statusMeta.color,
@@ -726,11 +726,26 @@ Future<void> _handleReceiptAction(
       _hideLoading(dialogContext);
       if (action == _ReceiptAction.share) {
         log('[Receipt] Converting HTML to PDF for sharing');
-        final pdfBytes = await ReceiptFileService.buildSimplePdfFromHtml(html);
-        final pdfFile = await ReceiptFileService.savePdfToTemp(
-          pdfBytes: pdfBytes,
-          transactionId: transactionId,
-        );
+        File pdfFile;
+        try {
+          pdfFile = await ReceiptFileService.buildPdfFileFromHtmlViaWebView(
+            html: html,
+            transactionId: transactionId,
+          );
+        } catch (e) {
+          log('[Receipt] Native WebView PDF failed: $e');
+          final shareResult = await _buildSharePdfBytes(html);
+          final pdfBytes = shareResult.bytes;
+          if (shareResult.usedFallback) {
+            AppSnackbar.show(
+              'Using a basic receipt because full rendering is unavailable.',
+            );
+          }
+          pdfFile = await ReceiptFileService.savePdfToTemp(
+            pdfBytes: pdfBytes,
+            transactionId: transactionId,
+          );
+        }
         log('[Receipt] PDF saved: ${pdfFile.path}');
         await Share.shareXFiles(
           [
@@ -788,6 +803,51 @@ Future<void> _handleReceiptAction(
     print(t);
     _hideLoading(dialogContext);
     AppSnackbar.show(e.toString());
+  }
+}
+
+class _SharePdfResult {
+  const _SharePdfResult({required this.bytes, required this.usedFallback});
+
+  final Uint8List bytes;
+  final bool usedFallback;
+}
+
+const Duration _shareRenderTimeout = Duration(seconds: 15);
+
+Future<_SharePdfResult> _buildSharePdfBytes(String html) async {
+  var usedFallback = false;
+  final startedAt = DateTime.now();
+  log('[Receipt] Share render start');
+  try {
+    final renderFuture = ReceiptFileService.buildPdfBytesFromHtml(html);
+    final fallbackFuture = Future<Uint8List>.delayed(
+      _shareRenderTimeout,
+      () async {
+        usedFallback = true;
+        log(
+          '[Receipt] Share render timed out after ${_shareRenderTimeout.inSeconds}s, using fallback',
+        );
+        return ReceiptFileService.buildSimplePdfFromHtml(html);
+      },
+    );
+    final bytes = await Future.any<Uint8List>([
+      renderFuture,
+      fallbackFuture,
+    ]);
+    final elapsedMs = DateTime.now().difference(startedAt).inMilliseconds;
+    log(
+      '[Receipt] Share render completed in ${elapsedMs}ms (fallback=$usedFallback, bytes=${bytes.length})',
+    );
+    return _SharePdfResult(bytes: bytes, usedFallback: usedFallback);
+  } catch (e, stackTrace) {
+    final elapsedMs = DateTime.now().difference(startedAt).inMilliseconds;
+    log(
+      '[Receipt] Share render failed after ${elapsedMs}ms: $e',
+      stackTrace: stackTrace,
+    );
+    final bytes = await ReceiptFileService.buildSimplePdfFromHtml(html);
+    return _SharePdfResult(bytes: bytes, usedFallback: true);
   }
 }
 

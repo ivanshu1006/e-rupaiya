@@ -245,14 +245,20 @@ class DioInterceptors extends InterceptorsWrapper {
         backgroundColor: Colors.red,
       );
     } else if (err.type == DioExceptionType.badResponse) {
-      final data = err.response?.data;
-      final apiMessage = (data is Map ? data['message'] as String? : null) ??
-          'Something went wrong';
-      AppSnackbar.show(
-        apiMessage,
-        textColor: Colors.white,
-        backgroundColor: Colors.red,
-      );
+      final path = err.requestOptions.path;
+      final suppressSnackbar = path.contains('/api/education/validate-amount') ||
+          path.contains('/api/education/check-mobile') ||
+          path.contains('/api/education/verify-bank');
+      if (!suppressSnackbar) {
+        final data = err.response?.data;
+        final apiMessage = (data is Map ? data['message'] as String? : null) ??
+            'Something went wrong';
+        AppSnackbar.show(
+          apiMessage,
+          textColor: Colors.white,
+          backgroundColor: Colors.red,
+        );
+      }
     } else if (err.type == DioExceptionType.cancel) {
       AppSnackbar.show(
         'Request Cancelled',

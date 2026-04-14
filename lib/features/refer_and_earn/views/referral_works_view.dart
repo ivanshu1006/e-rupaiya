@@ -16,93 +16,83 @@ class ReferralWorksView extends HookWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              const ReferAndEarnAppBar(title: 'How It Works'),
-              Expanded(child: Container(color: Colors.white)),
-            ],
-          ),
-          Positioned.fill(
-            top: 230.h,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(26.r),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
+          child: const ReferralShareActions(),
+        ),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            const ReferAndEarnAppBar(title: 'How It Works'),
+            Transform.translate(
+              offset: Offset(0, -26.h),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(26.r),
+                  ),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 18.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // _VideoPreviewCard(),
+                      // SizedBox(height: 16.h),
+                      ..._buildBullets(context),
+                      SizedBox(height: 12.h),
+                      Text(
+                        'Example:',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      SizedBox(height: 10.h),
+                      _VideoPreviewCard(),
+                      // SizedBox(height: 16.h),
+                      // _ExampleFlowCard(),
+                      SizedBox(height: 12.h),
+                      Text(
+                        'You → A → B → C',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        'You Earn:',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      SizedBox(height: 6.h),
+                      ..._buildEarnBullets(context),
+                      SizedBox(height: 12.h),
+                      Text(
+                        "There’s No Limit To How Many People Can Join Through\n"
+                        "Your Network – The More Your Network Grows, The More\n"
+                        "E-Coins You Earn!",
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.textPrimary.withOpacity(0.7),
+                              height: 1.4,
+                            ),
+                      ),
+                      SizedBox(height: 70.h),
+                    ],
+                  ),
                 ),
               ),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 24.h),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _VideoPreviewCard(),
-                          SizedBox(height: 16.h),
-                          ..._buildBullets(context),
-                          SizedBox(height: 12.h),
-                          Text(
-                            'Example:',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
-                                ?.copyWith(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                          ),
-                          SizedBox(height: 10.h),
-                          _ExampleFlowCard(),
-                          SizedBox(height: 12.h),
-                          Text(
-                            'You → A → B → C',
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: AppColors.textPrimary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                          ),
-                          SizedBox(height: 8.h),
-                          Text(
-                            'You Earn:',
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: AppColors.textPrimary,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                          ),
-                          SizedBox(height: 6.h),
-                          ..._buildEarnBullets(context),
-                          SizedBox(height: 12.h),
-                          Text(
-                            "There’s No Limit To How Many People Can Join Through\n"
-                            "Your Network – The More Your Network Grows, The More\n"
-                            "E-Coins You Earn!",
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: AppColors.textPrimary.withOpacity(0.7),
-                                  height: 1.4,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 18.h),
-                    child: const ReferralShareActions(),
-                  ),
-                ],
-              ),
             ),
-          ),
-        ],
+            SizedBox(height: 8.h),
+          ],
+        ),
       ),
     );
   }

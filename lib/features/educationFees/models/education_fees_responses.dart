@@ -1,0 +1,374 @@
+class EducationValidateAmountResponse {
+  const EducationValidateAmountResponse({
+    required this.status,
+    this.message,
+  });
+
+  factory EducationValidateAmountResponse.fromJson(Map<String, dynamic> json) {
+    String? message;
+    final messages = json['messages'];
+    if (messages is Map && messages['error'] is String) {
+      message = messages['error'] as String;
+    } else {
+      message = json['message'] as String?;
+    }
+    return EducationValidateAmountResponse(
+      status: json['status'] == true,
+      message: message,
+    );
+  }
+
+  final bool status;
+  final String? message;
+}
+
+class EducationCheckMobileResponse {
+  const EducationCheckMobileResponse({
+    required this.status,
+    required this.exists,
+    this.data,
+    this.message,
+  });
+
+  factory EducationCheckMobileResponse.fromJson(Map<String, dynamic> json) {
+    String? message;
+    final messages = json['messages'];
+    if (messages is Map && messages['error'] is String) {
+      message = messages['error'] as String;
+    } else {
+      message = json['message'] as String?;
+    }
+    return EducationCheckMobileResponse(
+      status: json['status'] == true,
+      exists: json['exists'] == true,
+      data: json['data'],
+      message: message,
+    );
+  }
+
+  final bool status;
+  final bool exists;
+  final Object? data;
+  final String? message;
+}
+
+class EducationVerifyPanResponse {
+  const EducationVerifyPanResponse({
+    required this.status,
+    this.message,
+  });
+
+  factory EducationVerifyPanResponse.fromJson(Map<String, dynamic> json) {
+    String? message;
+    final messages = json['messages'];
+    if (messages is Map && messages['error'] is String) {
+      message = messages['error'] as String;
+    } else {
+      message = json['message'] as String?;
+    }
+    return EducationVerifyPanResponse(
+      status: json['status'] == true,
+      message: message,
+    );
+  }
+
+  final bool status;
+  final String? message;
+}
+
+class EducationVerifyBankResponse {
+  const EducationVerifyBankResponse({
+    required this.status,
+    this.bankAccountId,
+    this.message,
+  });
+
+  factory EducationVerifyBankResponse.fromJson(Map<String, dynamic> json) {
+    final rawStatus = json['status'];
+    final status = rawStatus == true ||
+        (rawStatus is String && rawStatus.toUpperCase() == 'SUCCESS');
+    return EducationVerifyBankResponse(
+      status: status,
+      bankAccountId: json['bank_account_id'] as int?,
+      message: json['message'] as String?,
+    );
+  }
+
+  final bool status;
+  final int? bankAccountId;
+  final String? message;
+}
+
+class EducationPaymentSummaryData {
+  const EducationPaymentSummaryData({
+    required this.amount,
+    required this.serviceCharge,
+    required this.walletBalance,
+    required this.walletUsed,
+    required this.totalPayable,
+  });
+
+  factory EducationPaymentSummaryData.fromJson(Map<String, dynamic> json) {
+    double toDouble(Object? value) {
+      if (value is num) return value.toDouble();
+      return double.tryParse(value?.toString() ?? '') ?? 0.0;
+    }
+
+    return EducationPaymentSummaryData(
+      amount: toDouble(json['amount']),
+      serviceCharge: toDouble(json['service_charge']),
+      walletBalance: toDouble(json['wallet_balance']),
+      walletUsed: toDouble(json['wallet_used']),
+      totalPayable: toDouble(json['total_payable']),
+    );
+  }
+
+  final double amount;
+  final double serviceCharge;
+  final double walletBalance;
+  final double walletUsed;
+  final double totalPayable;
+}
+
+class EducationPaymentSummaryResponse {
+  const EducationPaymentSummaryResponse({
+    required this.status,
+    this.data,
+    this.message,
+  });
+
+  factory EducationPaymentSummaryResponse.fromJson(Map<String, dynamic> json) {
+    String? message;
+    final messages = json['messages'];
+    if (messages is Map && messages['error'] is String) {
+      message = messages['error'] as String;
+    } else {
+      message = json['message'] as String?;
+    }
+    final data = json['data'];
+    return EducationPaymentSummaryResponse(
+      status: json['status'] == true,
+      data: data is Map<String, dynamic>
+          ? EducationPaymentSummaryData.fromJson(data)
+          : null,
+      message: message,
+    );
+  }
+
+  final bool status;
+  final EducationPaymentSummaryData? data;
+  final String? message;
+}
+
+class EducationCard {
+  const EducationCard({
+    required this.cardId,
+    required this.cardToken,
+    required this.cardNumber,
+    required this.last4,
+    required this.cardNetwork,
+    required this.expiryMonth,
+    required this.expiryYear,
+    required this.expiryDisplay,
+    required this.isExpired,
+    required this.createdAt,
+    this.name,
+    this.pan,
+    this.accountNumber,
+    this.ifsc,
+    this.branch,
+  });
+
+  factory EducationCard.fromJson(Map<String, dynamic> json) {
+    return EducationCard(
+      cardId: json['card_id'] as int? ?? 0,
+      cardToken: json['card_token']?.toString() ?? '',
+      cardNumber: json['card_number']?.toString() ?? '',
+      last4: json['last4']?.toString() ?? '',
+      cardNetwork: json['card_network']?.toString() ?? '',
+      expiryMonth: json['expiry_month']?.toString() ?? '',
+      expiryYear: json['expiry_year']?.toString() ?? '',
+      expiryDisplay: json['expiry_display']?.toString() ?? '',
+      isExpired: json['is_expired'] == true,
+      createdAt: json['created_at']?.toString() ?? '',
+      name: json['name']?.toString(),
+      pan: json['pan']?.toString(),
+      accountNumber: json['account_number']?.toString(),
+      ifsc: json['ifsc']?.toString(),
+      branch: json['branch']?.toString(),
+    );
+  }
+
+  final int cardId;
+  final String cardToken;
+  final String cardNumber;
+  final String last4;
+  final String cardNetwork;
+  final String expiryMonth;
+  final String expiryYear;
+  final String expiryDisplay;
+  final bool isExpired;
+  final String createdAt;
+  final String? name;
+  final String? pan;
+  final String? accountNumber;
+  final String? ifsc;
+  final String? branch;
+}
+
+class EducationCardListResponse {
+  const EducationCardListResponse({
+    required this.status,
+    this.message,
+    this.cards = const [],
+  });
+
+  factory EducationCardListResponse.fromJson(Map<String, dynamic> json) {
+    String? message;
+    final messages = json['messages'];
+    if (messages is Map && messages['error'] is String) {
+      message = messages['error'] as String;
+    } else {
+      message = json['message'] as String?;
+    }
+    final data = json['data'];
+    final cards = data is List
+        ? data
+            .whereType<Map<String, dynamic>>()
+            .map(EducationCard.fromJson)
+            .toList()
+        : <EducationCard>[];
+    return EducationCardListResponse(
+      status: json['status'] == true,
+      message: message,
+      cards: cards,
+    );
+  }
+
+  final bool status;
+  final String? message;
+  final List<EducationCard> cards;
+}
+
+class EducationBeneficiary {
+  const EducationBeneficiary({
+    required this.id,
+    required this.userId,
+    required this.name,
+    required this.mobile,
+    required this.accountType,
+    required this.createdAt,
+    required this.panMasked,
+    required this.accountMasked,
+    required this.ifsc,
+  });
+
+  factory EducationBeneficiary.fromJson(Map<String, dynamic> json) {
+    return EducationBeneficiary(
+      id: json['id']?.toString() ?? '',
+      userId: json['user_id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      mobile: json['mobile']?.toString() ?? '',
+      accountType: json['account_type']?.toString() ?? '',
+      createdAt: json['created_at']?.toString() ?? '',
+      panMasked: json['pan_masked']?.toString() ?? '',
+      accountMasked: json['account_masked']?.toString() ?? '',
+      ifsc: json['ifsc']?.toString() ?? '',
+    );
+  }
+
+  final String id;
+  final String userId;
+  final String name;
+  final String mobile;
+  final String accountType;
+  final String createdAt;
+  final String panMasked;
+  final String accountMasked;
+  final String ifsc;
+}
+
+class EducationBeneficiariesResponse {
+  const EducationBeneficiariesResponse({
+    required this.status,
+    this.message,
+    this.beneficiaries = const [],
+  });
+
+  factory EducationBeneficiariesResponse.fromJson(Map<String, dynamic> json) {
+    String? message;
+    final messages = json['messages'];
+    if (messages is Map && messages['error'] is String) {
+      message = messages['error'] as String;
+    } else {
+      message = json['message'] as String?;
+    }
+    final data = json['data'];
+    final items = data is List
+        ? data
+            .whereType<Map<String, dynamic>>()
+            .map(EducationBeneficiary.fromJson)
+            .toList()
+        : <EducationBeneficiary>[];
+    return EducationBeneficiariesResponse(
+      status: json['status'] == true,
+      message: message,
+      beneficiaries: items,
+    );
+  }
+
+  final bool status;
+  final String? message;
+  final List<EducationBeneficiary> beneficiaries;
+}
+
+class EducationPaymentSuccessResponse {
+  const EducationPaymentSuccessResponse({
+    required this.status,
+    this.message,
+  });
+
+  factory EducationPaymentSuccessResponse.fromJson(Map<String, dynamic> json) {
+    String? message;
+    final messages = json['messages'];
+    if (messages is Map && messages['error'] is String) {
+      message = messages['error'] as String;
+    } else {
+      message = json['message'] as String?;
+    }
+    return EducationPaymentSuccessResponse(
+      status: json['status'] == true,
+      message: message,
+    );
+  }
+
+  final bool status;
+  final String? message;
+}
+
+class EducationSaveBeneficiaryResponse {
+  const EducationSaveBeneficiaryResponse({
+    required this.status,
+    this.message,
+    this.beneficiaryId,
+  });
+
+  factory EducationSaveBeneficiaryResponse.fromJson(Map<String, dynamic> json) {
+    String? message;
+    final messages = json['messages'];
+    if (messages is Map && messages['error'] is String) {
+      message = messages['error'] as String;
+    } else {
+      message = json['message'] as String?;
+    }
+    return EducationSaveBeneficiaryResponse(
+      status: json['status'] == true,
+      message: message,
+      beneficiaryId: json['beneficiary_id'] as int?,
+    );
+  }
+
+  final bool status;
+  final String? message;
+  final int? beneficiaryId;
+}

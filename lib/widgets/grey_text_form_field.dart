@@ -17,6 +17,8 @@ class GreyTextFormField extends StatelessWidget {
     this.hintText,
     this.height,
     this.contentPadding,
+    this.prefixIcon,
+    this.centerText = true,
   });
 
   final TextEditingController controller;
@@ -27,6 +29,8 @@ class GreyTextFormField extends StatelessWidget {
   final String? hintText;
   final double? height;
   final EdgeInsets? contentPadding;
+  final Widget? prefixIcon;
+  final bool centerText;
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +43,7 @@ class GreyTextFormField extends StatelessWidget {
           vertical: verticalPadding,
           horizontal: 12.w,
         );
+    final shouldCenter = centerText && prefixIcon == null;
     return Container(
       height: fieldHeight,
       decoration: BoxDecoration(
@@ -50,7 +55,7 @@ class GreyTextFormField extends StatelessWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
         ),
-        borderRadius: BorderRadius.circular(20.r),
+        borderRadius: BorderRadius.circular(22.r),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.06),
@@ -70,7 +75,7 @@ class GreyTextFormField extends StatelessWidget {
                 LengthLimitingTextInputFormatter(10),
               ]
             : null,
-        textAlign: TextAlign.center,
+        textAlign: shouldCenter ? TextAlign.center : TextAlign.left,
         textAlignVertical: TextAlignVertical.center,
         cursorHeight: fontSize + 2,
         cursorWidth: 1.6,
@@ -85,6 +90,11 @@ class GreyTextFormField extends StatelessWidget {
           ),
           isCollapsed: true,
           contentPadding: resolvedPadding,
+          prefixIcon: prefixIcon,
+          prefixIconConstraints: BoxConstraints(
+            minWidth: prefixIcon == null ? 0 : 36.w,
+            minHeight: fieldHeight,
+          ),
           counterText: '',
         ),
         style: Theme.of(context).textTheme.headlineSmall?.copyWith(

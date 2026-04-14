@@ -50,7 +50,6 @@ class _AuthBrandHeaderState extends State<AuthBrandHeader>
                 fontSize: 40.sp,
                 fontWeight: FontWeight.w700,
                 height: 1.15,
-                fontStyle: FontStyle.italic,
               );
 
           final subtitleStyle =
@@ -58,7 +57,6 @@ class _AuthBrandHeaderState extends State<AuthBrandHeader>
                     fontSize: 40.sp,
                     fontWeight: FontWeight.w700,
                     height: 1.15,
-                    fontStyle: FontStyle.italic,
                   );
 
           final titlePainter = TextPainter(
@@ -72,7 +70,7 @@ class _AuthBrandHeaderState extends State<AuthBrandHeader>
           )..layout(maxWidth: constraints.maxWidth);
 
           final contentHeight =
-              24.h + titlePainter.height + 16.h + subtitlePainter.height;
+              6.h + titlePainter.height + 6.h + subtitlePainter.height;
 
           return SizedBox(
             height: contentHeight,
@@ -89,12 +87,12 @@ class _AuthBrandHeaderState extends State<AuthBrandHeader>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(height: 24.h),
+                            SizedBox(height: 6.h),
                             _GradientText(
                               text: widget.title,
                               style: heroStyle,
                             ),
-                            SizedBox(height: 16.h),
+                            SizedBox(height: 6.h),
                             _GradientText(
                               text: widget.subtitle,
                               style: subtitleStyle,
@@ -109,12 +107,12 @@ class _AuthBrandHeaderState extends State<AuthBrandHeader>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(height: 24.h),
+                            SizedBox(height: 6.h),
                             _GradientText(
                               text: widget.title,
                               style: heroStyle,
                             ),
-                            SizedBox(height: 16.h),
+                            SizedBox(height: 6.h),
                             _GradientText(
                               text: widget.subtitle,
                               style: subtitleStyle,

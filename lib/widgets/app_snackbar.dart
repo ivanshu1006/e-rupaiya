@@ -47,8 +47,13 @@ class AppSnackbar {
     }
 
     _currentEntry?.remove();
+    final resolvedType = _inferType(
+      message,
+      fallback: type,
+      hasOverride: backgroundColor != null || textColor != null,
+    );
     final resolved = _SnackbarTheme.resolve(
-      type,
+      resolvedType,
       backgroundOverride: backgroundColor,
       textOverride: textColor,
     );
@@ -201,8 +206,7 @@ class _TopSnackBarState extends State<_TopSnackBar>
                                   child: Container(
                                     width: 4,
                                     decoration: BoxDecoration(
-                                      color:
-                                          Colors.white.withOpacity(0.55),
+                                      color: Colors.white.withOpacity(0.55),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                   ),
@@ -214,8 +218,7 @@ class _TopSnackBarState extends State<_TopSnackBar>
                                     width: 80,
                                     height: 80,
                                     decoration: BoxDecoration(
-                                      color:
-                                          Colors.white.withOpacity(0.08),
+                                      color: Colors.white.withOpacity(0.08),
                                       shape: BoxShape.circle,
                                       boxShadow: [
                                         BoxShadow(
@@ -237,7 +240,8 @@ class _TopSnackBarState extends State<_TopSnackBar>
                                       ),
                                       child: Icon(
                                         widget.icon,
-                                        color: widget.textColor.withOpacity(0.95),
+                                        color:
+                                            widget.textColor.withOpacity(0.95),
                                         size: 16,
                                       ),
                                     ),
@@ -292,33 +296,33 @@ class _SnackbarTheme {
   }) {
     if (backgroundOverride != null || textOverride != null) {
       return _SnackbarTheme(
-        background: backgroundOverride ?? AppColors.primary,
+        background: backgroundOverride ?? AppColors.green,
         text: textOverride ?? Colors.white,
         icon: _iconFor(type),
       );
     }
     switch (type) {
       case AppSnackbarType.success:
-        return _SnackbarTheme(
-          background: const Color(0xFF1E8E5A),
+        return const _SnackbarTheme(
+          background: AppColors.green,
           text: Colors.white,
           icon: Icons.check_circle_outline,
         );
       case AppSnackbarType.error:
-        return _SnackbarTheme(
-          background: const Color(0xFFC62828),
+        return const _SnackbarTheme(
+          background: AppColors.red,
           text: Colors.white,
           icon: Icons.error_outline,
         );
       case AppSnackbarType.warning:
-        return _SnackbarTheme(
-          background: const Color(0xFFF57C00),
+        return const _SnackbarTheme(
+          background: Color(0xFFF57C00),
           text: Colors.white,
           icon: Icons.warning_amber_outlined,
         );
       case AppSnackbarType.info:
       default:
-        return _SnackbarTheme(
+        return const _SnackbarTheme(
           background: AppColors.primary,
           text: Colors.white,
           icon: Icons.notifications_active_outlined,
@@ -339,4 +343,37 @@ class _SnackbarTheme {
         return Icons.notifications_active_outlined;
     }
   }
+}
+
+AppSnackbarType _inferType(
+  String message, {
+  required AppSnackbarType fallback,
+  required bool hasOverride,
+}) {
+  if (hasOverride || fallback != AppSnackbarType.info) return fallback;
+  final text = message.toLowerCase();
+  const successHints = [
+    'success',
+    'sent',
+    'updated',
+    'saved',
+    'copied',
+    'verified',
+    'registered',
+    'completed',
+  ];
+  const errorHints = [
+    'fail',
+    'error',
+    'invalid',
+    'unable',
+    'missing',
+    'required',
+    'please enter',
+    'not',
+    'denied',
+  ];
+  if (successHints.any(text.contains)) return AppSnackbarType.success;
+  if (errorHints.any(text.contains)) return AppSnackbarType.error;
+  return fallback;
 }

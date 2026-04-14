@@ -22,6 +22,10 @@ class ReceiptRepository {
             payload['message'] as String? ?? 'Failed to generate receipt.';
         throw Exception(message);
       }
+      final data = payload['data'];
+      if (data is Map<String, dynamic> && data['html'] != null) {
+        return data['html']?.toString() ?? '';
+      }
       return payload['receipt_html']?.toString() ?? '';
     } catch (e, stackTrace) {
       logger.error(

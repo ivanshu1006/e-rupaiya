@@ -1,14 +1,19 @@
 class QuickActionService {
-  const QuickActionService({required this.name, this.offers});
+  const QuickActionService(
+      {required this.name, this.icon, this.type, this.offers});
 
   factory QuickActionService.fromJson(Map<String, dynamic> json) {
     return QuickActionService(
       name: json['name'] as String? ?? '',
+      icon: json['icon'] as String?,
+      type: json['type'] as String?,
       offers: json['Offers'] as int?,
     );
   }
 
   final String name;
+  final String? icon;
+  final String? type;
   final int? offers;
 }
 

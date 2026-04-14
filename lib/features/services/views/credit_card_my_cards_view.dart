@@ -20,6 +20,7 @@ import '../../home/models/credit_card_item.dart';
 import '../controllers/biller_detail_controller.dart';
 import '../models/biller_detail_args.dart';
 import '../models/biller_model.dart';
+import '../components/credit_card_my_cards_shimmer.dart';
 
 class CreditCardMyCardsView extends HookConsumerWidget {
   const CreditCardMyCardsView({super.key});
@@ -50,123 +51,144 @@ class CreditCardMyCardsView extends HookConsumerWidget {
       return null;
     }, [isLoaded]);
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.arrow_back,
-                      color: AppColors.textPrimary,
+    void handleBack() {
+      navigatorKey.currentState?.popUntil((route) => route.isFirst);
+      if (context.mounted) {
+        context.go(RouteConstants.home);
+      }
+    }
+
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          handleBack();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: Column(
+          children: [
+            SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: AppColors.textPrimary,
+                      ),
+                      onPressed: handleBack,
                     ),
-                    onPressed: () => context.pop(),
-                  ),
-                  SizedBox(width: 6.w),
-                  Expanded(
-                    child: Text(
-                      'Credit Card Payment',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w700,
-                          ),
+                    SizedBox(width: 6.w),
+                    Expanded(
+                      child: Text(
+                        'Credit Card Payment',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                      ),
                     ),
-                  ),
-                  Image.asset(
-                    FileConstants.bharatConnectColor,
-                    height: 18.h,
-                  ),
-                  SizedBox(width: 10.w),
-                  IconButton(
-                    onPressed: () {},
-                    icon: Icon(
-                      Icons.help_outline,
-                      color: AppColors.textPrimary.withOpacity(0.7),
+                    Image.asset(
+                      FileConstants.bharatConnectColor,
+                      height: 18.h,
                     ),
-                  ),
-                ],
+                    SizedBox(width: 10.w),
+                    IconButton(
+                      onPressed: () {},
+                      icon: Icon(
+                        Icons.help_outline,
+                        color: AppColors.textPrimary.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          const AppDivider(),
-          Expanded(
-            child: isFetching || cards == null || cards.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(16.w, 6.h, 16.w, 12.h),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'My Cards',
-                          style:
-                              Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.w700,
+            const AppDivider(),
+            Expanded(
+              child: isFetching || cards == null || cards.isEmpty
+                  ? (isFetching || cards == null
+                      ? const CreditCardMyCardsShimmer()
+                      : const SizedBox.shrink())
+                  : SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(16.w, 6.h, 16.w, 12.h),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'My Cards',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                          SizedBox(height: 14.h),
+                          ...cards.asMap().entries.map(
+                                (entry) => Padding(
+                                  padding: EdgeInsets.only(bottom: 14.h),
+                                  child: CreditCardMyCardTile(
+                                    item: entry.value,
+                                    isHighlighted: entry.key == 0,
+                                    onPayNow: () {
+                                      final item = entry.value;
+                                      final billerName =
+                                          item.billerName?.trim().isNotEmpty ==
+                                                  true
+                                              ? item.billerName!.trim()
+                                              : 'Card';
+                                      final biller = Biller(
+                                        billerId: item.billerId ?? '',
+                                        billerName: billerName,
+                                        icon: item.icon,
+                                      );
+                                      ref
+                                          .read(billerDetailControllerProvider
+                                              .notifier)
+                                          .selectBiller(biller);
+                                      context.push(
+                                        RouteConstants.billerDetail,
+                                        extra: BillerDetailArgs(
+                                          biller: biller,
+                                          isCreditCard: true,
+                                          paymentType: 'Credit card',
+                                          mobileNumber: item.registerMobNo,
+                                          cardLast4: item.last4Digit,
+                                        ),
+                                      );
+                                    },
+                                    onMenuTap: () =>
+                                        _openCardActions(entry.value),
                                   ),
-                        ),
-                        SizedBox(height: 14.h),
-                        ...cards.asMap().entries.map(
-                              (entry) => Padding(
-                                padding: EdgeInsets.only(bottom: 14.h),
-                                child: CreditCardMyCardTile(
-                                  item: entry.value,
-                                  isHighlighted: entry.key == 0,
-                                  onPayNow: () {
-                                    final item = entry.value;
-                                    final billerName =
-                                        item.billerName?.trim().isNotEmpty ==
-                                                true
-                                            ? item.billerName!.trim()
-                                            : 'Card';
-                                    final biller = Biller(
-                                      billerId: item.billerId ?? '',
-                                      billerName: billerName,
-                                      icon: item.icon,
-                                    );
-                                    ref
-                                        .read(billerDetailControllerProvider
-                                            .notifier)
-                                        .selectBiller(biller);
-                                    context.push(
-                                      RouteConstants.billerDetail,
-                                      extra: BillerDetailArgs(
-                                        biller: biller,
-                                        isCreditCard: true,
-                                        paymentType: 'Credit card',
-                                        mobileNumber: item.registerMobNo,
-                                        cardLast4: item.last4Digit,
-                                      ),
-                                    );
-                                  },
-                                  onMenuTap: () =>
-                                      _openCardActions(entry.value),
                                 ),
                               ),
-                            ),
-                        SizedBox(height: 8.h),
-                      ],
+                          SizedBox(height: 8.h),
+                        ],
+                      ),
                     ),
-                  ),
-          ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
-              child: CustomElevatedButton(
-                onPressed: () => context.push(RouteConstants.creditCardListing),
-                label: 'Add New Card',
-                uppercaseLabel: false,
-                height: 42.h,
+            ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
+                child: CustomElevatedButton(
+                  onPressed: () =>
+                      context.push(RouteConstants.creditCardListing),
+                  label: 'Add New Card',
+                  uppercaseLabel: false,
+                  height: 42.h,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -203,9 +225,14 @@ class CreditCardMyCardTile extends StatelessWidget {
       item.billerId,
     );
     final amount = item.lastAmount ?? 0.0;
-    final dueText = (item.lastPaidDate ?? '').trim().isNotEmpty
-        ? 'Bill Due ${DateFormatHelper.formatDisplayDateWithYear(item.lastPaidDate!)}'
-        : 'Bill Due Tomorrow';
+    final isDue = item.isDue == true;
+    final dueText = isDue
+        ? ((item.dueDate ?? '').trim().isNotEmpty
+            ? 'Bill Due ${DateFormatHelper.formatDisplayDateWithYear(item.dueDate!)}'
+            : 'Bill Due Soon')
+        : ((item.lastPaidDate ?? '').trim().isNotEmpty
+            ? 'Last Paid on ${DateFormatHelper.formatDisplayDateWithYear(item.lastPaidDate!)}'
+            : 'Last Paid');
 
     return Container(
       decoration: BoxDecoration(
@@ -333,25 +360,26 @@ class CreditCardMyCardTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                InkWell(
-                  onTap: onPayNow,
-                  borderRadius: BorderRadius.circular(22.r),
-                  child: Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 18.w, vertical: 8.h),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(22.r),
-                    ),
-                    child: Text(
-                      'Pay Now',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
+                if (isDue)
+                  InkWell(
+                    onTap: onPayNow,
+                    borderRadius: BorderRadius.circular(22.r),
+                    child: Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 18.w, vertical: 8.h),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(22.r),
+                      ),
+                      child: Text(
+                        'Pay Now',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),

@@ -336,13 +336,11 @@ class _UseCoinForRow extends StatelessWidget {
       children: [
         HomeIconTile(
           label: 'Mobile\nPrepaid',
-          asset: FileConstants.mobile,
           onTap: () => context.push(RouteConstants.mobileRecentRecharges),
           iconSize: 28,
         ),
         HomeIconTile(
           label: 'Broadband\nPostpaid',
-          asset: FileConstants.broadband,
           onTap: () => context.push(
             RouteConstants.billerListing,
             extra: 'Broadband Postpaid',
@@ -351,7 +349,6 @@ class _UseCoinForRow extends StatelessWidget {
         ),
         HomeIconTile(
           label: 'DTH',
-          asset: FileConstants.dth,
           onTap: () => context.push(
             RouteConstants.billerListing,
             extra: 'DTH',
@@ -360,7 +357,6 @@ class _UseCoinForRow extends StatelessWidget {
         ),
         HomeIconTile(
           label: 'Cable TV',
-          asset: FileConstants.cable,
           onTap: () => context.push(
             RouteConstants.billerListing,
             extra: 'Cable TV',

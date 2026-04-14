@@ -16,6 +16,7 @@ import '../../../services/notification_badge_service.dart';
 import '../../../widgets/my_app_bar.dart';
 import '../../profile/views/my_wallet_view.dart';
 import '../components/quick_action_header_card.dart';
+import '../controllers/home_tab_controller.dart';
 import '../models/notification_item.dart';
 import '../repositories/notifications_repository.dart';
 
@@ -48,7 +49,14 @@ class NotificationsScreen extends HookConsumerWidget {
             title: 'Notifications',
             showHelp: true,
             trailing: unreadCount > 0 ? _CountBadge(count: unreadCount) : null,
-            onBack: () => context.pop(),
+            onBack: () {
+              final navigator = Navigator.of(context);
+              if (navigator.canPop()) {
+                navigator.pop();
+                return;
+              }
+              ref.read(homeTabControllerProvider).jumpToTab(0);
+            },
             onHelp: () {},
           ),
           Expanded(

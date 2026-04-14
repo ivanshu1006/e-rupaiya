@@ -9,29 +9,47 @@ import 'features/auth/views/otp_success_view.dart';
 import 'features/auth/views/otp_verification_view.dart';
 import 'features/auth/views/pin_setup_view.dart';
 import 'features/auth/views/splash_view.dart';
+import 'features/digital_gold/models/digital_gold_preview.dart';
+import 'features/digital_gold/models/digital_metal.dart';
+import 'features/digital_gold/views/digital_gold_details_view.dart';
+import 'features/digital_gold/views/digital_gold_locker_view.dart';
+import 'features/digital_gold/views/digital_gold_success_view.dart';
+import 'features/digital_gold/views/digital_gold_view.dart';
+import 'features/educationFees/views/education_fees_amount_view.dart';
+import 'features/educationFees/views/education_fees_payment_view.dart';
+import 'features/educationFees/views/education_fees_recipient_view.dart';
 import 'features/home/views/home_view.dart';
 import 'features/home/views/notifications_screen.dart';
+import 'features/home/views/quick_actions_view.dart';
+import 'features/kyc/views/kyc_verification_view.dart';
+import 'features/mobile_prepaid/models/recharge_quick_action_payload.dart';
 import 'features/mobile_prepaid/views/mobile_prepaid_view.dart';
 import 'features/mobile_prepaid/views/mobile_recent_recharges_view.dart';
-import 'features/mobile_prepaid/models/recharge_quick_action_payload.dart';
 import 'features/onboarding/views/aadhaar_verification_view.dart';
 import 'features/onboarding/views/kyc_overview_view.dart';
 import 'features/onboarding/views/language_selection_view.dart';
 import 'features/onboarding/views/pan_verification_view.dart';
 import 'features/onboarding/views/verification_result_view.dart';
-import 'features/home/views/quick_actions_view.dart';
+import 'features/profile/models/transaction_history_entry.dart';
 import 'features/profile/views/about_us_screen.dart';
 import 'features/profile/views/faq_screen.dart';
+import 'features/profile/views/grievance_screen.dart';
 import 'features/profile/views/help_center_chat_screen.dart';
 import 'features/profile/views/help_support_screen.dart';
+import 'features/profile/views/policies_screen.dart';
+import 'features/profile/views/refund_policy_screen.dart';
 import 'features/profile/views/my_qr_screen.dart';
+import 'features/profile/views/offers_view.dart';
+import 'features/profile/views/privacy_policy_screen.dart';
+import 'features/profile/views/settings_view.dart';
+import 'features/profile/views/terms_privacy_screen.dart';
 import 'features/profile/views/transaction_detail_screen.dart';
 import 'features/profile/views/transaction_history_screen.dart';
-import 'features/profile/views/terms_privacy_screen.dart';
-import 'features/profile/views/privacy_policy_screen.dart';
-import 'features/profile/views/offers_view.dart';
-import 'features/profile/views/settings_view.dart';
+import 'features/refer_and_earn/views/refer_and_earn_view.dart';
 import 'features/refer_and_earn/views/referral_deeplink_view.dart';
+import 'features/services/models/biller_detail_args.dart';
+import 'features/services/models/biller_model.dart';
+import 'features/services/models/credit_card_transaction.dart';
 import 'features/services/views/biller_detail_view.dart';
 import 'features/services/views/biller_listing_view.dart';
 import 'features/services/views/credit_card_intro_view.dart';
@@ -39,13 +57,9 @@ import 'features/services/views/credit_card_listing_view.dart';
 import 'features/services/views/credit_card_my_cards_view.dart';
 import 'features/services/views/credit_card_transaction_detail_screen.dart';
 import 'features/services/views/credit_card_transactions_screen.dart';
-import 'features/services/models/credit_card_transaction.dart';
 import 'features/spinandear/views/spin_and_win_view.dart';
 import 'services/logger_service.dart';
 import 'widgets/k_dialog.dart';
-import 'features/profile/models/transaction_history_entry.dart';
-import 'features/services/models/biller_detail_args.dart';
-import 'features/services/models/biller_model.dart';
 
 final routerProvider = Provider<GoRouter>(
   (ref) {
@@ -128,6 +142,10 @@ final routerProvider = Provider<GoRouter>(
           ),
         ),
         GoRoute(
+          path: RouteConstants.kycVerification,
+          builder: (context, state) => const KycVerificationView(),
+        ),
+        GoRoute(
           path: RouteConstants.panVerification,
           builder: (context, state) => const PanVerificationView(),
         ),
@@ -163,6 +181,20 @@ final routerProvider = Provider<GoRouter>(
             }
             return BillerDetailView(args: args);
           },
+        ),
+        GoRoute(
+          path: RouteConstants.educationFeesAmount,
+          builder: (context, state) => EducationFeesAmountView(
+            feeType: state.extra as String?,
+          ),
+        ),
+        GoRoute(
+          path: RouteConstants.educationFeesRecipient,
+          builder: (context, state) => const EducationFeesRecipientView(),
+        ),
+        GoRoute(
+          path: RouteConstants.educationFeesPayment,
+          builder: (context, state) => const EducationFeesPaymentView(),
         ),
         GoRoute(
           path: RouteConstants.creditCardIntro,
@@ -201,6 +233,18 @@ final routerProvider = Provider<GoRouter>(
           builder: (context, state) => MobilePrepaidView(
             quickAction: state.extra as RechargeQuickActionPayload?,
           ),
+        ),
+        GoRoute(
+          path: RouteConstants.policies,
+          builder: (context, state) => const PoliciesScreen(),
+        ),
+        GoRoute(
+          path: RouteConstants.refundPolicy,
+          builder: (context, state) => const RefundPolicyScreen(),
+        ),
+        GoRoute(
+          path: RouteConstants.grievance,
+          builder: (context, state) => const GrievanceScreen(),
         ),
         GoRoute(
           path: RouteConstants.aboutUs,
@@ -255,6 +299,50 @@ final routerProvider = Provider<GoRouter>(
         GoRoute(
           path: RouteConstants.settings,
           builder: (context, state) => const SettingsView(),
+        ),
+        GoRoute(
+          path: RouteConstants.referAndEarn,
+          builder: (context, state) => const ReferAndEarnView(),
+        ),
+        GoRoute(
+          path: RouteConstants.digitalGold,
+          builder: (context, state) {
+            final mode = state.uri.queryParameters['mode'] == 'sell'
+                ? GoldTradeMode.sell
+                : GoldTradeMode.buy;
+            final metal =
+                DigitalMetalTheme.fromQuery(state.uri.queryParameters['metal']);
+            return DigitalGoldView(mode: mode, metal: metal);
+          },
+        ),
+        GoRoute(
+          path: RouteConstants.digitalGoldDetails,
+          builder: (context, state) {
+            final metal =
+                DigitalMetalTheme.fromQuery(state.uri.queryParameters['metal']);
+            final extra = state.extra as Map<String, dynamic>?;
+            return DigitalGoldDetailsView(
+              amount: extra?['amount'] as int? ?? 0,
+              metal: metal,
+              preview: extra?['preview'] as DigitalGoldPreview?,
+            );
+          },
+        ),
+        GoRoute(
+          path: RouteConstants.digitalGoldSuccess,
+          builder: (context, state) {
+            final metal =
+                DigitalMetalTheme.fromQuery(state.uri.queryParameters['metal']);
+            return DigitalGoldSuccessView(metal: metal);
+          },
+        ),
+        GoRoute(
+          path: RouteConstants.digitalGoldLocker,
+          builder: (context, state) {
+            final metal =
+                DigitalMetalTheme.fromQuery(state.uri.queryParameters['metal']);
+            return DigitalGoldLockerView(metal: metal);
+          },
         ),
         GoRoute(
           path: RouteConstants.referral,

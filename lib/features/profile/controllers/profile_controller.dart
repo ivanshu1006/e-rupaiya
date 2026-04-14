@@ -105,6 +105,63 @@ class ProfileController extends StateNotifier<ProfileState> {
     }
   }
 
+  Future<bool> updateDeliveryInfo({
+    required String billingAddressLine1,
+    required String billingAddressLine2,
+    required String billingCity,
+    required String billingState,
+    required String billingZip,
+    required String billingCountry,
+    required String billingMobile,
+    required String deliveryAddressLine1,
+    required String deliveryAddressLine2,
+    required String deliveryCity,
+    required String deliveryState,
+    required String deliveryZip,
+    required String deliveryCountry,
+    required String deliveryMobile,
+  }) async {
+    state = state.copyWith(isUpdating: true, updateErrorMessage: null);
+    try {
+      final updated = await _repository.updateDeliveryInfo(
+        billingAddressLine1: billingAddressLine1,
+        billingAddressLine2: billingAddressLine2,
+        billingCity: billingCity,
+        billingState: billingState,
+        billingZip: billingZip,
+        billingCountry: billingCountry,
+        billingMobile: billingMobile,
+        deliveryAddressLine1: deliveryAddressLine1,
+        deliveryAddressLine2: deliveryAddressLine2,
+        deliveryCity: deliveryCity,
+        deliveryState: deliveryState,
+        deliveryZip: deliveryZip,
+        deliveryCountry: deliveryCountry,
+        deliveryMobile: deliveryMobile,
+      );
+      state = state.copyWith(
+        isUpdating: false,
+        profile: updated,
+        updateErrorMessage: null,
+      );
+      return true;
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to update delivery info',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      final msg = e.toString().startsWith('Exception: ')
+          ? e.toString().substring('Exception: '.length)
+          : 'Failed to update delivery info. Please try again.';
+      state = state.copyWith(
+        isUpdating: false,
+        updateErrorMessage: msg,
+      );
+      return false;
+    }
+  }
+
   Future<bool> updateMobile(String mobileNo) async {
     try {
       final response = await _repository.updateMobile(mobileNo);

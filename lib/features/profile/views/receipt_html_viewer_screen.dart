@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:share_plus/share_plus.dart';
@@ -29,22 +31,40 @@ class _ReceiptHtmlViewerScreenState extends State<ReceiptHtmlViewerScreen> {
   @override
   void initState() {
     super.initState();
+    final normalizedHtml = ReceiptFileService.normalizeHtml(widget.html);
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..loadHtmlString(widget.html);
+      ..loadHtmlString(normalizedHtml);
   }
 
   Future<void> _handleShare() async {
     if (_isBusy) return;
     setState(() => _isBusy = true);
     try {
-      final pdfBytes =
-          await ReceiptFileService.buildPdfBytesFromHtml(widget.html);
-      final imageFile = await ReceiptFileService.savePngFromPdfBytes(
-        pdfBytes: pdfBytes,
-        transactionId: widget.transactionId,
-      );
-      await Share.shareXFiles([XFile(imageFile.path)]);
+      if (Platform.isAndroid) {
+        final pdfFile = await ReceiptFileService.buildPdfFileFromHtmlViaWebView(
+          html: widget.html,
+          transactionId: widget.transactionId,
+        );
+        await Share.shareXFiles(
+          [
+            XFile(
+              pdfFile.path,
+              mimeType: 'application/pdf',
+              name: 'receipt_${widget.transactionId}.pdf',
+            ),
+          ],
+          text: 'Payment Receipt',
+        );
+      } else {
+        final pdfBytes =
+            await ReceiptFileService.buildPdfBytesFromHtml(widget.html);
+        final imageFile = await ReceiptFileService.savePngFromPdfBytes(
+          pdfBytes: pdfBytes,
+          transactionId: widget.transactionId,
+        );
+        await Share.shareXFiles([XFile(imageFile.path)]);
+      }
     } catch (e) {
       AppSnackbar.show(e.toString());
     } finally {
@@ -80,7 +100,7 @@ class _ReceiptHtmlViewerScreenState extends State<ReceiptHtmlViewerScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
-          'Receipt',
+          'Receipts',
           style: TextStyle(color: Colors.white),
         ),
         actions: [

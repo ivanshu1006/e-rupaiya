@@ -2,8 +2,10 @@
 
 import 'dart:async';
 
+import 'package:e_rupaiya/constants/app_text_styles.dart';
 import 'package:e_rupaiya/features/home/components/home_shimmer.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
@@ -15,19 +17,22 @@ import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
 import '../../../services/notification_badge_service.dart';
+import '../../../widgets/app_network_image.dart';
 import '../../../widgets/custom_elevated_button.dart';
+import '../../../widgets/k_dialog.dart';
 import '../../profile/controllers/profile_controller.dart';
 import '../../profile/views/offers_view.dart';
 import '../../profile/views/profile_view.dart';
 import '../../profile/views/transaction_history_screen.dart';
 import '../../refer_and_earn/views/refer_and_earn_view.dart';
 import '../../spinandear/controllers/spin_options_controller.dart';
+import '../components/exit_app_dialog.dart';
 import '../components/home_icon_tile.dart';
-import '../components/service_utils.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/home_tab_controller.dart';
 import '../models/quick_action_model.dart';
 import 'home_search_view.dart';
+import 'notifications_screen.dart';
 
 class HomeView extends HookConsumerWidget {
   const HomeView({super.key});
@@ -36,6 +41,7 @@ class HomeView extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tabController = ref.watch(homeTabControllerProvider);
     final lastTabIndex = useRef<int>(tabController.index);
+    final isExitDialogOpen = useRef<bool>(false);
     final tabs = [
       const _HomeContent(),
       const OffersView(),
@@ -50,7 +56,7 @@ class HomeView extends HookConsumerWidget {
         ),
       ),
       const TransactionHistoryScreen(),
-      const ProfileView(),
+      const NotificationsScreen(),
     ];
 
     final navTextStyle = TextStyle(
@@ -121,16 +127,16 @@ class HomeView extends HookConsumerWidget {
       ),
       PersistentBottomNavBarItem(
         icon: _BottomIcon(
-          asset: FileConstants.profile,
+          asset: FileConstants.notification,
           size: 20.r,
           color: AppColors.primary,
         ),
         inactiveIcon: _BottomIcon(
-          asset: FileConstants.profile,
+          asset: FileConstants.notification,
           size: 20.r,
           color: AppColors.primary,
         ),
-        title: 'Profile',
+        title: 'Alerts',
         iconSize: 30.r,
         textStyle: navTextStyle,
         activeColorPrimary: Colors.black,
@@ -150,22 +156,44 @@ class HomeView extends HookConsumerWidget {
       tabController.addListener(listener);
       return () => tabController.removeListener(listener);
     }, [tabController]);
-    return PersistentTabView(
-      context,
-      controller: tabController,
-      screens: tabs,
-      items: navItems,
-      navBarStyle: NavBarStyle.style15,
-      decoration: NavBarDecoration(
-        borderRadius: BorderRadius.circular(0),
-        // color: Colors.white,
-        colorBehindNavBar: Colors.white,
+    Future<void> showExitDialog() async {
+      if (isExitDialogOpen.value) return;
+      isExitDialogOpen.value = true;
+      try {
+        await KDialog.instance.openDialog(
+          barrierDismissible: false,
+          dialog: ExitAppDialog(
+            onConfirm: () => SystemNavigator.pop(),
+          ),
+        );
+      } finally {
+        isExitDialogOpen.value = false;
+      }
+    }
+
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        showExitDialog();
+      },
+      child: PersistentTabView(
+        context,
+        controller: tabController,
+        screens: tabs,
+        items: navItems,
+        navBarStyle: NavBarStyle.style15,
+        decoration: NavBarDecoration(
+          borderRadius: BorderRadius.circular(0),
+          // color: Colors.white,
+          colorBehindNavBar: Colors.white,
+        ),
+        navBarHeight: 58.h,
+        padding: EdgeInsets.only(top: 6.h, bottom: 8.h),
+        backgroundColor: Colors.white,
+        hideNavigationBarWhenKeyboardAppears: true,
+        confineToSafeArea: true,
       ),
-      navBarHeight: 58.h,
-      padding: EdgeInsets.only(top: 6.h, bottom: 8.h),
-      backgroundColor: Colors.white,
-      hideNavigationBarWhenKeyboardAppears: true,
-      confineToSafeArea: true,
     );
 
     // return PersistentTabView(
@@ -217,61 +245,6 @@ class HomeView extends HookConsumerWidget {
     // );
   }
 }
-
-// class _MembershipChip extends StatelessWidget {
-//   const _MembershipChip({required this.label});
-//   final String label;
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Container(
-//       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-//       decoration: BoxDecoration(
-//         color: Colors.white,
-//         borderRadius: BorderRadius.circular(20),
-//         border: Border.all(color: AppColors.lightBorder),
-//         boxShadow: const [
-//           BoxShadow(
-//             color: AppColors.cardShadow,
-//             blurRadius: 10,
-//             offset: Offset(0, 6),
-//           ),
-//         ],
-//       ),
-//       child: Row(
-//         mainAxisSize: MainAxisSize.min,
-//         children: [
-//           Image.asset(
-//             FileConstants.bharatConnect,
-//             height: 18,
-//             width: 18,
-//             color: AppColors.primary,
-//           ),
-//           const SizedBox(width: 8),
-//           Text(
-//             label,
-//             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-//                   color: AppColors.textPrimary,
-//                   fontWeight: FontWeight.w600,
-//                 ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
-
-// class _PlaceholderTab extends StatelessWidget {
-//   const _PlaceholderTab({required this.title});
-//   final String title;
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       body: Center(child: Text(title)),
-//     );
-//   }
-// }
 
 class _Dot extends StatelessWidget {
   const _Dot({required this.active});
@@ -452,6 +425,7 @@ class _HomeTopBar extends StatelessWidget {
     required this.walletBalance,
     required this.onSearchTap,
     required this.onReferTap,
+    required this.onProfileTap,
     this.compact = false,
   });
 
@@ -459,6 +433,7 @@ class _HomeTopBar extends StatelessWidget {
   final double walletBalance;
   final VoidCallback onSearchTap;
   final VoidCallback onReferTap;
+  final VoidCallback onProfileTap;
   final bool compact;
 
   @override
@@ -474,7 +449,13 @@ class _HomeTopBar extends StatelessWidget {
       children: [
         Row(
           children: [
-            _ProfileAvatar(initials: initials, size: compact ? 32 : 36),
+            GestureDetector(
+              onTap: onProfileTap,
+              child: _ProfileAvatar(
+                initials: initials,
+                size: compact ? 32 : 36,
+              ),
+            ),
             SizedBox(width: 8.w),
             _HeaderIconButton(
               icon: Icons.search,
@@ -664,9 +645,10 @@ class _HomeIconGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final maxWidth = constraints.maxWidth;
-        final tileSize = tileWidth.r;
-        final spacing =
-            columns > 1 ? (maxWidth - tileSize * columns) / (columns - 1) : 0;
+        final spacing = 12.w;
+        final computedTileSize = (maxWidth - spacing * (columns - 1)) / columns;
+        final tileSize =
+            computedTileSize > tileWidth.r ? tileWidth.r : computedTileSize;
         return Wrap(
           spacing: spacing.w,
           runSpacing: 16.h,
@@ -676,7 +658,7 @@ class _HomeIconGrid extends StatelessWidget {
               width: tileSize,
               child: HomeIconTile(
                 label: service.name,
-                asset: serviceIconMap[service.name],
+                iconUrl: service.icon,
                 offer: service.offers,
                 onTap: () async {
                   await onTap(service.name);
@@ -686,6 +668,147 @@ class _HomeIconGrid extends StatelessWidget {
           }),
         );
       },
+    );
+  }
+}
+
+class _CurvedIconGrid extends StatelessWidget {
+  const _CurvedIconGrid({
+    required this.services,
+    required this.onTap,
+    this.maxItems = 4,
+    this.labelBuilder,
+  });
+
+  final List<QuickActionService> services;
+  final Future<void> Function(String serviceName) onTap;
+  final int maxItems;
+  final String Function(QuickActionService service)? labelBuilder;
+
+  @override
+  Widget build(BuildContext context) {
+    final visibleItems = services.take(maxItems).toList();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final spacing = 10.w;
+        final tileWidth = (constraints.maxWidth - spacing * 3) / 4;
+        final tileHeight = tileWidth * 1.42;
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: List.generate(4, (index) {
+            final service =
+                index < visibleItems.length ? visibleItems[index] : null;
+            if (service == null) {
+              return SizedBox(width: tileWidth, height: tileHeight);
+            }
+            return SizedBox(
+              width: tileWidth,
+              height: tileHeight,
+              child: _CurvedIconTile(
+                label: labelBuilder?.call(service) ?? service.name,
+                iconUrl: service.icon ?? '',
+                onTap: () async {
+                  await onTap(service.name);
+                },
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+}
+
+class _CurvedIconTile extends StatelessWidget {
+  const _CurvedIconTile({
+    required this.label,
+    required this.iconUrl,
+    required this.onTap,
+  });
+
+  final String label;
+  final String iconUrl;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8.r),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xffFAFAFA),
+          borderRadius: BorderRadius.circular(8.r),
+          border: Border.all(color: const Color(0xffD4D4D4)),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14.r),
+          child: Stack(
+            children: [
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Image.asset(
+                  FileConstants.bottomOrangeCurve,
+                  height: 8.h,
+                  fit: BoxFit.cover,
+                  alignment: Alignment.topCenter,
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(6.w, 10.h, 6.w, 6.h),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 50.r,
+                      width: 50.r,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          center: Alignment.center,
+                          radius: 0.5,
+                          colors: [
+                            Color(0xFFF9F9F9),
+                            Color(0xFFF6F6F6),
+                          ],
+                        ),
+                      ),
+                      child: Center(
+                        child: AppNetworkImage(
+                          url: iconUrl,
+                          width: 26.r,
+                          height: 26.r,
+                          fit: BoxFit.contain,
+                          showShimmer: false,
+                          errorWidget: Image.asset(
+                            FileConstants.appLogo,
+                            height: 26.r,
+                            width: 26.r,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Expanded(
+                      child: Text(
+                        label,
+                        maxLines: 2,
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodyMediumBold(context),
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -730,21 +853,19 @@ class _PayBillsCard extends StatelessWidget {
   Widget _serviceTile(QuickActionService service) {
     return HomeIconTile(
       label: _labelForService(service),
-      asset: serviceIconMap[service.name],
+      iconUrl: service.icon,
       offer: service.offers,
       labelSpacing: 4.h,
+      showHalfRing: _isBookGasService(service),
       onTap: () async {
         await onTap(service.name);
       },
     );
   }
 
-  String _promoLabelForService(QuickActionService service) {
+  bool _isBookGasService(QuickActionService service) {
     const gasNames = ['LPG Gas', 'Book Gas Cylinder', 'Pipe Gas', 'Book Gas'];
-    if (gasNames.contains(service.name)) {
-      return 'Book your Gas and Get 10% Off*';
-    }
-    return service.name;
+    return gasNames.contains(service.name);
   }
 
   @override
@@ -771,77 +892,96 @@ class _PayBillsCard extends StatelessWidget {
       credit ?? _nextUnused(used),
     ];
 
+    const imageAspectRatio = 1960 / 1380;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding:
-              EdgeInsets.fromLTRB(14.w, 0.h, 14.w, 12.h), // ✅ reduced top space
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(8.r),
-            ),
-            border: Border.all(color: AppColors.lightBorder),
-            boxShadow: const [
-              BoxShadow(
-                color: AppColors.cardShadow,
-                blurRadius: 14,
-                offset: Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: topRow.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  mainAxisSpacing: 1,
-                  crossAxisSpacing: 6,
-                  childAspectRatio: 1,
-                ),
-                itemBuilder: (context, index) {
-                  final service = topRow[index];
-                  if (service == null) return const SizedBox.shrink();
-                  return _serviceTile(service);
-                },
-              ),
-              SizedBox(height: 8.h),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final height = width / imageAspectRatio;
+            final tileWidth = width * 0.18;
+            final bookTileWidth = width * 0.2;
+
+            Widget positionedTile({
+              required double x,
+              required double y,
+              required QuickActionService? service,
+              required double tileW,
+            }) {
+              if (service == null) return const SizedBox.shrink();
+              return Positioned(
+                left: x - (tileW / 2),
+                top: y,
+                width: tileW,
+                child: _serviceTile(service),
+              );
+            }
+
+            return SizedBox(
+              width: width,
+              height: height,
+              child: Stack(
+                clipBehavior: Clip.none,
                 children: [
-                  if (bookGas != null)
-                    SizedBox(
-                      width: 68.w,
-                      child: _serviceTile(bookGas),
-                    )
-                  else
-                    SizedBox(width: 68.w),
-                  SizedBox(width: 10.w),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (bookGas != null)
-                          _PromoStrip(
-                            text: _promoLabelForService(bookGas),
-                          ),
-                        SizedBox(height: 3.h),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: _ExploreUtilitiesRow(onTap: onExploreTap),
-                        ),
-                      ],
+                  Positioned.fill(
+                    child: Image.asset(
+                      FileConstants.homeIconSection,
+                      fit: BoxFit.fill,
                     ),
+                  ),
+                  positionedTile(
+                    x: width * 0.17,
+                    y: height * 0.16,
+                    service: topRow[0],
+                    tileW: tileWidth,
+                  ),
+                  positionedTile(
+                    x: width * 0.39,
+                    y: height * 0.16,
+                    service: topRow[1],
+                    tileW: tileWidth,
+                  ),
+                  positionedTile(
+                    x: width * 0.61,
+                    y: height * 0.16,
+                    service: topRow[2],
+                    tileW: tileWidth,
+                  ),
+                  positionedTile(
+                    x: width * 0.83,
+                    y: height * 0.16,
+                    service: topRow[3],
+                    tileW: tileWidth,
+                  ),
+                  positionedTile(
+                    x: width * 0.16,
+                    y: height * 0.52,
+                    service: bookGas,
+                    tileW: bookTileWidth,
+                  ),
+                  if (bookGas != null)
+                    Positioned(
+                      left: width * 0.32,
+                      right: 0,
+                      top: height * 0.54,
+                      child: _PromoStrip(
+                        asset: FileConstants.bookLpgStrip,
+                      ),
+                    ),
+                  Positioned(
+                    right: width * 0.01,
+                    // left: width * 0.01,
+                    bottom: height * -0.008,
+                    child: _ExploreUtilitiesRow(onTap: onExploreTap),
                   ),
                 ],
               ),
-            ],
-          ),
+            );
+          },
         ),
+        SizedBox(height: 18.h),
         const _ReferStrip(),
       ],
     );
@@ -849,57 +989,21 @@ class _PayBillsCard extends StatelessWidget {
 }
 
 class _PromoStrip extends StatelessWidget {
-  const _PromoStrip({required this.text});
-  final String text;
+  const _PromoStrip({required this.asset});
+  final String asset;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 14.w),
-      height: 30.h,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [
-            Color(0xFF1A9A57),
-            Color(0xFF135834),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(8.r),
+    return ClipRRect(
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(10),
+        bottomLeft: Radius.circular(10),
       ),
-      child: Row(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFF49A976),
-              shape: BoxShape.circle,
-            ),
-            height: 22.r,
-            width: 22.r,
-            child: ClipOval(
-              child: Transform.rotate(
-                angle: 0.2,
-                child: Image.asset(
-                  FileConstants.gasGif,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Text(
-              text,
-              style: GoogleFonts.bricolageGrotesque(
-                textStyle: Theme.of(context).textTheme.bodySmall,
-                fontSize: 9.sp,
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
+      child: Image.asset(
+        asset,
+        height: 30.h,
+        width: double.infinity,
+        fit: BoxFit.cover,
       ),
     );
   }
@@ -913,34 +1017,42 @@ class _ExploreUtilitiesRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12.r),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Text(
-            'Explore All Utilities',
-            style: GoogleFonts.bricolageGrotesque(
-              textStyle: Theme.of(context).textTheme.bodySmall,
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w600,
+      borderRadius: BorderRadius.circular(10.r),
+      child: Container(
+        width: 220.w,
+        padding: EdgeInsets.symmetric(horizontal: 0.w, vertical: 10.h),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFBE6DE),
+          borderRadius: BorderRadius.circular(14.r),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Explore All Services',
+              style: GoogleFonts.bricolageGrotesque(
+                textStyle: Theme.of(context).textTheme.bodyMedium,
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-          SizedBox(width: 8.w),
-          Container(
-            height: 24.r,
-            width: 24.r,
-            decoration: const BoxDecoration(
-              color: AppColors.primary,
-              shape: BoxShape.circle,
+            SizedBox(width: 8.w),
+            Container(
+              height: 24.r,
+              width: 24.r,
+              decoration: const BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.arrow_forward,
+                size: 14.r,
+                color: AppColors.white,
+              ),
             ),
-            child: Icon(
-              Icons.arrow_forward,
-              size: 14.r,
-              color: AppColors.white,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -954,11 +1066,16 @@ class _ReferStrip extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
       decoration: BoxDecoration(
-        color: const Color(0xFFAD5E39),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(20.r),
-          bottomRight: Radius.circular(20.r),
+        gradient: const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            Color(0xFFFF794E),
+            Color(0xFF99482F),
+          ],
+          stops: [-0.3508, 1],
         ),
+        borderRadius: BorderRadius.circular(8.r),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -970,10 +1087,11 @@ class _ReferStrip extends StatelessWidget {
               color: Colors.white.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.currency_rupee,
-              size: 12.r,
-              color: Colors.white,
+            child: Image.asset(
+              FileConstants.coin_3d,
+              height: 12.r,
+              width: 12.r,
+              fit: BoxFit.contain,
             ),
           ),
           SizedBox(width: 8.w),
@@ -1004,6 +1122,7 @@ class _InvestmentTile extends StatelessWidget {
     required this.arrowAsset,
     required this.borderColor,
     required this.textColor,
+    this.backgroundGradient,
   });
 
   final String label;
@@ -1011,6 +1130,7 @@ class _InvestmentTile extends StatelessWidget {
   final String arrowAsset;
   final Color borderColor;
   final Color textColor;
+  final Gradient? backgroundGradient;
 
   @override
   Widget build(BuildContext context) {
@@ -1018,7 +1138,8 @@ class _InvestmentTile extends StatelessWidget {
       height: 42.h,
       padding: EdgeInsets.symmetric(horizontal: 12.w),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: backgroundGradient == null ? Colors.white : null,
+        gradient: backgroundGradient,
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(color: borderColor, width: 1),
       ),
@@ -1421,6 +1542,26 @@ class _HomeContent extends HookConsumerWidget {
       return timer.cancel;
     }, const []);
 
+    final educationBanners = useMemoized(
+      () => [FileConstants.homeBanner12, FileConstants.homeBanner10],
+    );
+    final educationBannerPage = useState(0);
+    final educationBannerController =
+        useMemoized(() => PageController(), const []);
+    useEffect(() {
+      if (educationBanners.length < 2) return null;
+      final timer = Timer.periodic(const Duration(seconds: 3), (_) {
+        if (!educationBannerController.hasClients) return;
+        final next = (educationBannerPage.value + 1) % educationBanners.length;
+        educationBannerController.animateToPage(
+          next,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
+      });
+      return timer.cancel;
+    }, const []);
+
     final quickActions = homeState.quickActions;
 
     QuickActionCategory? findCategory(
@@ -1449,6 +1590,14 @@ class _HomeContent extends HookConsumerWidget {
         }
       } else if (serviceName == 'Mobile Prepaid') {
         context.push(RouteConstants.mobileRecentRecharges);
+      } else if (serviceName == 'Tuition Fees' ||
+          serviceName == 'Tution Fees' ||
+          serviceName == 'School Fees' ||
+          serviceName == 'College Fees') {
+        context.push(
+          RouteConstants.educationFeesAmount,
+          extra: serviceName,
+        );
       } else {
         context.push(
           RouteConstants.billerListing,
@@ -1499,7 +1648,7 @@ class _HomeContent extends HookConsumerWidget {
                       automaticallyImplyLeading: false,
                       centerTitle: false,
                       titleSpacing: 0,
-                      backgroundColor: AppColors.gradientEnd,
+                      backgroundColor: const Color(0xffD66D4D),
                       elevation: 0,
                       toolbarHeight: 54.h,
                       expandedHeight: MediaQuery.of(context).padding.top +
@@ -1555,8 +1704,7 @@ class _HomeContent extends HookConsumerWidget {
                                         onTap: () {
                                           if (index == 0) {
                                             context.push(
-                                              RouteConstants
-                                                  .mobileRecentRecharges,
+                                              RouteConstants.referAndEarn,
                                             );
                                           }
                                         },
@@ -1612,6 +1760,13 @@ class _HomeContent extends HookConsumerWidget {
                             PersistentNavBarNavigator.pushNewScreen(
                               context,
                               screen: const ReferAndEarnView(),
+                              withNavBar: false,
+                            );
+                          },
+                          onProfileTap: () {
+                            PersistentNavBarNavigator.pushNewScreen(
+                              context,
+                              screen: const ProfileView(),
                               withNavBar: false,
                             );
                           },
@@ -1689,7 +1844,11 @@ class _HomeContent extends HookConsumerWidget {
                                         children: [
                                           Expanded(
                                             child: GestureDetector(
-                                              onTap: () {},
+                                              onTap: () {
+                                                context.push(
+                                                  RouteConstants.digitalGold,
+                                                );
+                                              },
                                               child: _InvestmentTile(
                                                 label: 'Digital Gold',
                                                 iconAsset: FileConstants
@@ -1700,13 +1859,26 @@ class _HomeContent extends HookConsumerWidget {
                                                     const Color(0xFFE0C46A),
                                                 textColor:
                                                     const Color(0xFF8B6B12),
+                                                backgroundGradient:
+                                                    const LinearGradient(
+                                                  begin: Alignment.centerLeft,
+                                                  end: Alignment.centerRight,
+                                                  colors: [
+                                                    Color(0xFFFFFFFF),
+                                                    Color(0xFFFFF4D5),
+                                                  ],
+                                                ),
                                               ),
                                             ),
                                           ),
                                           SizedBox(width: 12.w),
                                           Expanded(
                                             child: GestureDetector(
-                                              onTap: () {},
+                                              onTap: () {
+                                                context.push(
+                                                  '${RouteConstants.digitalGold}?metal=silver',
+                                                );
+                                              },
                                               child: _InvestmentTile(
                                                 label: 'Digital Silver',
                                                 iconAsset: FileConstants
@@ -1717,6 +1889,15 @@ class _HomeContent extends HookConsumerWidget {
                                                     const Color(0xFFE1E1E1),
                                                 textColor:
                                                     const Color(0xFF6B6B6B),
+                                                backgroundGradient:
+                                                    const LinearGradient(
+                                                  begin: Alignment.centerLeft,
+                                                  end: Alignment.centerRight,
+                                                  colors: [
+                                                    Color(0xFFFFFFFF),
+                                                    Color(0xFFF5F5F5),
+                                                  ],
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -1726,10 +1907,9 @@ class _HomeContent extends HookConsumerWidget {
                                       const _SectionHeader(
                                           title: 'Education & Lifestyle'),
                                       SizedBox(height: 12.h),
-                                      _HomeIconGrid(
+                                      _CurvedIconGrid(
                                         services: educationCategory?.services ??
                                             const [],
-                                        maxItems: 4,
                                         onTap: handleServiceTap,
                                       ),
                                       SizedBox(height: 14.h),
@@ -1739,9 +1919,53 @@ class _HomeContent extends HookConsumerWidget {
                                 Padding(
                                   padding:
                                       EdgeInsets.symmetric(horizontal: 16.w),
-                                  child: _ImageBanner(
-                                    asset: FileConstants.homeBanner12,
-                                    height: 110.h,
+                                  child: Column(
+                                    children: [
+                                      SizedBox(
+                                        height: 110.h,
+                                        child: PageView.builder(
+                                          controller: educationBannerController,
+                                          onPageChanged: (page) =>
+                                              educationBannerPage.value = page,
+                                          itemCount: educationBanners.length,
+                                          itemBuilder: (_, index) => Padding(
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 4.w),
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(14.r),
+                                              child: Image.asset(
+                                                educationBanners[index],
+                                                width: double.infinity,
+                                                fit: BoxFit.fill,
+                                                alignment: Alignment.centerLeft,
+                                                cacheWidth: bannerCacheWidth,
+                                                filterQuality:
+                                                    FilterQuality.low,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(height: 6.h),
+                                      if (educationBanners.length > 1)
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: List.generate(
+                                            educationBanners.length,
+                                            (index) => Padding(
+                                              padding: EdgeInsets.symmetric(
+                                                  horizontal: 3.w),
+                                              child: _Dot(
+                                                active:
+                                                    educationBannerPage.value ==
+                                                        index,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                 ),
                                 Padding(
@@ -1758,11 +1982,23 @@ class _HomeContent extends HookConsumerWidget {
                                             .push(RouteConstants.quickActions),
                                       ),
                                       SizedBox(height: 12.h),
-                                      _HomeIconGrid(
+                                      _CurvedIconGrid(
                                         services: insuranceCategory?.services ??
                                             const [],
-                                        maxItems: 4,
                                         onTap: handleServiceTap,
+                                        labelBuilder: (service) {
+                                          final name = service.name.trim();
+                                          final lower = name.toLowerCase();
+                                          if (lower.contains('insurance')) {
+                                            return name;
+                                          }
+                                          if (lower == 'general' ||
+                                              lower == 'health' ||
+                                              lower == 'life') {
+                                            return '$name Insurance';
+                                          }
+                                          return name;
+                                        },
                                       ),
                                       SizedBox(height: 14.h),
                                     ],
@@ -1772,7 +2008,7 @@ class _HomeContent extends HookConsumerWidget {
                                   width: double.infinity,
                                   child: _ImageBanner(
                                     asset: FileConstants.homeBanner9,
-                                    height: 62.h,
+                                    height: 60.h,
                                   ),
                                 ),
                                 Padding(
@@ -1786,7 +2022,7 @@ class _HomeContent extends HookConsumerWidget {
                                             child: _MiniActionCard(
                                               title: 'Gift card',
                                               subtitle: 'Gift your friends',
-                                              asset: FileConstants.giftIcon,
+                                              asset: FileConstants.giftGif,
                                               backgroundColor:
                                                   const Color(0xFFFFF3EE),
                                               gradientBorder:
@@ -1820,7 +2056,9 @@ class _HomeContent extends HookConsumerWidget {
                                       SizedBox(height: 12.h),
                                       _SupportTile(
                                         title: 'Faq & Support',
-                                        onTap: () {},
+                                        onTap: () => context.push(
+                                          RouteConstants.faq,
+                                        ),
                                       ),
                                       SizedBox(height: 16.h),
                                     ],
@@ -1835,27 +2073,26 @@ class _HomeContent extends HookConsumerWidget {
                                 ),
                                 Container(
                                   decoration: const BoxDecoration(
-                                    color: Color(0xffFEFEFE),
+                                    color: Color(0XFFFDFDFD),
                                   ),
                                   child: Padding(
                                     padding: EdgeInsets.fromLTRB(
-                                        16.w, 12.h, 16.w, 24.h),
+                                        16.w, 20.h, 16.w, 24.h),
                                     child: Row(
                                       children: [
                                         Text(
                                           'Powered by',
                                           style: Theme.of(context)
                                               .textTheme
-                                              .bodyLarge
+                                              .bodySmall
                                               ?.copyWith(
-                                                color: AppColors.textPrimary
-                                                    .withOpacity(0.6),
+                                                color: AppColors.textPrimary,
                                               ),
                                         ),
                                         SizedBox(width: 6.w),
                                         Image.asset(
                                           FileConstants.bharatConnectColor,
-                                          height: 30.h,
+                                          height: 25.h,
                                           fit: BoxFit.contain,
                                         ),
                                       ],
@@ -1873,60 +2110,6 @@ class _HomeContent extends HookConsumerWidget {
     );
   }
 }
-
-// SliverToBoxAdapter(
-//   child: Padding(
-//     padding:
-//         const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-//     child: Column(
-//       crossAxisAlignment: CrossAxisAlignment.start,
-//       children: [
-//         HomeSectionHeader(
-//           title: 'Memberships',
-//           actionLabel: 'View All',
-//           onAction: () {},
-//           padding: EdgeInsets.zero,
-//         ),
-//         const SizedBox(height: 12),
-//         const Wrap(
-//           spacing: 18,
-//           runSpacing: 16,
-//           children: [
-//             _MembershipChip(label: 'Credit Card'),
-//             _MembershipChip(label: 'Loan Repayment'),
-//             _MembershipChip(label: 'Recurring Deposit'),
-//             _MembershipChip(label: 'Insurance'),
-//           ],
-//         ),
-//         const SizedBox(height: 28),
-//         Text(
-//           'e-rupaiya',
-//           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-//                 color: AppColors.primary,
-//                 fontWeight: FontWeight.w700,
-//               ),
-//         ),
-//         const SizedBox(height: 6),
-//         Text(
-//           '#India Ka Smartest Bill Payment App',
-//           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-//                 color: AppColors.textPrimary,
-//               ),
-//         ),
-//         const SizedBox(height: 18),
-//       ],
-//     ),
-//   ),
-// ),
-//           ],
-//         ),
-//       ),
-//     ),
-//   ],
-// ),
-// );
-//   }
-// }
 
 class _HomeErrorState extends StatelessWidget {
   const _HomeErrorState({

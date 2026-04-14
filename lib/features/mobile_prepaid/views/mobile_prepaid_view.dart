@@ -13,12 +13,14 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../constants/file_constants.dart';
 import '../../../services/permission_service.dart';
 import '../../../widgets/k_dialog.dart';
 import '../../../widgets/my_app_bar.dart';
 import '../../../widgets/screen_wrapper.dart';
 import '../../../widgets/search_textfield.dart';
 import '../../home/components/quick_action_header_card.dart';
+import '../components/mobile_prepaid_shimmer.dart';
 import '../components/payment_bottom_sheet.dart';
 import '../components/plan_card.dart';
 import '../controllers/contacts_cache_controller.dart';
@@ -216,6 +218,13 @@ class MobilePrepaidView extends HookConsumerWidget {
     final hasPlanSelected = showPlans && state.selectedPlan != null;
     final showOperatorCard = showPlans || hasPlanSelected;
     final isOpeningOperatorSheet = useState(false);
+
+    if (state.isFetching) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: MobilePrepaidShimmer(),
+      );
+    }
 
     Future<void> handleChange() async {
       if (isOpeningOperatorSheet.value) return;
@@ -555,7 +564,6 @@ class _PlanSection extends StatelessWidget {
           selected: state.selectedCategory,
           onSelected: controller.selectCategory,
         ),
-        const SizedBox(height: 10),
         if (state.isFetching)
           const Center(
             child: SpinKitCircle(
@@ -737,7 +745,7 @@ class _PayNowSection extends StatelessWidget {
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(20.r),
                 ),
                 elevation: 0,
               ),
@@ -990,28 +998,43 @@ class _OperatorSelectSheet extends ConsumerWidget {
             )
           else
             Flexible(
-              child: ListView.separated(
+              child: ListView.builder(
                 shrinkWrap: true,
                 itemCount: meta.operators.length,
-                separatorBuilder: (_, __) => Divider(
-                  color: AppColors.lightBorder.withOpacity(0.7),
-                  height: 1,
-                ),
                 itemBuilder: (_, index) {
                   final item = meta.operators[index];
-                  return ListTile(
+                  return InkWell(
                     onTap: () {
                       Navigator.of(context).pop();
                       onSelected(item);
                     },
-                    leading: _OperatorLogo(iconUrl: item.iconUrl),
-                    title: Text(
-                      item.name,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: 6.h),
+                      child: Row(
+                        children: [
+                          _OperatorLogo(iconUrl: item.iconUrl),
+                          SizedBox(width: 12.w),
+                          Expanded(
+                            child: Text(
+                              item.name,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
                           ),
+                          Transform.rotate(
+                            angle: -0.65,
+                            child: const Icon(
+                              Icons.arrow_forward,
+                              size: 20,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    trailing: const Icon(Icons.arrow_forward),
                   );
                 },
               ),
@@ -1139,31 +1162,49 @@ class _OperatorLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (iconUrl.isEmpty) {
-      return CircleAvatar(
-        radius: 20.r,
-        backgroundColor: AppColors.primary.withOpacity(0.1),
-        child: const Icon(Icons.sim_card, color: AppColors.primary),
+      return Container(
+        padding: EdgeInsets.all(4.r),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.lightBorder),
+        ),
+        child: CircleAvatar(
+          radius: 20.r,
+          backgroundColor: AppColors.primary.withOpacity(0.08),
+          child: Icon(
+            Icons.sim_card,
+            color: AppColors.primary,
+            size: 20.r,
+          ),
+        ),
       );
     }
     final isSvg = iconUrl.toLowerCase().endsWith('.svg');
-    return CircleAvatar(
-      radius: 20.r,
-      backgroundColor: Colors.white,
-      child: isSvg
-          ? SvgPicture.network(
-              iconUrl,
-              width: 24.r,
-              height: 24.r,
-              fit: BoxFit.contain,
-              placeholderBuilder: (_) => _logoPlaceholder(),
-            )
-          : Image.network(
-              iconUrl,
-              width: 24.r,
-              height: 24.r,
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => _logoPlaceholder(),
-            ),
+    return Container(
+      padding: EdgeInsets.all(4.r),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.lightBorder),
+      ),
+      child: CircleAvatar(
+        radius: 20.r,
+        backgroundColor: Colors.white,
+        child: isSvg
+            ? SvgPicture.network(
+                iconUrl,
+                width: 24.r,
+                height: 24.r,
+                fit: BoxFit.contain,
+                placeholderBuilder: (_) => _logoPlaceholder(),
+              )
+            : Image.network(
+                iconUrl,
+                width: 24.r,
+                height: 24.r,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => _logoPlaceholder(),
+              ),
+      ),
     );
   }
 
@@ -1406,6 +1447,18 @@ class _SuggestedPlanCard extends StatelessWidget {
         ),
         child: Stack(
           children: [
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: IgnorePointer(
+                child: Image.asset(
+                  FileConstants.suggestedCardImage,
+                  width: 75,
+                  height: 80,
+                  fit: BoxFit.fill,
+                ),
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 70, 16),
               child: Column(
@@ -1423,8 +1476,8 @@ class _SuggestedPlanCard extends StatelessWidget {
                   Text(
                     plan.planName.isNotEmpty ? plan.planName : 'Data Pack',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textPrimary.withOpacity(0.65),
-                          fontWeight: FontWeight.w500,
+                          color: const Color(0XFF222222),
+                          fontWeight: FontWeight.w400,
                         ),
                   ),
                   const SizedBox(height: 10),
@@ -1436,38 +1489,14 @@ class _SuggestedPlanCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textPrimary.withOpacity(0.6),
+                            color: const Color(0XFF222222),
+                            fontWeight: FontWeight.w400,
                             height: 1.4,
                             fontSize: 12,
                           ),
                     ),
                   ),
                 ],
-              ),
-            ),
-            // Orange circle arrow on the right
-            Positioned(
-              right: -6,
-              top: 0,
-              bottom: 0,
-              child: Center(
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.primary,
-                    border: Border.all(
-                      color: AppColors.gradientStart,
-                      width: 3,
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.chevron_right,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
               ),
             ),
           ],
@@ -1492,7 +1521,7 @@ class _CategoryTabs extends StatelessWidget {
   Widget build(BuildContext context) {
     if (categories.isEmpty) return const SizedBox.shrink();
     return SizedBox(
-      height: 38,
+      height: 30,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: categories.length,
@@ -1554,7 +1583,7 @@ class _PlanList extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: plans.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (_, __) => SizedBox(height: 12.h),
       itemBuilder: (context, index) {
         final plan = plans[index];
         return PlanCard(

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -51,10 +53,11 @@ class ReferralShareService {
       }
       final code = response.referralCode.trim();
       final link = response.referralLink.trim();
+      final shareLink = _buildShareLink(link);
       if (code.isEmpty) {
-        return 'Join me on E-Rupaiya: $link';
+        return 'Join me on E-Rupaiya: $shareLink';
       }
-      return 'Join me on E-Rupaiya. Use my referral code $code: $link';
+      return 'Join me on E-Rupaiya. Use my referral code $code: $shareLink';
     } catch (e, stackTrace) {
       _hideLoading(dialogContext);
       logger.error(
@@ -73,4 +76,20 @@ void _hideLoading(BuildContext? dialogContext) {
   if (Navigator.of(dialogContext).canPop()) {
     Navigator.of(dialogContext).pop();
   }
+}
+
+String _buildShareLink(String link) {
+  if (!Platform.isAndroid) return link;
+  final uri = Uri.tryParse(link);
+  if (uri == null) return link;
+  if (uri.scheme != 'https' || uri.host != 'test.erupaiya.com') {
+    return link;
+  }
+  final fallback =
+      'https://play.google.com/store/apps/details?id=com.innoplix.erupiya';
+  final fallbackEncoded = Uri.encodeComponent(fallback);
+  return 'intent://${uri.host}${uri.path}'
+      '?${uri.query}'
+      '#Intent;scheme=https;package=com.innoplix.erupiya;'
+      'S.browser_fallback_url=$fallbackEncoded;end';
 }

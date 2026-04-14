@@ -2,20 +2,23 @@
 
 import 'dart:async';
 import 'dart:developer';
+import 'dart:ui';
 
 import 'package:e_rupaiya/widgets/custom_elevated_button.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:pinput/pinput.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
 import '../../../widgets/app_snackbar.dart';
-import '../components/pin_input_row.dart';
 import '../controllers/auth_controller.dart';
 
 class AppLockView extends HookConsumerWidget {
@@ -24,20 +27,11 @@ class AppLockView extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
-    final pinControllers = List.generate(4, (_) => useTextEditingController());
-    final pinFocusNodes = List.generate(4, (_) => useFocusNode());
-    final forgotOtpControllers =
-        useMemoized(() => List.generate(4, (_) => TextEditingController()));
-    final forgotOtpFocusNodes =
-        useMemoized(() => List.generate(4, (_) => FocusNode()));
-    final forgotPinControllers =
-        useMemoized(() => List.generate(4, (_) => TextEditingController()));
-    final forgotPinFocusNodes =
-        useMemoized(() => List.generate(4, (_) => FocusNode()));
-    final forgotConfirmControllers =
-        useMemoized(() => List.generate(4, (_) => TextEditingController()));
-    final forgotConfirmFocusNodes =
-        useMemoized(() => List.generate(4, (_) => FocusNode()));
+    final pinController = useTextEditingController();
+    final pinFocusNode = useFocusNode();
+    final forgotOtpController = useTextEditingController();
+    final forgotPinController = useTextEditingController();
+    final forgotConfirmController = useTextEditingController();
     final isLoading = useState(true);
     final isUnlocking = useState(false);
     final mobile = useState<String?>(null);
@@ -51,20 +45,11 @@ class AppLockView extends HookConsumerWidget {
 
     useEffect(() {
       return () {
-        for (final controller in [
-          ...forgotOtpControllers,
-          ...forgotPinControllers,
-          ...forgotConfirmControllers,
-        ]) {
-          controller.dispose();
-        }
-        for (final focusNode in [
-          ...forgotOtpFocusNodes,
-          ...forgotPinFocusNodes,
-          ...forgotConfirmFocusNodes,
-        ]) {
-          focusNode.dispose();
-        }
+        pinController.dispose();
+        pinFocusNode.dispose();
+        forgotOtpController.dispose();
+        forgotPinController.dispose();
+        forgotConfirmController.dispose();
       };
     }, const []);
 
@@ -123,7 +108,7 @@ class AppLockView extends HookConsumerWidget {
 
     Future<void> handleUnlock() async {
       if (isUnlocking.value) return;
-      final pin = pinControllers.map((c) => c.text).join();
+      final pin = pinController.text.trim();
       if (pin.length != 4) {
         AppSnackbar.show('Please enter a 4-digit PIN');
         return;
@@ -152,17 +137,9 @@ class AppLockView extends HookConsumerWidget {
           ref.read(authControllerProvider).errorMessage ??
               'Invalid PIN. Try again.',
         );
-        for (final c in pinControllers) {
-          c.clear();
-        }
-        if (pinFocusNodes.isNotEmpty) {
-          pinFocusNodes.first.requestFocus();
-        }
+        pinController.clear();
+        pinFocusNode.requestFocus();
       }
-    }
-
-    String joinDigits(List<TextEditingController> controllers) {
-      return controllers.map((c) => c.text).join();
     }
 
     Future<void> requestForgotOtp() async {
@@ -185,9 +162,6 @@ class AppLockView extends HookConsumerWidget {
             forgotRemainingSeconds.value -= 1;
           }
         });
-        if (forgotOtpFocusNodes.isNotEmpty) {
-          forgotOtpFocusNodes.first.requestFocus();
-        }
       } else {
         AppSnackbar.show(
           ref.read(authControllerProvider).errorMessage ??
@@ -202,9 +176,9 @@ class AppLockView extends HookConsumerWidget {
     }
 
     Future<void> handleForgotVerify() async {
-      final otp = joinDigits(forgotOtpControllers);
-      final pin = joinDigits(forgotPinControllers);
-      final confirmPin = joinDigits(forgotConfirmControllers);
+      final otp = forgotOtpController.text.trim();
+      final pin = forgotPinController.text.trim();
+      final confirmPin = forgotConfirmController.text.trim();
       if (otp.length != 4) {
         AppSnackbar.show('Please enter the 4-digit OTP.');
         return;
@@ -229,13 +203,9 @@ class AppLockView extends HookConsumerWidget {
       if (message != null) {
         AppSnackbar.show(message);
         showForgotPin.value = false;
-        for (final controller in [
-          ...forgotOtpControllers,
-          ...forgotPinControllers,
-          ...forgotConfirmControllers,
-        ]) {
-          controller.clear();
-        }
+        forgotOtpController.clear();
+        forgotPinController.clear();
+        forgotConfirmController.clear();
       } else {
         AppSnackbar.show(
           ref.read(authControllerProvider).errorMessage ??
@@ -258,246 +228,385 @@ class AppLockView extends HookConsumerWidget {
         backgroundColor: Colors.white,
         resizeToAvoidBottomInset: !showForgotPin.value,
         body: SafeArea(
-          child: isLoading.value
-              ? const Center(child: CircularProgressIndicator())
-              : Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
-                  child: AnimatedPadding(
-                    duration: const Duration(milliseconds: 150),
-                    curve: Curves.easeOut,
-                    padding: EdgeInsets.only(
-                      bottom: showForgotPin.value
-                          ? MediaQuery.of(context).viewInsets.bottom
-                          : 0,
-                    ),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        children: [
-                        SizedBox(height: 16.h),
-                        CircleAvatar(
-                          radius: 38.r,
-                          backgroundColor: AppColors.primary.withOpacity(0.1),
-                          child: Icon(
-                            Icons.lock_outline,
-                            size: 34.sp,
-                            color: AppColors.primary,
-                          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              isLoading.value
+                  ? const Center(child: CircularProgressIndicator())
+                  : Padding(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 24.w, vertical: 20.h),
+                      child: AnimatedPadding(
+                        duration: const Duration(milliseconds: 150),
+                        curve: Curves.easeOut,
+                        padding: EdgeInsets.only(
+                          bottom: showForgotPin.value
+                              ? MediaQuery.of(context).viewInsets.bottom
+                              : 0,
                         ),
-                        SizedBox(height: 14.h),
-                        Text(
-                          'Please Enter Your Security Pin',
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.textPrimary,
-                                  ),
-                        ),
-                        SizedBox(height: 18.h),
-                        if (!showForgotPin.value) ...[
-                          PinInputRow(
-                            controllers: pinControllers,
-                            focusNodes: pinFocusNodes,
-                            enabled: !isUnlocking.value,
-                            onPinCompleted: (_) => handleUnlock(),
-                          ),
-                          SizedBox(height: 12.h),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () => showForgotPin.value = true,
-                              child: Text(
-                                'Forgot PIN ?',
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              SizedBox(height: 16.h),
+                              CircleAvatar(
+                                radius: 38.r,
+                                backgroundColor:
+                                    AppColors.primary.withOpacity(0.1),
+                                child: Icon(
+                                  Icons.lock_outline,
+                                  size: 34.sp,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                              SizedBox(height: 14.h),
+                              Text(
+                                'Please Enter Your Security Pin',
                                 style: Theme.of(context)
                                     .textTheme
-                                    .bodySmall
+                                    .titleMedium
                                     ?.copyWith(
-                                      color: AppColors.textPrimary
-                                          .withOpacity(0.6),
-                                      decoration: TextDecoration.underline,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textPrimary,
                                     ),
                               ),
-                            ),
-                          ),
-                        ] else ...[
-                          Text(
-                            'Reset Your PIN',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textPrimary,
+                              SizedBox(height: 18.h),
+                              if (!showForgotPin.value) ...[
+                                _AppLockPinInput(
+                                  controller: pinController,
+                                  focusNode: pinFocusNode,
+                                  enabled: !isUnlocking.value,
+                                  obscure: true,
+                                  onCompleted: (_) => handleUnlock(),
                                 ),
-                          ),
-                          SizedBox(height: 6.h),
-                          Text(
-                            'Enter the 4-digit OTP sent to your mobile number.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: AppColors.textPrimary.withOpacity(0.6),
+                                SizedBox(height: 12.h),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: () => showForgotPin.value = true,
+                                    child: Text(
+                                      'Forgot PIN ?',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                    ),
+                                  ),
                                 ),
+                              ] else ...[
+                                Text(
+                                  'Reset Your PIN',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleSmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                ),
+                                SizedBox(height: 6.h),
+                                Text(
+                                  'Enter the 4-digit OTP sent to your mobile number.',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: AppColors.textPrimary
+                                            .withOpacity(0.6),
+                                      ),
+                                ),
+                                SizedBox(height: 12.h),
+                                _AppLockPinInput(
+                                  controller: forgotOtpController,
+                                  enabled: !authState.isSubmitting,
+                                  onCompleted: (_) {},
+                                ),
+                                SizedBox(height: 10.h),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.access_time,
+                                        size: 18, color: AppColors.textPrimary),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${(forgotRemainingSeconds.value ~/ 60).toString().padLeft(2, '0')}:${(forgotRemainingSeconds.value % 60).toString().padLeft(2, '0')}',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                    ),
+                                    const Spacer(),
+                                    TextButton(
+                                      onPressed:
+                                          forgotRemainingSeconds.value == 0 &&
+                                                  !isRequestingOtp.value
+                                              ? handleForgotResend
+                                              : null,
+                                      style: TextButton.styleFrom(
+                                        foregroundColor:
+                                            forgotRemainingSeconds.value == 0
+                                                ? AppColors.primary
+                                                : AppColors.textPrimary
+                                                    .withOpacity(0.35),
+                                      ),
+                                      child: Text(
+                                        isRequestingOtp.value
+                                            ? 'Sending...'
+                                            : 'Resend OTP',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 8.h),
+                                Divider(
+                                  color: AppColors.textPrimary.withOpacity(0.1),
+                                ),
+                                SizedBox(height: 8.h),
+                                Text(
+                                  'Create New PIN',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                ),
+                                SizedBox(height: 8.h),
+                                _AppLockPinInput(
+                                  controller: forgotPinController,
+                                  enabled: !authState.isSubmitting,
+                                  obscure: true,
+                                  onCompleted: (_) {},
+                                ),
+                                SizedBox(height: 14.h),
+                                Text(
+                                  'Confirm PIN',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                ),
+                                SizedBox(height: 8.h),
+                                _AppLockPinInput(
+                                  controller: forgotConfirmController,
+                                  enabled: !authState.isSubmitting,
+                                  obscure: true,
+                                  onCompleted: (_) {},
+                                ),
+                                SizedBox(height: 18.h),
+                                CustomElevatedButton(
+                                  onPressed: authState.isSubmitting
+                                      ? null
+                                      : handleForgotVerify,
+                                  label: authState.isSubmitting
+                                      ? 'Verifying...'
+                                      : 'Verify & Continue',
+                                  uppercaseLabel: false,
+                                  showArrow: false,
+                                ),
+                                SizedBox(height: 8.h),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: () {
+                                      showForgotPin.value = false;
+                                      forgotOtpController.clear();
+                                      forgotPinController.clear();
+                                      forgotConfirmController.clear();
+                                    },
+                                    child: const Text('Back'),
+                                  ),
+                                ),
+                              ],
+                              SizedBox(height: 26.h),
+                              if (biometricAvailable.value &&
+                                  !showForgotPin.value) ...[
+                                GestureDetector(
+                                  onTap: handleBiometric,
+                                  child: Container(
+                                    width: 64.w,
+                                    height: 64.w,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.grey.shade100,
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: AppColors.cardShadow,
+                                          blurRadius: 10,
+                                          offset: Offset(0, 6),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      Icons.fingerprint,
+                                      size: 30.sp,
+                                      color: AppColors.textPrimary
+                                          .withOpacity(0.7),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: 8.h),
+                                Text(
+                                  'Use Fingerprint Instead',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: AppColors.textPrimary
+                                            .withOpacity(0.7),
+                                      ),
+                                ),
+                              ],
+                              SizedBox(height: 12.h),
+                            ],
                           ),
-                          SizedBox(height: 12.h),
-                          PinInputRow(
-                            controllers: forgotOtpControllers,
-                            focusNodes: forgotOtpFocusNodes,
-                            enabled: !authState.isSubmitting,
+                        ),
+                      ),
+                    ),
+              if (isUnlocking.value)
+                Positioned.fill(
+                  child: Stack(
+                    children: [
+                      BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                        child: Container(
+                          color: Colors.black.withOpacity(0.15),
+                        ),
+                      ),
+                      Center(
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 24.w,
+                            vertical: 20.h,
                           ),
-                          SizedBox(height: 10.h),
-                          Row(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.12),
+                                blurRadius: 18,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.access_time,
-                                  size: 18, color: AppColors.textPrimary),
-                              const SizedBox(width: 6),
+                              Image.asset(
+                                FileConstants.logo,
+                                height: 48.h,
+                                width: 48.h,
+                              ),
+                              SizedBox(height: 12.h),
                               Text(
-                                '${(forgotRemainingSeconds.value ~/ 60).toString().padLeft(2, '0')}:${(forgotRemainingSeconds.value % 60).toString().padLeft(2, '0')}',
+                                'Unlocking Securely...',
                                 style: Theme.of(context)
                                     .textTheme
                                     .titleSmall
                                     ?.copyWith(
-                                      fontWeight: FontWeight.w600,
                                       color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.w700,
                                     ),
                               ),
-                              const Spacer(),
-                              TextButton(
-                                onPressed: forgotRemainingSeconds.value == 0 &&
-                                        !isRequestingOtp.value
-                                    ? handleForgotResend
-                                    : null,
-                                style: TextButton.styleFrom(
-                                  foregroundColor:
-                                      forgotRemainingSeconds.value == 0
-                                          ? AppColors.primary
-                                          : AppColors.textPrimary
-                                              .withOpacity(0.35),
-                                ),
-                                child: Text(
-                                  isRequestingOtp.value
-                                      ? 'Sending...'
-                                      : 'Resend OTP',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                              SizedBox(height: 10.h),
+                              SizedBox(
+                                height: 20.h,
+                                width: 20.h,
+                                child: const CircularProgressIndicator(
+                                  strokeWidth: 2.4,
                                 ),
                               ),
                             ],
                           ),
-                          SizedBox(height: 8.h),
-                          Divider(
-                            color: AppColors.textPrimary.withOpacity(0.1),
-                          ),
-                          SizedBox(height: 8.h),
-                          Text(
-                            'Create New PIN',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
-                                ),
-                          ),
-                          SizedBox(height: 8.h),
-                          PinInputRow(
-                            controllers: forgotPinControllers,
-                            focusNodes: forgotPinFocusNodes,
-                            enabled: !authState.isSubmitting,
-                          ),
-                          SizedBox(height: 14.h),
-                          Text(
-                            'Confirm PIN',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textPrimary,
-                                ),
-                          ),
-                          SizedBox(height: 8.h),
-                          PinInputRow(
-                            controllers: forgotConfirmControllers,
-                            focusNodes: forgotConfirmFocusNodes,
-                            enabled: !authState.isSubmitting,
-                          ),
-                          SizedBox(height: 18.h),
-                          CustomElevatedButton(
-                            onPressed: authState.isSubmitting
-                                ? null
-                                : handleForgotVerify,
-                            label: authState.isSubmitting
-                                ? 'Verifying...'
-                                : 'Verify & Continue',
-                            uppercaseLabel: false,
-                            showArrow: false,
-                          ),
-                          SizedBox(height: 8.h),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () {
-                                showForgotPin.value = false;
-                                for (final controller in [
-                                  ...forgotOtpControllers,
-                                  ...forgotPinControllers,
-                                  ...forgotConfirmControllers,
-                                ]) {
-                                  controller.clear();
-                                }
-                              },
-                              child: const Text('Back'),
-                            ),
-                          ),
-                        ],
-                        SizedBox(height: 26.h),
-                        if (biometricAvailable.value &&
-                            !showForgotPin.value) ...[
-                          GestureDetector(
-                            onTap: handleBiometric,
-                            child: Container(
-                              width: 64.w,
-                              height: 64.w,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.grey.shade100,
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: AppColors.cardShadow,
-                                    blurRadius: 10,
-                                    offset: Offset(0, 6),
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                Icons.fingerprint,
-                                size: 30.sp,
-                                color: AppColors.textPrimary.withOpacity(0.7),
-                              ),
-                            ),
-                          ),
-                          SizedBox(height: 8.h),
-                          Text(
-                            'Use Fingerprint Instead',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: AppColors.textPrimary.withOpacity(0.7),
-                                ),
-                          ),
-                        ],
-                        SizedBox(height: 12.h),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _AppLockPinInput extends StatelessWidget {
+  const _AppLockPinInput({
+    required this.controller,
+    this.focusNode,
+    this.enabled = true,
+    this.obscure = false,
+    required this.onCompleted,
+  });
+
+  final TextEditingController controller;
+  final FocusNode? focusNode;
+  final bool enabled;
+  final bool obscure;
+  final ValueChanged<String> onCompleted;
+
+  @override
+  Widget build(BuildContext context) {
+    final pinTheme = PinTheme(
+      width: 58.w,
+      height: 54.h,
+      textStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: AppColors.lightBorder),
+      ),
+    );
+    final cursor = Container(
+      width: 2.w,
+      height: 22.h,
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(2.r),
+      ),
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final totalWidth = constraints.maxWidth;
+        const gap = 10.0;
+        final fieldWidth = (totalWidth - (gap * 3)) / 4;
+        final stretchedTheme = pinTheme.copyWith(width: fieldWidth);
+        return Pinput(
+          controller: controller,
+          focusNode: focusNode,
+          length: 4,
+          enabled: enabled,
+          obscureText: obscure,
+          obscuringCharacter: '●',
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          defaultPinTheme: stretchedTheme,
+          focusedPinTheme: stretchedTheme.copyWith(
+            decoration: stretchedTheme.decoration?.copyWith(
+              border: Border.all(color: AppColors.primary, width: 1.5),
+            ),
+          ),
+          cursor: cursor,
+          separatorBuilder: (_) => const SizedBox(width: gap),
+          onCompleted: onCompleted,
+        );
+      },
     );
   }
 }

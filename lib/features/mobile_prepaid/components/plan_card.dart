@@ -325,7 +325,7 @@ class _PlanPayNowButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomElevatedButton(
-      height: 38.h,
+      height: 34.h,
       width: double.infinity,
       onPressed: onTap,
       label: 'Pay Now',

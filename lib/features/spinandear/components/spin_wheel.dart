@@ -32,11 +32,28 @@ class SpinWheel extends StatelessWidget {
               painter: _WheelPainter(rewards: rewards),
             ),
           ),
-          Image.asset(
-            FileConstants.spin,
+          Container(
             width: size * 0.28,
             height: size * 0.28,
-            fit: BoxFit.contain,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF057B83),
+                  Color(0xFF011B1D),
+                ],
+              ),
+            ),
+            child: Center(
+              child: Image.asset(
+                FileConstants.rLogo,
+                width: size * 0.1,
+                height: size * 0.1,
+                fit: BoxFit.contain,
+              ),
+            ),
           ),
         ],
       ),
@@ -55,16 +72,19 @@ class _WheelPainter extends CustomPainter {
     final radius = size.width / 2;
     final sweep = (2 * math.pi) / rewards.length;
     const colors = [
-      Color(0xFFF5A24C),
-      Color(0xFFEF8D3E),
-      Color(0xFFE57C2F),
-      Color(0xFFF2B156),
+      Color(0xFF0F6B6F),
+      Color(0xFFFFFFFF),
     ];
+    final dividerPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = radius * 0.02
+      ..color = const Color(0xFFE6F0F0);
 
     for (var i = 0; i < rewards.length; i++) {
+      final sliceColor = colors[i % colors.length];
       final paint = Paint()
         ..style = PaintingStyle.fill
-        ..color = colors[i % colors.length];
+        ..color = sliceColor;
       final start = -math.pi / 2 + (i * sweep);
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius),
@@ -73,15 +93,23 @@ class _WheelPainter extends CustomPainter {
         true,
         paint,
       );
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        start,
+        sweep,
+        true,
+        dividerPaint,
+      );
 
       final label = rewards[i].label;
+      final isLightSlice = sliceColor == Colors.white;
       final textPainter = TextPainter(
         text: TextSpan(
           text: label,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: isLightSlice ? const Color(0xFF0F6B6F) : Colors.white,
             fontSize: 12,
-            fontWeight: FontWeight.w600,
+            fontWeight: isLightSlice ? FontWeight.w700 : FontWeight.w600,
           ),
         ),
         textDirection: TextDirection.ltr,

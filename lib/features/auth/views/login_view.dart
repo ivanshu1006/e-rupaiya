@@ -1,22 +1,28 @@
 // ignore_for_file: deprecated_member_use
 
 import 'dart:async';
+import 'dart:ui';
 
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:pinput/pinput.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
+import '../../../constants/storage_keys.dart';
 import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/custom_elevated_button.dart';
 import '../../../widgets/grey_text_form_field.dart';
 import '../components/auth_brand_header.dart';
 import '../components/otp_verification_card.dart';
 import '../components/phone_number_input_card.dart';
-import '../components/pin_input_row.dart';
 import '../controllers/auth_controller.dart';
 import '../models/auth_flow.dart';
 
@@ -35,25 +41,14 @@ class LoginView extends HookConsumerWidget {
     final step = useState(_LoginStep.mobile);
     final phoneController = useTextEditingController();
     final allowConsent = useState(false);
+    final referralCode = useState<String?>(null);
+    final storage = useMemoized(() => const FlutterSecureStorage());
 
-    final pinControllers = useMemoized(
-      () => List.generate(4, (_) => TextEditingController()),
-      const [],
-    );
-    final pinFocusNodes =
-        useMemoized(() => List.generate(4, (_) => FocusNode()), const []);
-    final forgotOtpControllers =
-        useMemoized(() => List.generate(4, (_) => TextEditingController()));
-    final forgotOtpFocusNodes =
-        useMemoized(() => List.generate(4, (_) => FocusNode()));
-    final forgotPinControllers =
-        useMemoized(() => List.generate(4, (_) => TextEditingController()));
-    final forgotPinFocusNodes =
-        useMemoized(() => List.generate(4, (_) => FocusNode()));
-    final forgotConfirmControllers =
-        useMemoized(() => List.generate(4, (_) => TextEditingController()));
-    final forgotConfirmFocusNodes =
-        useMemoized(() => List.generate(4, (_) => FocusNode()));
+    final pinController = useTextEditingController();
+    final pinFocusNode = useFocusNode();
+    final forgotOtpController = useTextEditingController();
+    final forgotPinController = useTextEditingController();
+    final forgotConfirmController = useTextEditingController();
     final showForgotPin = useState(false);
 
     final otpControllers = useMemoized(
@@ -70,23 +65,51 @@ class LoginView extends HookConsumerWidget {
     final isRequestingOtp = useState(false);
 
     useEffect(() {
+      Future<void> applyReferralCode(String code) async {
+        final trimmed = code.trim();
+        if (trimmed.isEmpty) return;
+        referralCode.value = trimmed;
+        await storage.write(
+          key: StorageKeys.pendingReferralCode,
+          value: trimmed,
+        );
+      }
+
+      Future<void> handleIncomingUri(Uri? uri) async {
+        if (uri == null) return;
+        final path = uri.path.toLowerCase();
+        if (!path.contains('/referral')) return;
+        final code = uri.queryParameters['code'] ?? '';
+        if (code.isEmpty) return;
+        await applyReferralCode(code);
+      }
+
+      Future.microtask(() async {
+        final stored = await storage.read(key: StorageKeys.pendingReferralCode);
+        if (stored != null && stored.trim().isNotEmpty) {
+          referralCode.value = stored.trim();
+        }
+        try {
+          final initialUri = await AppLinks().getInitialLink();
+          await handleIncomingUri(initialUri);
+        } catch (_) {}
+      });
+
+      final sub = AppLinks().uriLinkStream.listen(
+            (uri) => handleIncomingUri(uri),
+            onError: (_) {},
+          );
       return () {
-        for (final controller in [
-          ...pinControllers,
-          ...otpControllers,
-          ...forgotOtpControllers,
-          ...forgotPinControllers,
-          ...forgotConfirmControllers,
-        ]) {
+        sub.cancel();
+        pinController.dispose();
+        pinFocusNode.dispose();
+        forgotOtpController.dispose();
+        forgotPinController.dispose();
+        forgotConfirmController.dispose();
+        for (final controller in otpControllers) {
           controller.dispose();
         }
-        for (final node in [
-          ...pinFocusNodes,
-          ...otpFocusNodes,
-          ...forgotOtpFocusNodes,
-          ...forgotPinFocusNodes,
-          ...forgotConfirmFocusNodes,
-        ]) {
+        for (final node in otpFocusNodes) {
           node.dispose();
         }
         timerRef.value?.cancel();
@@ -119,10 +142,6 @@ class LoginView extends HookConsumerWidget {
       }
     }
 
-    String joinDigits(List<TextEditingController> controllers) {
-      return controllers.map((c) => c.text).join();
-    }
-
     Future<void> requestForgotOtp() async {
       if (isRequestingOtp.value) return;
       isRequestingOtp.value = true;
@@ -143,9 +162,6 @@ class LoginView extends HookConsumerWidget {
             forgotRemainingSeconds.value -= 1;
           }
         });
-        if (forgotOtpFocusNodes.isNotEmpty) {
-          forgotOtpFocusNodes.first.requestFocus();
-        }
       } else {
         AppSnackbar.show(
           ref.read(authControllerProvider).errorMessage ??
@@ -160,9 +176,9 @@ class LoginView extends HookConsumerWidget {
     }
 
     Future<void> handleForgotVerify() async {
-      final otp = joinDigits(forgotOtpControllers);
-      final pin = joinDigits(forgotPinControllers);
-      final confirmPin = joinDigits(forgotConfirmControllers);
+      final otp = forgotOtpController.text.trim();
+      final pin = forgotPinController.text.trim();
+      final confirmPin = forgotConfirmController.text.trim();
       if (otp.length != 4) {
         AppSnackbar.show('Please enter the 4-digit OTP.');
         return;
@@ -187,13 +203,9 @@ class LoginView extends HookConsumerWidget {
       if (message != null) {
         AppSnackbar.show(message);
         showForgotPin.value = false;
-        for (final controller in [
-          ...forgotOtpControllers,
-          ...forgotPinControllers,
-          ...forgotConfirmControllers,
-        ]) {
-          controller.clear();
-        }
+        forgotOtpController.clear();
+        forgotPinController.clear();
+        forgotConfirmController.clear();
       } else {
         AppSnackbar.show(
           ref.read(authControllerProvider).errorMessage ??
@@ -226,13 +238,11 @@ class LoginView extends HookConsumerWidget {
       step.value = _LoginStep.mobile;
       otpErrorText.value = null;
       showForgotPin.value = false;
-      for (final controller in [
-        ...pinControllers,
-        ...otpControllers,
-        ...forgotOtpControllers,
-        ...forgotPinControllers,
-        ...forgotConfirmControllers,
-      ]) {
+      pinController.clear();
+      forgotOtpController.clear();
+      forgotPinController.clear();
+      forgotConfirmController.clear();
+      for (final controller in otpControllers) {
         controller.clear();
       }
     }
@@ -257,7 +267,13 @@ class LoginView extends HookConsumerWidget {
         );
         return;
       }
-      step.value = flow == AuthFlow.login ? _LoginStep.pin : _LoginStep.otp;
+      if (flow == AuthFlow.login) {
+        step.value = _LoginStep.pin;
+      } else {
+        resetToMobile();
+        if (!context.mounted) return;
+        context.push(RouteConstants.otp, extra: phone);
+      }
     }
 
     Future<void> handlePinLogin() async {
@@ -266,7 +282,7 @@ class LoginView extends HookConsumerWidget {
         AppSnackbar.show('Enter a valid 10-digit mobile number');
         return;
       }
-      final pin = pinControllers.map((c) => c.text).join();
+      final pin = pinController.text.trim();
       if (pin.length != 4) {
         AppSnackbar.show('Please enter a 4-digit PIN');
         return;
@@ -283,6 +299,8 @@ class LoginView extends HookConsumerWidget {
         AppSnackbar.show(
           latestState.errorMessage ?? 'Login failed. Please try again.',
         );
+        pinController.clear();
+        pinFocusNode.requestFocus();
       }
     }
 
@@ -349,29 +367,47 @@ class LoginView extends HookConsumerWidget {
     }
 
     Widget buildPinCard() {
+      final pinTheme = PinTheme(
+        width: 58.w,
+        height: 54.h,
+        textStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: AppColors.lightBorder),
+        ),
+      );
+      final pinCursor = Container(
+        width: 2.w,
+        height: 22.h,
+        decoration: BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: BorderRadius.circular(2.r),
+        ),
+      );
       return buildCard(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          // mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (!showForgotPin.value) ...[
-              Center(
-                child: Text(
-                  'Welcome Back',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                ),
+              Text(
+                'Welcome Back',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 20.sp,
+                      color: AppColors.textPrimary,
+                    ),
               ),
               SizedBox(height: 4.h),
-              Center(
-                child: Text(
-                  'Log in to continue earning rewards.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textPrimary.withOpacity(0.6),
-                      ),
-                ),
+              Text(
+                'Log in to continue earning rewards.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textPrimary.withOpacity(0.6),
+                    ),
               ),
               SizedBox(height: 14.h),
             ],
@@ -416,10 +452,35 @@ class LoginView extends HookConsumerWidget {
             ),
             SizedBox(height: 6.h),
             if (!showForgotPin.value) ...[
-              PinInputRow(
-                controllers: pinControllers,
-                focusNodes: pinFocusNodes,
-                enabled: !authState.isSubmitting,
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final totalWidth = constraints.maxWidth;
+                  const gap = 10.0;
+                  final fieldWidth = (totalWidth - (gap * 3)) / 4;
+                  final stretchedTheme = pinTheme.copyWith(
+                    width: fieldWidth,
+                  );
+                  return Pinput(
+                    controller: pinController,
+                    focusNode: pinFocusNode,
+                    length: 4,
+                    enabled: !authState.isSubmitting,
+                    obscureText: true,
+                    obscuringCharacter: '●',
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    defaultPinTheme: stretchedTheme,
+                    focusedPinTheme: stretchedTheme.copyWith(
+                      decoration: stretchedTheme.decoration?.copyWith(
+                        border:
+                            Border.all(color: AppColors.primary, width: 1.5),
+                      ),
+                    ),
+                    cursor: pinCursor,
+                    separatorBuilder: (_) => const SizedBox(width: gap),
+                    onCompleted: (_) => handlePinLogin(),
+                  );
+                },
               ),
               SizedBox(height: 8.h),
               Align(
@@ -428,13 +489,14 @@ class LoginView extends HookConsumerWidget {
                   onPressed: authState.isSubmitting
                       ? null
                       : () => showForgotPin.value = true,
-                  child: const Text('Forgot PIN ?'),
+                  child: Text(
+                    'Forgot PIN ?',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                  ),
                 ),
-              ),
-              SizedBox(height: 12.h),
-              CustomElevatedButton(
-                onPressed: authState.isSubmitting ? null : handlePinLogin,
-                label: authState.isSubmitting ? 'Logging in...' : 'Continue',
               ),
             ] else ...[
               Text(
@@ -452,10 +514,31 @@ class LoginView extends HookConsumerWidget {
                     ),
               ),
               SizedBox(height: 12.h),
-              PinInputRow(
-                controllers: forgotOtpControllers,
-                focusNodes: forgotOtpFocusNodes,
-                enabled: !authState.isSubmitting,
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final totalWidth = constraints.maxWidth;
+                  const gap = 10.0;
+                  final fieldWidth = (totalWidth - (gap * 3)) / 4;
+                  final stretchedTheme = pinTheme.copyWith(
+                    width: fieldWidth,
+                  );
+                  return Pinput(
+                    controller: forgotOtpController,
+                    length: 4,
+                    enabled: !authState.isSubmitting,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    defaultPinTheme: stretchedTheme,
+                    focusedPinTheme: stretchedTheme.copyWith(
+                      decoration: stretchedTheme.decoration?.copyWith(
+                        border:
+                            Border.all(color: AppColors.primary, width: 1.5),
+                      ),
+                    ),
+                    cursor: pinCursor,
+                    separatorBuilder: (_) => const SizedBox(width: gap),
+                  );
+                },
               ),
               SizedBox(height: 10.h),
               Row(
@@ -499,10 +582,33 @@ class LoginView extends HookConsumerWidget {
                     ),
               ),
               SizedBox(height: 8.h),
-              PinInputRow(
-                controllers: forgotPinControllers,
-                focusNodes: forgotPinFocusNodes,
-                enabled: !authState.isSubmitting,
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final totalWidth = constraints.maxWidth;
+                  const gap = 10.0;
+                  final fieldWidth = (totalWidth - (gap * 3)) / 4;
+                  final stretchedTheme = pinTheme.copyWith(
+                    width: fieldWidth,
+                  );
+                  return Pinput(
+                    controller: forgotPinController,
+                    length: 4,
+                    enabled: !authState.isSubmitting,
+                    obscureText: true,
+                    obscuringCharacter: '●',
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    defaultPinTheme: stretchedTheme,
+                    focusedPinTheme: stretchedTheme.copyWith(
+                      decoration: stretchedTheme.decoration?.copyWith(
+                        border:
+                            Border.all(color: AppColors.primary, width: 1.5),
+                      ),
+                    ),
+                    cursor: pinCursor,
+                    separatorBuilder: (_) => const SizedBox(width: gap),
+                  );
+                },
               ),
               SizedBox(height: 14.h),
               Text(
@@ -513,10 +619,33 @@ class LoginView extends HookConsumerWidget {
                     ),
               ),
               SizedBox(height: 8.h),
-              PinInputRow(
-                controllers: forgotConfirmControllers,
-                focusNodes: forgotConfirmFocusNodes,
-                enabled: !authState.isSubmitting,
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final totalWidth = constraints.maxWidth;
+                  const gap = 10.0;
+                  final fieldWidth = (totalWidth - (gap * 3)) / 4;
+                  final stretchedTheme = pinTheme.copyWith(
+                    width: fieldWidth,
+                  );
+                  return Pinput(
+                    controller: forgotConfirmController,
+                    length: 4,
+                    enabled: !authState.isSubmitting,
+                    obscureText: true,
+                    obscuringCharacter: '●',
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    defaultPinTheme: stretchedTheme,
+                    focusedPinTheme: stretchedTheme.copyWith(
+                      decoration: stretchedTheme.decoration?.copyWith(
+                        border:
+                            Border.all(color: AppColors.primary, width: 1.5),
+                      ),
+                    ),
+                    cursor: pinCursor,
+                    separatorBuilder: (_) => const SizedBox(width: gap),
+                  );
+                },
               ),
               SizedBox(height: 18.h),
               CustomElevatedButton(
@@ -533,13 +662,9 @@ class LoginView extends HookConsumerWidget {
                 child: TextButton(
                   onPressed: () {
                     showForgotPin.value = false;
-                    for (final controller in [
-                      ...forgotOtpControllers,
-                      ...forgotPinControllers,
-                      ...forgotConfirmControllers,
-                    ]) {
-                      controller.clear();
-                    }
+                    forgotOtpController.clear();
+                    forgotPinController.clear();
+                    forgotConfirmController.clear();
                   },
                   child: const Text('Back'),
                 ),
@@ -573,10 +698,52 @@ class LoginView extends HookConsumerWidget {
       );
     }
 
+    Widget buildReferralBanner() {
+      final code = referralCode.value;
+      if (code == null || code.isEmpty) return const SizedBox.shrink();
+      return Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(14.r),
+          border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 26.r,
+              height: 26.r,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.redeem,
+                size: 14,
+                color: AppColors.primary,
+              ),
+            ),
+            SizedBox(width: 8.w),
+            Expanded(
+              child: Text(
+                'Referral code applied $code',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     Widget buildContentCard() {
+      final Widget content;
       switch (step.value) {
         case _LoginStep.mobile:
-          return PhoneNumberInputCard(
+          content = PhoneNumberInputCard(
             controller: phoneController,
             onContinue: authState.isSubmitting ? null : handleMobileContinue,
             isConsentAllowed: allowConsent.value,
@@ -585,11 +752,23 @@ class LoginView extends HookConsumerWidget {
             showHelper: false,
             enabled: !authState.isSubmitting,
           );
+          break;
         case _LoginStep.pin:
-          return buildPinCard();
+          content = buildPinCard();
+          break;
         case _LoginStep.otp:
-          return buildOtpCard();
+          content = buildOtpCard();
+          break;
       }
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          buildReferralBanner(),
+          if (referralCode.value != null && referralCode.value!.isNotEmpty)
+            SizedBox(height: 10.h),
+          content,
+        ],
+      );
     }
 
     return PopScope(
@@ -637,9 +816,71 @@ class LoginView extends HookConsumerWidget {
                 Positioned(
                   left: 12,
                   right: 12,
-                  bottom: 24,
+                  bottom: 126,
                   child: buildContentCard(),
                 ),
+                if (authState.isSubmitting && step.value == _LoginStep.pin)
+                  Positioned.fill(
+                    child: Stack(
+                      children: [
+                        BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                          child: Container(
+                            color: Colors.black.withOpacity(0.15),
+                          ),
+                        ),
+                        Center(
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 24.w,
+                              vertical: 20.h,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(18.r),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.12),
+                                  blurRadius: 18,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset(
+                                  FileConstants.logo,
+                                  height: 48.h,
+                                  width: 48.h,
+                                ),
+                                SizedBox(height: 12.h),
+                                Text(
+                                  'Logging In...',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleSmall
+                                      ?.copyWith(
+                                        color: AppColors.textPrimary
+                                            .withOpacity(0.8),
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                ),
+                                // SizedBox(height: 10.h),
+                                // SizedBox(
+                                //   height: 20.h,
+                                //   width: 20.h,
+                                //   child: const CircularProgressIndicator(
+                                //     strokeWidth: 2.4,
+                                //   ),
+                                // ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             );
           },

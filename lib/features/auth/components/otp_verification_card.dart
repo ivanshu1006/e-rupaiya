@@ -90,16 +90,15 @@ class OtpVerificationCard extends StatelessWidget {
               Text(
                 errorMessage!,
                 textAlign: TextAlign.center,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: Colors.red.shade700, fontWeight: FontWeight.w600),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.red.shade700, fontWeight: FontWeight.w600),
               ),
             ],
             SizedBox(height: 12.h),
             Row(
               children: [
-                const Icon(Icons.access_time, size: 18, color: AppColors.textPrimary),
+                const Icon(Icons.access_time,
+                    size: 18, color: AppColors.textPrimary),
                 const SizedBox(width: 6),
                 Text(
                   timerText,

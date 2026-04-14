@@ -22,40 +22,40 @@ class ReferralMilestonesView extends HookWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              const ReferAndEarnAppBar(title: 'Referral Milestones'),
-              Expanded(child: Container(color: Colors.white)),
-            ],
-          ),
-          Positioned.fill(
-            top: 230.h,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(26.r),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
+          child: const ReferralShareActions(),
+        ),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            const ReferAndEarnAppBar(title: 'Referral Milestones'),
+            Transform.translate(
+              offset: Offset(0, -26.h),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(26.r),
+                  ),
+                ),
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 18.h),
+                  child: Column(
+                    children: [
+                      _buildContent(context, snapshot),
+                      SizedBox(height: 70.h),
+                    ],
+                  ),
                 ),
               ),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 24.h),
-                      child: _buildContent(context, snapshot),
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 18.h),
-                    child: const ReferralShareActions(),
-                  ),
-                ],
-              ),
             ),
-          ),
-        ],
+            SizedBox(height: 8.h),
+          ],
+        ),
       ),
     );
   }
