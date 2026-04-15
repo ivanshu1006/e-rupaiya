@@ -2,6 +2,7 @@ class FileConstants {
   static String loginLogo = 'assets/images/svg/erupaiya_logo.svg';
   static String indiaFlag = 'assets/images/png/indiaFlag.png';
   static String logo = 'assets/images/png/logo.png';
+  static String whatsapp = 'assets/images/png/whatsapp.png';
   static String ennglish = 'assets/images/png/english.png';
   static String pan = 'assets/images/png/pan.png';
   static String aadhaar = 'assets/images/png/aadhar.png';
@@ -94,6 +95,7 @@ class FileConstants {
   static String donation = 'assets/images/png/home_icon/donation.png';
   static String education = 'assets/images/png/home_icon/education.png';
   static String rLogo = 'assets/images/png/home_icon/r_logo.png';
+  static String erupaiyaLogo = 'assets/images/png/home_icon/erupaiya_logo.png';
   static String wallet = 'assets/images/png/home_icon/wallet.png';
   static String metro = 'assets/images/png/home_icon/metro.png';
   static String preCard = 'assets/images/png/home_icon/pre_card.png';

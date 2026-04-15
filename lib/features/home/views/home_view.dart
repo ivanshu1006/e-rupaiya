@@ -60,10 +60,11 @@ class HomeView extends HookConsumerWidget {
     ];
 
     final navTextStyle = TextStyle(
-      fontSize: 10.sp,
+      fontSize: 12.sp,
       fontWeight: FontWeight.w600,
       color: Colors.black,
     );
+    final inactiveNavColor = AppColors.textPrimary.withOpacity(0.45);
     final navItems = [
       PersistentBottomNavBarItem(
         icon: _BottomIcon(
@@ -71,11 +72,16 @@ class HomeView extends HookConsumerWidget {
           size: 20.r,
           color: AppColors.primary,
         ),
+        // inactiveIcon: _BottomIcon(
+        //   asset: FileConstants.erupaiyaLogo,
+        //   size: 20.r,
+        //   color: inactiveNavColor,
+        // ),
         title: 'Pay Bills',
         iconSize: 30.r,
         textStyle: navTextStyle,
         activeColorPrimary: Colors.black,
-        inactiveColorPrimary: Colors.black,
+        inactiveColorPrimary: inactiveNavColor,
       ),
       PersistentBottomNavBarItem(
         icon: _BottomIcon(
@@ -83,16 +89,16 @@ class HomeView extends HookConsumerWidget {
           size: 20.r,
           color: AppColors.primary,
         ),
-        // inactiveIcon: _BottomIcon(
-        //   asset: FileConstants.offers,
-        //   size: 20.r,
-        //   color: AppColors.textPrimary.withOpacity(0.4),
-        // ),
+        inactiveIcon: _BottomIcon(
+          asset: FileConstants.offers,
+          size: 20.r,
+          color: inactiveNavColor,
+        ),
         title: 'Offers',
         iconSize: 30.r,
         textStyle: navTextStyle,
         activeColorPrimary: Colors.black,
-        inactiveColorPrimary: Colors.black,
+        inactiveColorPrimary: inactiveNavColor,
       ),
       PersistentBottomNavBarItem(
         icon: _GradientFabIcon(
@@ -103,13 +109,13 @@ class HomeView extends HookConsumerWidget {
         inactiveIcon: _GradientFabIcon(
           asset: FileConstants.scanUser,
           size: 20.r,
-          iconColor: Colors.white,
+          iconColor: Colors.white.withOpacity(0.75),
         ),
         title: 'Scan User',
         iconSize: 30.r,
         textStyle: navTextStyle,
-        activeColorPrimary: Colors.white,
-        inactiveColorPrimary: Colors.black,
+        activeColorPrimary: AppColors.primary,
+        inactiveColorPrimary: inactiveNavColor,
       ),
       PersistentBottomNavBarItem(
         icon: _BottomIcon(
@@ -118,12 +124,15 @@ class HomeView extends HookConsumerWidget {
           color: AppColors.primary,
         ),
         inactiveIcon: _BottomIcon(
-            asset: FileConstants.history, size: 20.r, color: AppColors.primary),
+          asset: FileConstants.history,
+          size: 20.r,
+          color: inactiveNavColor,
+        ),
         title: 'History',
         iconSize: 30.r,
         textStyle: navTextStyle,
         activeColorPrimary: Colors.black,
-        inactiveColorPrimary: Colors.black,
+        inactiveColorPrimary: inactiveNavColor,
       ),
       PersistentBottomNavBarItem(
         icon: _BottomIcon(
@@ -134,13 +143,13 @@ class HomeView extends HookConsumerWidget {
         inactiveIcon: _BottomIcon(
           asset: FileConstants.notification,
           size: 20.r,
-          color: AppColors.primary,
+          color: inactiveNavColor,
         ),
         title: 'Alerts',
         iconSize: 30.r,
         textStyle: navTextStyle,
         activeColorPrimary: Colors.black,
-        inactiveColorPrimary: Colors.black,
+        inactiveColorPrimary: inactiveNavColor,
       ),
     ];
     useEffect(() {
@@ -379,7 +388,7 @@ class _BottomIcon extends StatelessWidget {
       asset,
       height: size,
       width: size,
-      color: color ?? AppColors.primary,
+      color: color ?? const Color.fromARGB(255, 248, 245, 244),
     );
   }
 }
@@ -583,7 +592,7 @@ class _SectionHeader extends StatelessWidget {
         Text(
           title,
           style: GoogleFonts.bricolageGrotesque(
-            textStyle: Theme.of(context).textTheme.titleMedium,
+            fontSize: 14.sp,
             fontWeight: FontWeight.w700,
             color: AppColors.textPrimary,
           ),
@@ -597,7 +606,7 @@ class _SectionHeader extends StatelessWidget {
                 Text(
                   actionLabel!,
                   style: GoogleFonts.bricolageGrotesque(
-                    textStyle: Theme.of(context).textTheme.bodySmall,
+                    textStyle: Theme.of(context).textTheme.bodyMedium,
                     color: AppColors.primary,
                     fontWeight: FontWeight.w600,
                   ),
@@ -692,7 +701,7 @@ class _CurvedIconGrid extends StatelessWidget {
       builder: (context, constraints) {
         final spacing = 10.w;
         final tileWidth = (constraints.maxWidth - spacing * 3) / 4;
-        final tileHeight = tileWidth * 1.42;
+        final tileHeight = tileWidth * 1.4;
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: List.generate(4, (index) {
@@ -739,7 +748,7 @@ class _CurvedIconTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xffFAFAFA),
           borderRadius: BorderRadius.circular(8.r),
-          border: Border.all(color: const Color(0xffD4D4D4)),
+          border: Border.all(color: const Color(0xffEAEAEA)),
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(14.r),
@@ -798,7 +807,7 @@ class _CurvedIconTile extends StatelessWidget {
                         maxLines: 2,
                         textAlign: TextAlign.center,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.bodyMediumBold(context),
+                        style: AppTextStyles.bodySmallSemibold(context),
                       ),
                     ),
                     SizedBox(height: 2.h),
@@ -900,9 +909,13 @@ class _PayBillsCard extends StatelessWidget {
         LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-            final height = width / imageAspectRatio;
+            final height = width / imageAspectRatio - 20.h;
             final tileWidth = width * 0.18;
             final bookTileWidth = width * 0.2;
+            final horizontalInset = width * 0.06;
+            final topRowSpacing =
+                (width - (horizontalInset * 2) - (tileWidth * 4)) / 3;
+            final firstTileCenter = horizontalInset + (tileWidth / 2);
 
             Widget positionedTile({
               required double x,
@@ -932,32 +945,32 @@ class _PayBillsCard extends StatelessWidget {
                     ),
                   ),
                   positionedTile(
-                    x: width * 0.17,
-                    y: height * 0.16,
+                    x: firstTileCenter,
+                    y: height * 0.08,
                     service: topRow[0],
                     tileW: tileWidth,
                   ),
                   positionedTile(
-                    x: width * 0.39,
-                    y: height * 0.16,
+                    x: firstTileCenter + tileWidth + topRowSpacing,
+                    y: height * 0.08,
                     service: topRow[1],
                     tileW: tileWidth,
                   ),
                   positionedTile(
-                    x: width * 0.61,
-                    y: height * 0.16,
+                    x: firstTileCenter + ((tileWidth + topRowSpacing) * 2),
+                    y: height * 0.08,
                     service: topRow[2],
                     tileW: tileWidth,
                   ),
                   positionedTile(
-                    x: width * 0.83,
-                    y: height * 0.16,
+                    x: firstTileCenter + ((tileWidth + topRowSpacing) * 3),
+                    y: height * 0.08,
                     service: topRow[3],
                     tileW: tileWidth,
                   ),
                   positionedTile(
-                    x: width * 0.16,
-                    y: height * 0.52,
+                    x: width * 0.15,
+                    y: height * 0.56,
                     service: bookGas,
                     tileW: bookTileWidth,
                   ),
@@ -973,7 +986,7 @@ class _PayBillsCard extends StatelessWidget {
                   Positioned(
                     right: width * 0.01,
                     // left: width * 0.01,
-                    bottom: height * -0.008,
+                    bottom: height * -0.00,
                     child: _ExploreUtilitiesRow(onTap: onExploreTap),
                   ),
                 ],
@@ -1020,10 +1033,10 @@ class _ExploreUtilitiesRow extends StatelessWidget {
       borderRadius: BorderRadius.circular(10.r),
       child: Container(
         width: 220.w,
-        padding: EdgeInsets.symmetric(horizontal: 0.w, vertical: 10.h),
+        padding: EdgeInsets.symmetric(horizontal: 0.w, vertical: 6.h),
         decoration: BoxDecoration(
           color: const Color(0xFFFBE6DE),
-          borderRadius: BorderRadius.circular(14.r),
+          borderRadius: BorderRadius.circular(10.r),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1063,53 +1076,62 @@ class _ReferStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [
-            Color(0xFFFF794E),
-            Color(0xFF99482F),
-          ],
-          stops: [-0.3508, 1],
-        ),
-        borderRadius: BorderRadius.circular(8.r),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            height: 18.r,
-            width: 18.r,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              shape: BoxShape.circle,
-            ),
-            child: Image.asset(
-              FileConstants.coin_3d,
-              height: 12.r,
-              width: 12.r,
-              fit: BoxFit.contain,
-            ),
+    return InkWell(
+      onTap: () {
+        PersistentNavBarNavigator.pushNewScreen(
+          context,
+          screen: const ReferAndEarnView(),
+          withNavBar: false,
+        );
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              Color(0xFFFF794E),
+              Color(0xFF99482F),
+            ],
+            stops: [-0.3508, 1],
           ),
-          SizedBox(width: 8.w),
-          Expanded(
-            child: Text(
-              'Refer Your First Friend And Grab 1000 E-Coins',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.bricolageGrotesque(
-                textStyle: Theme.of(context).textTheme.bodySmall,
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 10.sp,
+          borderRadius: BorderRadius.circular(8.r),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              height: 18.r,
+              width: 18.r,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Image.asset(
+                FileConstants.coin_3d,
+                height: 12.r,
+                width: 12.r,
+                fit: BoxFit.contain,
               ),
             ),
-          ),
-          SizedBox(width: 8.w),
-          Icon(Icons.celebration, size: 14.r, color: Colors.white),
-        ],
+            SizedBox(width: 8.w),
+            Expanded(
+              child: Text(
+                'Refer Your First Friend And Grab 1000 E-Coins',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.bricolageGrotesque(
+                  textStyle: Theme.of(context).textTheme.bodySmall,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 10.sp,
+                ),
+              ),
+            ),
+            SizedBox(width: 8.w),
+            Icon(Icons.celebration, size: 14.r, color: Colors.white),
+          ],
+        ),
       ),
     );
   }
@@ -1159,7 +1181,7 @@ class _InvestmentTile extends StatelessWidget {
               label,
               style: GoogleFonts.bricolageGrotesque(
                 textStyle: Theme.of(context).textTheme.bodySmall,
-                fontSize: 12.sp,
+                fontSize: 10.sp,
                 fontWeight: FontWeight.w600,
                 color: textColor,
               ),
@@ -1200,6 +1222,191 @@ class _ImageBanner extends StatelessWidget {
   }
 }
 
+class InsuranceBannerCarousel extends HookWidget {
+  const InsuranceBannerCarousel({super.key, required this.onApply});
+
+  final VoidCallback onApply;
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = usePageController();
+    final currentIndex = useState(0);
+
+    final banners = [
+      FileConstants.homeBanner10,
+      FileConstants.homeBanner10,
+      FileConstants.homeBanner10,
+    ];
+
+    return Stack(
+      children: [
+        SizedBox(
+          height: 128.h,
+          child: PageView.builder(
+            controller: controller,
+            itemCount: banners.length,
+            onPageChanged: (index) => currentIndex.value = index,
+            itemBuilder: (context, index) {
+              return _InsuranceBanner(onApply: onApply);
+            },
+          ),
+        ),
+
+        ///DOTS OVERLAY
+        Positioned(
+          left: 18.w, // match your padding
+          bottom: 5.h, // just below button visually
+          child: Row(
+            children: List.generate(
+              banners.length,
+              (index) => AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                margin: EdgeInsets.only(right: 4.w),
+                height: 6.h,
+                width: currentIndex.value == index ? 14.w : 6.w,
+                decoration: BoxDecoration(
+                  color: currentIndex.value == index
+                      ? Colors.white
+                      : Colors.white.withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _InsuranceBannerItem extends StatelessWidget {
+  const _InsuranceBannerItem({
+    required this.image,
+    required this.onApply,
+    required this.currentIndex,
+    required this.total,
+  });
+
+  final String image;
+  final VoidCallback onApply;
+  final int currentIndex;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF0F8A4B),
+            Color(0xFF0C6B3B),
+          ],
+        ),
+      ),
+      child: Row(
+        children: [
+          /// LEFT CONTENT
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Secure Your Future',
+                  style: GoogleFonts.bricolageGrotesque(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  'Health, Motor & Life Insurance In\nMinutes',
+                  style: GoogleFonts.bricolageGrotesque(
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+                SizedBox(height: 10.h),
+
+                /// APPLY BUTTON
+                InkWell(
+                  onTap: onApply,
+                  borderRadius: BorderRadius.circular(18.r),
+                  child: Container(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18.r),
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color(0xFFDD5428),
+                          Color(0xFF772D16),
+                        ],
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Apply Now',
+                          style: GoogleFonts.bricolageGrotesque(
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(width: 6.w),
+                        Icon(Icons.north_east, size: 12.r, color: Colors.white),
+                      ],
+                    ),
+                  ),
+                ),
+
+                SizedBox(height: 8.h),
+
+                Row(
+                  children: List.generate(
+                    total,
+                    (index) => AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      margin: EdgeInsets.only(right: 4.w),
+                      height: 6.h,
+                      width: currentIndex == index ? 14.w : 6.w,
+                      decoration: BoxDecoration(
+                        color: currentIndex == index
+                            ? Colors.white
+                            : Colors.white.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(10.r),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(width: 8.w),
+
+          /// RIGHT IMAGE
+          SizedBox(
+            height: 96.h,
+            width: 120.w,
+            child: Image.asset(
+              image,
+              fit: BoxFit.contain,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _InsuranceBanner extends StatelessWidget {
   const _InsuranceBanner({required this.onApply});
 
@@ -1208,7 +1415,7 @@ class _InsuranceBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 110.h,
+      height: 130.h,
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -1282,6 +1489,9 @@ class _InsuranceBanner extends StatelessWidget {
                           size: 12.r,
                           color: Colors.white,
                         ),
+                        SizedBox(
+                          height: 10.h,
+                        )
                       ],
                     ),
                   ),
@@ -1523,9 +1733,8 @@ class _HomeContent extends HookConsumerWidget {
       return null;
     }, const []);
 
-    final banners = useMemoized(
-      () => [FileConstants.homeBanner8, FileConstants.homeBanner8],
-    );
+    // Pull banners dynamically from your updated state
+    final banners = homeState.banners ?? [];
     final bannerPage = useState(0);
     final bannerController = useMemoized(() => PageController(), const []);
     useEffect(() {
@@ -1534,13 +1743,19 @@ class _HomeContent extends HookConsumerWidget {
         if (!bannerController.hasClients) return;
         final next = (bannerPage.value + 1) % banners.length;
         bannerController.animateToPage(
-          next,
+          next.toInt(),
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeInOut,
         );
       });
       return timer.cancel;
-    }, const []);
+    }, [
+      banners.length
+    ]); // depend on length so timer updates once API returns data
+
+    final showBannerPlaceholder = homeState.isFetching && banners.isEmpty;
+    final bannerAreaHeight =
+        (banners.isNotEmpty || showBannerPlaceholder) ? 100.h : 0.h;
 
     final educationBanners = useMemoized(
       () => [FileConstants.homeBanner12, FileConstants.homeBanner10],
@@ -1652,10 +1867,10 @@ class _HomeContent extends HookConsumerWidget {
                       elevation: 0,
                       toolbarHeight: 54.h,
                       expandedHeight: MediaQuery.of(context).padding.top +
-                          54.h +
+                          40.h +
                           14.h +
-                          100.h +
-                          (banners.length > 1 ? 8.h : 0.h),
+                          bannerAreaHeight +
+                          (banners.length > 1 ? 16.h : 0.h),
                       flexibleSpace: FlexibleSpaceBar(
                         collapseMode: CollapseMode.none,
                         background: Container(
@@ -1682,48 +1897,59 @@ class _HomeContent extends HookConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 SizedBox(height: 6.h),
-                                SizedBox(
-                                  height: 100.h,
-                                  // padding: EdgeInsets.all(8.w),
-                                  // decoration: BoxDecoration(
-                                  //   color: Colors.white.withOpacity(0.16),
-                                  //   borderRadius: BorderRadius.circular(18.r),
-                                  //   border: Border.all(
-                                  //     color: Colors.white.withOpacity(0.6),
-                                  //   ),
-                                  // ),
-                                  child: PageView.builder(
-                                    controller: bannerController,
-                                    onPageChanged: (page) =>
-                                        bannerPage.value = page,
-                                    itemCount: banners.length,
-                                    itemBuilder: (_, index) => Padding(
-                                      padding:
-                                          EdgeInsets.symmetric(horizontal: 4.w),
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          if (index == 0) {
-                                            context.push(
-                                              RouteConstants.referAndEarn,
-                                            );
-                                          }
-                                        },
-                                        child: ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(14.r),
-                                          child: Image.asset(
-                                            banners[index],
-                                            width: double.infinity,
-                                            fit: BoxFit.fill,
-                                            alignment: Alignment.centerLeft,
-                                            cacheWidth: bannerCacheWidth,
-                                            filterQuality: FilterQuality.low,
+                                if (showBannerPlaceholder)
+                                  Padding(
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 4.w),
+                                    child: AppNetworkImage(
+                                      url: '',
+                                      width: double.infinity,
+                                      height: 100.h,
+                                      borderRadius: BorderRadius.circular(14.r),
+                                    ),
+                                  )
+                                else if (banners.isNotEmpty)
+                                  SizedBox(
+                                    height: 100.h,
+                                    child: PageView.builder(
+                                      controller: bannerController,
+                                      onPageChanged: (page) =>
+                                          bannerPage.value = page,
+                                      itemCount: banners.length,
+                                      itemBuilder: (_, index) {
+                                        final banner = banners[index];
+                                        return Padding(
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 4.w),
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              if (index == 0) {
+                                                context.push(
+                                                  RouteConstants.referAndEarn,
+                                                );
+                                              }
+                                            },
+                                            child: ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(14.r),
+                                              child: AppNetworkImage(
+                                                url: banner
+                                                    .image, // Access API url
+                                                width: double.infinity,
+                                                height: 100.h,
+                                                fit: BoxFit.fill,
+                                                placeholder: AppNetworkImage(
+                                                  url: '',
+                                                  width: double.infinity,
+                                                  height: 100.h,
+                                                ),
+                                              ),
+                                            ),
                                           ),
-                                        ),
-                                      ),
+                                        );
+                                      },
                                     ),
                                   ),
-                                ),
                                 SizedBox(height: 4.h),
                                 if (banners.length > 1)
                                   Row(
@@ -1828,17 +2054,13 @@ class _HomeContent extends HookConsumerWidget {
                                             const [],
                                         onTap: handleServiceTap,
                                         onExploreTap: () {
-                                          Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  const HomeSearchView(),
-                                            ),
-                                          );
+                                          context.push(
+                                              RouteConstants.homeSearchView);
                                         },
                                       ),
                                       SizedBox(height: 12.h),
                                       const _SectionHeader(
-                                          title: 'Investments'),
+                                          title: 'Banking & Investments'),
                                       SizedBox(height: 10.h),
                                       Row(
                                         children: [
@@ -2055,7 +2277,7 @@ class _HomeContent extends HookConsumerWidget {
                                       ),
                                       SizedBox(height: 12.h),
                                       _SupportTile(
-                                        title: 'Faq & Support',
+                                        title: 'FAQ & Support',
                                         onTap: () => context.push(
                                           RouteConstants.faq,
                                         ),
@@ -2066,7 +2288,7 @@ class _HomeContent extends HookConsumerWidget {
                                 ),
                                 SizedBox(
                                   width: double.infinity,
-                                  child: _InsuranceBanner(
+                                  child: InsuranceBannerCarousel(
                                     onApply: () =>
                                         handleServiceTap('Insurance'),
                                   ),

@@ -1,6 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:e_rupaiya/core/barrel_file.dart';
 
 import '../services/referral_share_service.dart';
 
@@ -23,18 +21,11 @@ class ReferralShareActions extends HookWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
+                  SizedBox(
                     width: 20.w,
                     height: 20.w,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.chat_bubble,
-                      size: 14,
-                      color: Color(0xFF25D366),
-                    ),
+                    child: Image.asset(FileConstants.whatsapp,
+                        fit: BoxFit.contain),
                   ),
                   SizedBox(width: 8.w),
                   Text(

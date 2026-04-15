@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../constants/app_colors.dart';
@@ -540,9 +541,11 @@ class _PrimaryButton extends HookWidget {
             ? SizedBox(
                 width: 22.w,
                 height: 22.w,
-                child: const CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                child: const Center(
+                  child: SpinKitCircle(
+                    color: AppColors.primary,
+                    size: 48,
+                  ),
                 ),
               )
             : Text(

@@ -365,12 +365,12 @@ class SpinAndWinView extends HookConsumerWidget {
                                                 size: wheelSize,
                                               ),
                                   ),
-                                  Positioned.fill(
-                                    child: Image.asset(
-                                      FileConstants.spinBlast,
-                                      fit: BoxFit.fill,
-                                    ),
-                                  ),
+                                  // Positioned.fill(
+                                  //   child: Image.asset(
+                                  //     FileConstants.spinBlast,
+                                  //     fit: BoxFit.fill,
+                                  //   ),
+                                  // ),
                                 ],
                               ),
                             ),

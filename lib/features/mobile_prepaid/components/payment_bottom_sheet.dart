@@ -104,7 +104,7 @@ Color _paymentStatusColor(_PaymentOutcome outcome) {
     case _PaymentOutcome.failure:
       return Colors.red;
     case _PaymentOutcome.insufficient:
-      return Colors.red;
+      return const Color.fromARGB(255, 255, 255, 255);
   }
 }
 
@@ -116,7 +116,8 @@ List<Color> _paymentHeaderGradient(_PaymentOutcome outcome) {
       return const [Color(0xFFF59E0B), Color(0xFFD97706)];
     case _PaymentOutcome.failure:
     case _PaymentOutcome.insufficient:
-      return const [Color(0xFFB91C1C), Color(0xFFDC2626)];
+      return const [Colors.white];
+    // return const [Color(0xFFB91C1C), Color(0xFFDC2626)];
   }
 }
 

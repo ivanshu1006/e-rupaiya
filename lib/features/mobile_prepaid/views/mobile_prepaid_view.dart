@@ -2,6 +2,7 @@
 
 import 'dart:async';
 
+import 'package:e_rupaiya/features/mobile_prepaid/components/recharge_quick_action_card.dart';
 import 'package:e_rupaiya/features/mobile_prepaid/models/mobile_prepaid_state.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +20,6 @@ import '../../../widgets/k_dialog.dart';
 import '../../../widgets/my_app_bar.dart';
 import '../../../widgets/screen_wrapper.dart';
 import '../../../widgets/search_textfield.dart';
-import '../../home/components/quick_action_header_card.dart';
 import '../components/mobile_prepaid_shimmer.dart';
 import '../components/payment_bottom_sheet.dart';
 import '../components/plan_card.dart';
@@ -279,7 +279,15 @@ class MobilePrepaidView extends HookConsumerWidget {
                   right: 16,
                   bottom: -38.h,
                   height: 72.h,
-                  child: QuickActionHeaderCard(
+                  // child: QuickActionHeaderCard(
+                  //   title: '+91 ${state.mobile}',
+                  //   subtitle:
+                  //       '${state.operatorInfo?.operatorName ?? 'Operator'} • ${state.operatorInfo?.circle ?? 'Circle'}',
+                  //   leadingImageUrl: state.operatorInfo?.iconUrl,
+                  //   actionLabel: 'Change',
+                  //   onAction: handleChange,
+                  // ),
+                  child: SimpleQuickActionCard(
                     title: '+91 ${state.mobile}',
                     subtitle:
                         '${state.operatorInfo?.operatorName ?? 'Operator'} • ${state.operatorInfo?.circle ?? 'Circle'}',
@@ -548,7 +556,7 @@ class _PlanSection extends StatelessWidget {
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w800,
                 color: AppColors.textPrimary,
-                fontSize: 18,
+                fontSize: 14.sp,
               ),
         ),
         const SizedBox(height: 14),
@@ -1453,8 +1461,8 @@ class _SuggestedPlanCard extends StatelessWidget {
               child: IgnorePointer(
                 child: Image.asset(
                   FileConstants.suggestedCardImage,
-                  width: 75,
-                  height: 80,
+                  width: 60,
+                  height: 60,
                   fit: BoxFit.fill,
                 ),
               ),
@@ -1521,7 +1529,7 @@ class _CategoryTabs extends StatelessWidget {
   Widget build(BuildContext context) {
     if (categories.isEmpty) return const SizedBox.shrink();
     return SizedBox(
-      height: 30,
+      height: 35,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: categories.length,

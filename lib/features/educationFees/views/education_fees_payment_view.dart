@@ -4,6 +4,7 @@ import 'package:e_rupaiya/widgets/custom_elevated_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -12,8 +13,8 @@ import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
 import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/k_dialog.dart';
-import '../../profile/models/transaction_history_entry.dart';
 import '../../paymentgateway/razorpay_service.dart';
+import '../../profile/models/transaction_history_entry.dart';
 import '../components/education_payment_sheets.dart';
 import '../controllers/education_fees_controller.dart';
 import '../models/education_fees_responses.dart';
@@ -276,7 +277,12 @@ class _CardListSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (cardsFuture.connectionState == ConnectionState.waiting) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: SpinKitCircle(
+          color: AppColors.primary,
+          size: 48,
+        ),
+      );
     }
     if (cardsFuture.hasError) {
       return Text(

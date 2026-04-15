@@ -70,275 +70,274 @@ class GoldPaymentSummarySheet extends HookConsumerWidget {
     final payable =
         (preview.totalAmount - walletUsed).clamp(0, double.infinity).toDouble();
 
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 16.h),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 34.w,
-                  height: 34.w,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.lightBorder),
-                    color: Colors.white,
-                  ),
-                  padding: EdgeInsets.all(6.w),
-                  child: Image.asset(FileConstants.mmtcPamp),
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 16.h + bottomInset),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34.w,
+                height: 34.w,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.lightBorder),
+                  color: Colors.white,
                 ),
-                SizedBox(width: 10.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Buying From MMTC-PAMP',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
+                padding: EdgeInsets.all(6.w),
+                child: Image.asset(FileConstants.mmtcPamp),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Buying From MMTC-PAMP',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      theme.providerSubtitle,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textPrimary.withOpacity(0.6),
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Text(
+            'Purchase Details',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+          ),
+          SizedBox(height: 8.h),
+          _SummaryRow(
+            label: 'Pre Tax Amount',
+            value: '₹${preview.preTaxAmount.toStringAsFixed(2)}',
+          ),
+          SizedBox(height: 6.h),
+          _SummaryRow(
+            label: 'GST 3%',
+            value: '₹${preview.gstAmount.toStringAsFixed(2)}',
+          ),
+          SizedBox(height: 10.h),
+          Row(
+            children: [
+              Container(
+                height: 22.r,
+                width: 22.r,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFEDD8),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.lightBorder),
+                ),
+                child: Image.asset(FileConstants.goldcoin),
+              ),
+              SizedBox(width: 8.w),
+              Expanded(
+                child: Text(
+                  'Balance ${walletBalance.toStringAsFixed(0)} Coins',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textPrimary.withOpacity(0.6),
                       ),
-                      SizedBox(height: 2.h),
-                      Text(
-                        theme.providerSubtitle,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textPrimary.withOpacity(0.6),
-                            ),
-                      ),
-                    ],
+                ),
+              ),
+              SizedBox(
+                width: 80.w,
+                child: TextField(
+                  controller: walletController,
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  decoration: InputDecoration(
+                    hintText: '0',
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 8.w,
+                      vertical: 6.h,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                      borderSide:
+                          const BorderSide(color: AppColors.lightBorder),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                      borderSide:
+                          const BorderSide(color: AppColors.lightBorder),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                      borderSide: const BorderSide(color: AppColors.primary),
+                    ),
                   ),
+                  onChanged: onWalletUsedChanged,
                 ),
-                IconButton(
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
-            SizedBox(height: 12.h),
+              ),
+            ],
+          ),
+          SizedBox(height: 6.h),
+          _SummaryRow(
+            label: 'You Used ${walletUsed.toStringAsFixed(0)} E-Coins',
+            value: '-₹${walletUsed.toStringAsFixed(2)}',
+            valueColor: Colors.red,
+          ),
+          Divider(height: 22.h, color: AppColors.lightBorder),
+          _SummaryRow(
+            label: 'Total',
+            value: '₹${payable.toStringAsFixed(2)}',
+            isBold: true,
+          ),
+          SizedBox(height: 12.h),
+          if (isOtpMode.value) ...[
             Text(
-              'Purchase Details',
+              'Enter OTP',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
                   ),
             ),
             SizedBox(height: 8.h),
-            _SummaryRow(
-              label: 'Pre Tax Amount',
-              value: '₹${preview.preTaxAmount.toStringAsFixed(2)}',
-            ),
-            SizedBox(height: 6.h),
-            _SummaryRow(
-              label: 'GST 3%',
-              value: '₹${preview.gstAmount.toStringAsFixed(2)}',
-            ),
-            SizedBox(height: 10.h),
-            Row(
-              children: [
-                Container(
-                  height: 22.r,
-                  width: 22.r,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFEDD8),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.lightBorder),
-                  ),
-                  child: Image.asset(FileConstants.goldcoin),
+            TextField(
+              controller: otpController,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              decoration: InputDecoration(
+                hintText: 'Enter 6-digit OTP',
+                counterText: '',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                  borderSide: const BorderSide(color: AppColors.lightBorder),
                 ),
-                SizedBox(width: 8.w),
-                Expanded(
-                  child: Text(
-                    'Balance ${walletBalance.toStringAsFixed(0)} Coins',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textPrimary.withOpacity(0.6),
-                        ),
-                  ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                  borderSide: const BorderSide(color: AppColors.lightBorder),
                 ),
-                SizedBox(
-                  width: 80.w,
-                  child: TextField(
-                    controller: walletController,
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
-                    decoration: InputDecoration(
-                      hintText: '0',
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 8.w,
-                        vertical: 6.h,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.r),
-                        borderSide:
-                            const BorderSide(color: AppColors.lightBorder),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.r),
-                        borderSide:
-                            const BorderSide(color: AppColors.lightBorder),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.r),
-                        borderSide: const BorderSide(color: AppColors.primary),
-                      ),
-                    ),
-                    onChanged: onWalletUsedChanged,
-                  ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                  borderSide: const BorderSide(color: AppColors.primary),
                 ),
-              ],
-            ),
-            SizedBox(height: 6.h),
-            _SummaryRow(
-              label: 'You Used ${walletUsed.toStringAsFixed(0)} E-Coins',
-              value: '-₹${walletUsed.toStringAsFixed(2)}',
-              valueColor: Colors.red,
-            ),
-            Divider(height: 22.h, color: AppColors.lightBorder),
-            _SummaryRow(
-              label: 'Total',
-              value: '₹${payable.toStringAsFixed(2)}',
-              isBold: true,
+              ),
             ),
             SizedBox(height: 12.h),
-            if (isOtpMode.value) ...[
-              Text(
-                'Enter OTP',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-              ),
-              SizedBox(height: 8.h),
-              TextField(
-                controller: otpController,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                decoration: InputDecoration(
-                  hintText: 'Enter 6-digit OTP',
-                  counterText: '',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                    borderSide: const BorderSide(color: AppColors.lightBorder),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                    borderSide: const BorderSide(color: AppColors.lightBorder),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.r),
-                    borderSide: const BorderSide(color: AppColors.primary),
-                  ),
-                ),
-              ),
-              SizedBox(height: 12.h),
-            ],
-            CustomElevatedButton(
-              onPressed: isSubmitting.value
-                  ? null
-                  : () async {
-                      if (isOtpMode.value) {
-                        // Handle OTP submission and payment
-                        if (otpController.text.trim().isEmpty ||
-                            otpController.text.trim().length != 6) {
-                          AppSnackbar.show(
-                            'Please enter a valid 6-digit OTP',
-                            type: AppSnackbarType.error,
-                          );
-                          return;
-                        }
-
-                        isSubmitting.value = true;
-                        try {
-                          // Open Razorpay first
-                          await RazorpayService.instance.openCheckout(
-                            amount: payable,
-                            name: '${theme.label} Purchase',
-                            description: '${theme.label} buy',
-                            onSuccess: (_) async {
-                              // Call buy API only after Razorpay success
-                              try {
-                                final repository =
-                                    ref.read(digitalGoldRepoProvider);
-                                await repository.buyGold(
-                                  refId: otpResponse.value!.refId,
-                                  billingAddressId: preview.billingAddressId!,
-                                  customerId: preview.customerId!,
-                                  quoteId: preview.quoteId!,
-                                  stateResp: otpResponse.value!.stateResp,
-                                  otp: otpController.text.trim(),
-                                );
-                                Navigator.of(context).maybePop();
-                                onBuyNow();
-                              } catch (e) {
-                                AppSnackbar.show(
-                                  e.toString().replaceFirst('Exception: ', ''),
-                                  type: AppSnackbarType.error,
-                                );
-                              }
-                            },
-                            onFailure: (message) {
-                              AppSnackbar.show(
-                                message,
-                                backgroundColor: Colors.red,
-                                textColor: Colors.white,
-                              );
-                            },
-                          );
-                        } catch (e) {
-                          AppSnackbar.show(
-                            e.toString().replaceFirst('Exception: ', ''),
-                            type: AppSnackbarType.error,
-                          );
-                        } finally {
-                          isSubmitting.value = false;
-                        }
-                      } else {
-                        // Send OTP first
-                        if (preview.customerId == null ||
-                            preview.billingAddressId == null ||
-                            preview.quoteId == null) {
-                          AppSnackbar.show(
-                            'Missing required information. Please try again.',
-                            type: AppSnackbarType.error,
-                          );
-                          return;
-                        }
-
-                        isSubmitting.value = true;
-                        try {
-                          final repository = ref.read(digitalGoldRepoProvider);
-                          final response = await repository.sendOtp(
-                            customerId: preview.customerId!,
-                            billingAddressId: preview.billingAddressId!,
-                            quoteId: preview.quoteId!,
-                          );
-                          otpResponse.value = response;
-                          isOtpMode.value = true;
-                          AppSnackbar.show(
-                            'OTP sent successfully',
-                            type: AppSnackbarType.success,
-                          );
-                        } catch (e) {
-                          AppSnackbar.show(
-                            e.toString().replaceFirst('Exception: ', ''),
-                            type: AppSnackbarType.error,
-                          );
-                        } finally {
-                          isSubmitting.value = false;
-                        }
-                      }
-                    },
-              label: isOtpMode.value ? 'Proceed to Payment' : 'Buy Now',
-              uppercaseLabel: false,
-              height: 42.h,
-            ),
           ],
-        ),
+          CustomElevatedButton(
+            onPressed: isSubmitting.value
+                ? null
+                : () async {
+                    if (isOtpMode.value) {
+                      // Handle OTP submission and payment
+                      if (otpController.text.trim().isEmpty ||
+                          otpController.text.trim().length != 6) {
+                        AppSnackbar.show(
+                          'Please enter a valid 6-digit OTP',
+                          type: AppSnackbarType.error,
+                        );
+                        return;
+                      }
+
+                      isSubmitting.value = true;
+                      try {
+                        // Open Razorpay first
+                        await RazorpayService.instance.openCheckout(
+                          amount: payable,
+                          name: '${theme.label} Purchase',
+                          description: '${theme.label} buy',
+                          onSuccess: (_) async {
+                            // Call buy API only after Razorpay success
+                            try {
+                              final repository =
+                                  ref.read(digitalGoldRepoProvider);
+                              await repository.buyGold(
+                                refId: otpResponse.value!.refId,
+                                billingAddressId: preview.billingAddressId!,
+                                customerId: preview.customerId!,
+                                quoteId: preview.quoteId!,
+                                stateResp: otpResponse.value!.stateResp,
+                                otp: otpController.text.trim(),
+                              );
+                              Navigator.of(context).maybePop();
+                              onBuyNow();
+                            } catch (e) {
+                              AppSnackbar.show(
+                                e.toString().replaceFirst('Exception: ', ''),
+                                type: AppSnackbarType.error,
+                              );
+                            }
+                          },
+                          onFailure: (message) {
+                            AppSnackbar.show(
+                              message,
+                              backgroundColor: Colors.red,
+                              textColor: Colors.white,
+                            );
+                          },
+                        );
+                      } catch (e) {
+                        AppSnackbar.show(
+                          e.toString().replaceFirst('Exception: ', ''),
+                          type: AppSnackbarType.error,
+                        );
+                      } finally {
+                        isSubmitting.value = false;
+                      }
+                    } else {
+                      // Send OTP first
+                      if (preview.customerId == null ||
+                          preview.billingAddressId == null ||
+                          preview.quoteId == null) {
+                        AppSnackbar.show(
+                          'Missing required information. Please try again.',
+                          type: AppSnackbarType.error,
+                        );
+                        return;
+                      }
+
+                      isSubmitting.value = true;
+                      try {
+                        final repository = ref.read(digitalGoldRepoProvider);
+                        final response = await repository.sendOtp(
+                          customerId: preview.customerId!,
+                          billingAddressId: preview.billingAddressId!,
+                          quoteId: preview.quoteId!,
+                        );
+                        otpResponse.value = response;
+                        isOtpMode.value = true;
+                        AppSnackbar.show(
+                          'OTP sent successfully',
+                          type: AppSnackbarType.success,
+                        );
+                      } catch (e) {
+                        AppSnackbar.show(
+                          e.toString().replaceFirst('Exception: ', ''),
+                          type: AppSnackbarType.error,
+                        );
+                      } finally {
+                        isSubmitting.value = false;
+                      }
+                    }
+                  },
+            label: isOtpMode.value ? 'Proceed to Payment' : 'Buy Now',
+            uppercaseLabel: false,
+            height: 42.h,
+          ),
+        ],
       ),
     );
   }

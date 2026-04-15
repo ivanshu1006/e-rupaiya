@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -257,7 +258,12 @@ class BillerDetailView extends HookConsumerWidget {
                           if (detailState.isFetchingDetail)
                             const Padding(
                               padding: EdgeInsets.symmetric(vertical: 32),
-                              child: Center(child: CircularProgressIndicator()),
+                              child: Center(
+                                child: SpinKitCircle(
+                                  color: AppColors.primary,
+                                  size: 48,
+                                ),
+                              ),
                             )
 
                           // --- Input form (no bill yet) ---
@@ -506,7 +512,12 @@ class BillerDetailView extends HookConsumerWidget {
                           if (detailState.isFetchingBill)
                             const Padding(
                               padding: EdgeInsets.symmetric(vertical: 32),
-                              child: Center(child: CircularProgressIndicator()),
+                              child: Center(
+                                child: SpinKitCircle(
+                                  color: AppColors.primary,
+                                  size: 48,
+                                ),
+                              ),
                             ),
                         ],
                       ),
@@ -528,7 +539,7 @@ class BillerDetailView extends HookConsumerWidget {
                               final payLabel = bill != null
                                   // ? 'Pay \u20B9${_resolvedPayAmount(billAmountController, bill).toStringAsFixed(0)}'
                                   ? 'Proceed to Pay'
-                                  : 'Confirm';
+                                  : 'CONFIRM';
                               final enteredAmount =
                                   _parseEnteredAmount(value.text);
                               final shouldDisablePay =
@@ -572,8 +583,8 @@ class BillerDetailView extends HookConsumerWidget {
                                               visibleParams.isNotEmpty &&
                                               values.isEmpty) {
                                             AppSnackbar.show(
-                                              'Please enter either Registered Contact Number or LPG ID.',
-                                            );
+                                                'Please enter either Registered Contact Number or LPG ID.',
+                                                type: AppSnackbarType.error);
                                             return;
                                           }
 
@@ -605,31 +616,31 @@ class BillerDetailView extends HookConsumerWidget {
                               );
                             },
                           ),
-                          if (bill == null) ...[
-                            const SizedBox(height: 10),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Powered by',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: AppColors.textPrimary
-                                            .withOpacity(0.6),
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                ),
-                                const SizedBox(width: 8),
-                                Image.asset(
-                                  FileConstants.bharatConnectColor,
-                                  height: 20,
-                                  fit: BoxFit.contain,
-                                ),
-                              ],
-                            ),
-                          ],
+                          // if (bill == null) ...[
+                          //   const SizedBox(height: 10),
+                          //   Row(
+                          //     mainAxisAlignment: MainAxisAlignment.center,
+                          //     children: [
+                          //       Text(
+                          //         'Powered by',
+                          //         style: Theme.of(context)
+                          //             .textTheme
+                          //             .bodySmall
+                          //             ?.copyWith(
+                          //               color: AppColors.textPrimary
+                          //                   .withOpacity(0.6),
+                          //               fontWeight: FontWeight.w600,
+                          //             ),
+                          //       ),
+                          //       const SizedBox(width: 8),
+                          //       Image.asset(
+                          //         FileConstants.bharatConnectColor,
+                          //         height: 20,
+                          //         fit: BoxFit.contain,
+                          //       ),
+                          //     ],
+                          //   ),
+                          // ],
                         ],
                       ),
                     ),

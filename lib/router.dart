@@ -1,3 +1,4 @@
+import 'package:e_rupaiya/features/home/views/home_search_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -36,11 +37,11 @@ import 'features/profile/views/faq_screen.dart';
 import 'features/profile/views/grievance_screen.dart';
 import 'features/profile/views/help_center_chat_screen.dart';
 import 'features/profile/views/help_support_screen.dart';
-import 'features/profile/views/policies_screen.dart';
-import 'features/profile/views/refund_policy_screen.dart';
 import 'features/profile/views/my_qr_screen.dart';
 import 'features/profile/views/offers_view.dart';
+import 'features/profile/views/policies_screen.dart';
 import 'features/profile/views/privacy_policy_screen.dart';
+import 'features/profile/views/refund_policy_screen.dart';
 import 'features/profile/views/settings_view.dart';
 import 'features/profile/views/terms_privacy_screen.dart';
 import 'features/profile/views/transaction_detail_screen.dart';
@@ -108,6 +109,10 @@ final routerProvider = Provider<GoRouter>(
         GoRoute(
           path: RouteConstants.home,
           builder: (context, state) => const HomeView(),
+        ),
+        GoRoute(
+          path: RouteConstants.homeSearchView,
+          builder: (context, state) => const HomeSearchView(),
         ),
         GoRoute(
           path: RouteConstants.login,

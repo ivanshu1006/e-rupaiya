@@ -1,3 +1,5 @@
+import 'package:e_rupaiya/features/refer_and_earn/services/referral_share_service.dart';
+import 'package:e_rupaiya/widgets/app_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -112,8 +114,7 @@ class ReferAndEarnView extends HookConsumerWidget {
                               onTap: () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (_) =>
-                                        const ReferralWorksView(),
+                                    builder: (_) => const ReferralWorksView(),
                                   ),
                                 );
                               },
@@ -213,12 +214,31 @@ class _ContactsStrip extends HookWidget {
         separatorBuilder: (_, __) => SizedBox(width: 14.w),
         itemBuilder: (context, index) {
           final item = items[index];
+
           if (item is Contact) {
-            return _ContactAvatar(
-              item: _ContactItem(name: item.displayName),
+            return GestureDetector(
+              onTap: () {
+                if (item.phones.isEmpty) {
+                  AppSnackbar.show('No phone number found');
+                  return;
+                }
+
+                final phone = item.phones.first.number;
+
+                ReferralShareService.shareSMS(
+                  context,
+                  phone: phone,
+                );
+              },
+              child: _ContactAvatar(
+                item: _ContactItem(name: item.displayName),
+              ),
             );
           }
+
+          // Placeholder case (no click)
           final placeholder = item as _PlaceholderContact;
+
           return _ContactAvatar(
             item: _ContactItem(name: placeholder.name),
           );

@@ -50,6 +50,7 @@ class KDialog {
 
     if (isMobile) {
       showModalBottomSheet(
+        backgroundColor: Colors.white,
         context: context,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -61,7 +62,14 @@ class KDialog {
             top: false,
             left: false,
             right: false,
-            child: dialog,
+            child: AnimatedPadding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.easeOut,
+              child: dialog,
+            ),
           );
         },
       );
@@ -105,7 +113,14 @@ class KDialog {
           top: false,
           left: false,
           right: false,
-          child: dialog,
+          child: AnimatedPadding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOut,
+            child: dialog,
+          ),
         );
       },
     );

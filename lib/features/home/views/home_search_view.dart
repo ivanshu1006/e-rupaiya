@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -37,7 +38,7 @@ class HomeSearchView extends HookConsumerWidget {
           final data = await ref
               .read(homeRepositoryProvider)
               .fetchQuickActions(search: query.value.trim());
-          results.value = data;
+          results.value = data.categories;
         } catch (_) {
           error.value = 'Failed to fetch services. Please try again.';
         } finally {
@@ -74,9 +75,11 @@ class HomeSearchView extends HookConsumerWidget {
             ),
           ),
           if (isLoading.value)
-            const Padding(
-              padding: EdgeInsets.only(top: 24),
-              child: CircularProgressIndicator(),
+            const Center(
+              child: SpinKitCircle(
+                color: AppColors.primary,
+                size: 48,
+              ),
             )
           else if (error.value != null)
             Padding(

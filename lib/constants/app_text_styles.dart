@@ -14,6 +14,14 @@ class AppTextStyles {
         );
   }
 
+  static TextStyle? bodySmall(BuildContext context, {Color? color}) {
+    return Theme.of(context).textTheme.bodySmall?.copyWith(
+          fontWeight: FontWeight.w600,
+          color: color ?? AppColors.textPrimary,
+          fontSize: 9.sp,
+        );
+  }
+
   static TextStyle? bodySmallMuted(BuildContext context) {
     return Theme.of(context).textTheme.bodySmall?.copyWith(
           color: AppColors.textPrimary.withValues(alpha: 0.65),

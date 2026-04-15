@@ -7,11 +7,11 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_colors.dart';
-import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
 import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/custom_elevated_button.dart';
 import '../../../widgets/k_dialog.dart';
+import '../../../widgets/my_app_bar.dart';
 import '../../paymentgateway/razorpay_service.dart';
 import '../../profile/models/transaction_history_entry.dart';
 import '../components/education_payment_sheets.dart';
@@ -105,31 +105,11 @@ class EducationFeesTutorsView extends HookConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        title: Text(
-          'Tutors',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-        ),
-        actions: [
-          Image.asset(
-            FileConstants.bharatConnectColor,
-            height: 20.h,
-            fit: BoxFit.contain,
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.help_outline, color: AppColors.textPrimary),
-          ),
-        ],
+      appBar: MyAppBar(
+        title: 'Tutors',
+        showHelp: true,
+        onBack: () => Navigator.of(context).maybePop(),
+        onHelp: () {},
       ),
       body: SafeArea(
         top: false,

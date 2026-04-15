@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:local_auth/local_auth.dart';
@@ -232,7 +233,12 @@ class AppLockView extends HookConsumerWidget {
             fit: StackFit.expand,
             children: [
               isLoading.value
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(
+                      child: SpinKitCircle(
+                        color: AppColors.primary,
+                        size: 48,
+                      ),
+                    )
                   : Padding(
                       padding: EdgeInsets.symmetric(
                           horizontal: 24.w, vertical: 20.h),
@@ -524,8 +530,11 @@ class AppLockView extends HookConsumerWidget {
                               SizedBox(
                                 height: 20.h,
                                 width: 20.h,
-                                child: const CircularProgressIndicator(
-                                  strokeWidth: 2.4,
+                                child: const Center(
+                                  child: SpinKitCircle(
+                                    color: AppColors.primary,
+                                    size: 48,
+                                  ),
                                 ),
                               ),
                             ],

@@ -1,6 +1,6 @@
 // ignore_for_file: deprecated_member_use
 
-import 'package:e_rupaiya/widgets/app_divider.dart';
+import 'package:e_rupaiya/constants/file_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -8,19 +8,19 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_colors.dart';
-import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
 import '../../../utils/date_format_helper.dart';
 import '../../../widgets/app_network_image.dart';
 import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/custom_elevated_button.dart';
 import '../../../widgets/k_dialog.dart';
+import '../../../widgets/my_app_bar.dart';
 import '../../home/controllers/home_controller.dart';
 import '../../home/models/credit_card_item.dart';
+import '../components/credit_card_my_cards_shimmer.dart';
 import '../controllers/biller_detail_controller.dart';
 import '../models/biller_detail_args.dart';
 import '../models/biller_model.dart';
-import '../components/credit_card_my_cards_shimmer.dart';
 
 class CreditCardMyCardsView extends HookConsumerWidget {
   const CreditCardMyCardsView({super.key});
@@ -67,49 +67,14 @@ class CreditCardMyCardsView extends HookConsumerWidget {
       },
       child: Scaffold(
         backgroundColor: Colors.white,
+        appBar: MyAppBar(
+          title: 'Credit Card Payment',
+          showHelp: true,
+          onBack: handleBack,
+          onHelp: () {},
+        ),
         body: Column(
           children: [
-            SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        color: AppColors.textPrimary,
-                      ),
-                      onPressed: handleBack,
-                    ),
-                    SizedBox(width: 6.w),
-                    Expanded(
-                      child: Text(
-                        'Credit Card Payment',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                      ),
-                    ),
-                    Image.asset(
-                      FileConstants.bharatConnectColor,
-                      height: 18.h,
-                    ),
-                    SizedBox(width: 10.w),
-                    IconButton(
-                      onPressed: () {},
-                      icon: Icon(
-                        Icons.help_outline,
-                        color: AppColors.textPrimary.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const AppDivider(),
             Expanded(
               child: isFetching || cards == null || cards.isEmpty
                   ? (isFetching || cards == null

@@ -6,6 +6,7 @@ import 'package:e_rupaiya/features/home/models/quick_actions_model.dart';
 import '../../../constants/api_constants.dart';
 import '../../../services/dio_service.dart';
 import '../../../services/logger_service.dart';
+import '../models/banner_model.dart';
 import '../models/credit_card_item.dart';
 import '../models/quick_action_model.dart';
 
@@ -14,7 +15,8 @@ class HomeRepository {
 
   final Dio _dio;
 
-  Future<List<QuickActionCategory>> fetchQuickActions({String? search}) async {
+  Future<({List<QuickActionCategory> categories, List<BannerModel> banners})>
+      fetchQuickActions({String? search}) async {
     try {
       final response = await _dio.get(
         ApiConstants.quickActionsEndpoint,
@@ -28,10 +30,20 @@ class HomeRepository {
             payload?['message'] as String? ?? 'Failed to fetch quick actions';
         throw Exception(message);
       }
-      final dataList = payload?['data'] as List<dynamic>? ?? [];
-      return dataList
-          .map((e) => QuickActionCategory.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final dataMap = payload?['data'] as Map<String, dynamic>? ?? {};
+      final categories = <QuickActionCategory>[];
+      final banners = <BannerModel>[];
+
+      dataMap.forEach((key, value) {
+        if (key == 'banners' && value is List) {
+          banners.addAll(value
+              .map((e) => BannerModel.fromJson(e as Map<String, dynamic>)));
+        } else if (key != 'banners' && value is Map<String, dynamic>) {
+          categories.add(QuickActionCategory.fromJson(value));
+        }
+      });
+
+      return (categories: categories, banners: banners);
     } catch (e) {
       logger.error('Failed to fetch quick actions: $e', error: e);
       rethrow;

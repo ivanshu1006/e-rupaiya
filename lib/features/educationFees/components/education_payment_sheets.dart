@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_colors.dart';
@@ -232,8 +233,9 @@ class EducationPaymentSummarySheet extends HookConsumerWidget {
     final serviceCharge = current?.serviceCharge ?? 0.0;
     final walletBalance = current?.walletBalance ?? 0.0;
     final walletUsed = walletUsedInput.value.toDouble();
-    final payable =
-        (amount + serviceCharge - walletUsed).clamp(0, double.infinity).toDouble();
+    final payable = (amount + serviceCharge - walletUsed)
+        .clamp(0, double.infinity)
+        .toDouble();
 
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return SafeArea(
@@ -340,11 +342,10 @@ class EducationPaymentSummarySheet extends HookConsumerWidget {
                             suffixIcon: isLoading.value
                                 ? Padding(
                                     padding: EdgeInsets.all(8.r),
-                                    child: SizedBox(
-                                      height: 12.r,
-                                      width: 12.r,
-                                      child: const CircularProgressIndicator(
-                                        strokeWidth: 2,
+                                    child: const Center(
+                                      child: SpinKitCircle(
+                                        color: AppColors.primary,
+                                        size: 48,
                                       ),
                                     ),
                                   )

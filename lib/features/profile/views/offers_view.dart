@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -53,8 +54,12 @@ class OffersView extends HookConsumerWidget {
           ),
           Expanded(
             child: offersAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator.adaptive()),
+              loading: () => const Center(
+                child: SpinKitCircle(
+                  color: AppColors.primary,
+                  size: 48,
+                ),
+              ),
               error: (error, _) => RefreshIndicator(
                 color: AppColors.primary,
                 onRefresh: () => ref.refresh(offersProvider.future),

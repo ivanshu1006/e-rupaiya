@@ -2,9 +2,11 @@
 
 import 'dart:async';
 
+import 'package:e_rupaiya/features/refer_and_earn/views/refer_and_earn_wallet_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -14,7 +16,6 @@ import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
 import '../../../services/notification_badge_service.dart';
 import '../../../widgets/my_app_bar.dart';
-import '../../profile/views/my_wallet_view.dart';
 import '../components/quick_action_header_card.dart';
 import '../controllers/home_tab_controller.dart';
 import '../models/notification_item.dart';
@@ -48,7 +49,7 @@ class NotificationsScreen extends HookConsumerWidget {
           MyAppBar(
             title: 'Notifications',
             showHelp: true,
-            trailing: unreadCount > 0 ? _CountBadge(count: unreadCount) : null,
+            // trailing: unreadCount > 0 ? _CountBadge(count: unreadCount) : null,
             onBack: () {
               final navigator = Navigator.of(context);
               if (navigator.canPop()) {
@@ -61,8 +62,12 @@ class NotificationsScreen extends HookConsumerWidget {
           ),
           Expanded(
             child: notificationsAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator.adaptive()),
+              loading: () => const Center(
+                child: SpinKitCircle(
+                  color: AppColors.primary,
+                  size: 48,
+                ),
+              ),
               error: (_, __) => const _NotificationsEmptyState(),
               data: (notifications) {
                 if (notifications.isEmpty) {
@@ -175,7 +180,7 @@ void _handleNotificationTap(
   if (combined.contains('wallet')) {
     PersistentNavBarNavigator.pushNewScreen(
       context,
-      screen: const MyWalletView(),
+      screen: const ReferAndEarnWalletView(),
       withNavBar: false,
     );
     return;

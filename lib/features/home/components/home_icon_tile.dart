@@ -84,7 +84,10 @@ class _HomeIconTileState extends State<HomeIconTile>
 
   @override
   Widget build(BuildContext context) {
-    final labelTextStyle = AppTextStyles.bodySmallSemibold(context);
+    final labelTextStyle = AppTextStyles.bodySmall(context);
+    final labelWords = widget.label.trim().split(RegExp(r'\s+'));
+    final isTwoWordLabel = labelWords.length == 2;
+
     return InkWell(
       borderRadius: BorderRadius.circular(12.r),
       onTap: widget.onTap,
@@ -113,8 +116,8 @@ class _HomeIconTileState extends State<HomeIconTile>
                   },
                 ),
               Container(
-                height: 48.r,
-                width: 48.r,
+                height: 54.r,
+                width: 54.r,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   // border: Border.all(
@@ -155,8 +158,8 @@ class _HomeIconTileState extends State<HomeIconTile>
               ),
               if (widget.offer != null)
                 Positioned(
-                  top: -4.h,
-                  right: 7.w,
+                  top: -6.h,
+                  right: 11.5.w,
                   child: Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
@@ -168,7 +171,7 @@ class _HomeIconTileState extends State<HomeIconTile>
                       '₹${widget.offer}',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 8,
+                        fontSize: 10,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -179,18 +182,65 @@ class _HomeIconTileState extends State<HomeIconTile>
           SizedBox(height: widget.labelSpacing ?? 6.h),
           SizedBox(
             width: double.infinity,
-            child: Text(
-              widget.label,
-              maxLines: 1,
-              softWrap: false,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: labelTextStyle,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final displayLabel = isTwoWordLabel
+                    ? '${labelWords.first}\n${labelWords.last}'
+                    : _truncateSingleWordLabel(
+                        widget.label,
+                        constraints.maxWidth,
+                        labelTextStyle,
+                      );
+
+                return Text(
+                  displayLabel,
+                  maxLines: isTwoWordLabel ? 2 : 1,
+                  softWrap: isTwoWordLabel,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: labelTextStyle,
+                );
+              },
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _truncateSingleWordLabel(
+    String label,
+    double maxWidth,
+    TextStyle? style,
+  ) {
+    final trimmed = label.trim();
+    if (trimmed.isEmpty || trimmed.contains(' ')) return trimmed;
+
+    final fullTextPainter = TextPainter(
+      text: TextSpan(text: trimmed, style: style),
+      maxLines: 1,
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: maxWidth);
+
+    if (!fullTextPainter.didExceedMaxLines) {
+      return trimmed;
+    }
+
+    const suffix = '..';
+    for (var end = trimmed.length - 1; end > 0; end--) {
+      final candidate = '${trimmed.substring(0, end)}$suffix';
+      final candidatePainter = TextPainter(
+        text: TextSpan(text: candidate, style: style),
+        maxLines: 1,
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: maxWidth);
+
+      if (!candidatePainter.didExceedMaxLines) {
+        return candidate;
+      }
+    }
+
+    return suffix;
   }
 }
 
@@ -215,7 +265,7 @@ class _HalfRingPainter extends CustomPainter {
       size.height - strokeWidth,
     );
 
-    final startAngle = 0.75 * math.pi;
+    const startAngle = 0.75 * math.pi;
     final sweepAngle = math.pi * progress;
     canvas.drawArc(rect, startAngle, sweepAngle, false, paint);
   }

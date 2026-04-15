@@ -1,3 +1,4 @@
+import 'banner_model.dart';
 import 'credit_card_item.dart';
 import 'quick_action_model.dart';
 import 'quick_actions_model.dart';
@@ -12,6 +13,7 @@ class HomeState {
     this.quickActions,
     this.creditCardActions,
     this.rechargeActions,
+    this.banners,
   });
 
   final bool isFetching;
@@ -23,6 +25,7 @@ class HomeState {
   // null = not yet fetched, [] = fetched & empty, [...] = has data
   final List<CreditCardItem>? creditCardActions;
   final List<Data>? rechargeActions;
+  final List<BannerModel>? banners;
 
   static const _sentinel = Object();
 
@@ -35,6 +38,7 @@ class HomeState {
     Object? quickActions = _sentinel,
     Object? creditCardActions = _sentinel,
     Object? rechargeActions = _sentinel,
+    Object? banners = _sentinel,
   }) {
     return HomeState(
       isFetching: isFetching ?? this.isFetching,
@@ -54,6 +58,8 @@ class HomeState {
       rechargeActions: rechargeActions == _sentinel
           ? this.rechargeActions
           : rechargeActions as List<Data>?,
+      banners:
+          banners == _sentinel ? this.banners : banners as List<BannerModel>?,
     );
   }
 }

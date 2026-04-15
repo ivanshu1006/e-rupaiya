@@ -2,8 +2,8 @@ import 'package:e_rupaiya/utils/utils.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../services/logger_service.dart';
-import '../models/home_state.dart';
 import '../models/credit_card_item.dart';
+import '../models/home_state.dart';
 import '../models/quick_actions_model.dart';
 import '../repositories/home_repository.dart';
 
@@ -27,10 +27,11 @@ class HomeController extends StateNotifier<HomeState> {
   Future<void> fetchQuickActions() async {
     state = state.copyWith(isFetching: true, errorMessage: null);
     try {
-      final data = await _repository.fetchQuickActions();
+      final result = await _repository.fetchQuickActions();
       state = state.copyWith(
         isFetching: false,
-        quickActions: data,
+        quickActions: result.categories,
+        banners: result.banners,
         errorMessage: null,
       );
     } catch (e, stackTrace) {

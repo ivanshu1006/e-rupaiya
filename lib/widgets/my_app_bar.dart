@@ -1,8 +1,9 @@
 import 'package:e_rupaiya/constants/file_constants.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class MyAppBar extends StatelessWidget {
+class MyAppBar extends StatelessWidget implements PreferredSizeWidget {
   const MyAppBar({
     super.key,
     required this.title,
@@ -23,7 +24,18 @@ class MyAppBar extends StatelessWidget {
   final Color? backgroundColor;
 
   @override
+  Size get preferredSize => Size.fromHeight(height);
+
+  @override
   Widget build(BuildContext context) {
+    final bottomGap = backgroundColor == null ? 20.h : 0.0;
+    final bgColor = backgroundColor ?? Colors.white;
+    final isDark =
+        ThemeData.estimateBrightnessForColor(bgColor) == Brightness.dark;
+    final overlayStyle = (isDark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark)
+        .copyWith(statusBarColor: bgColor);
     // Old design (kept for reference)
     // return SizedBox(
     //   height: height,
@@ -109,64 +121,73 @@ class MyAppBar extends StatelessWidget {
     //   ),
     // );
 
-    return SizedBox(
-      height: height,
-      child: Container(
-        margin: EdgeInsets.only(
-            bottom: backgroundColor == null ? 20.h : 0, top: 35.h),
-        color: backgroundColor ?? Colors.white,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      Icons.arrow_back,
-                      color:
-                          backgroundColor == null ? Colors.black : Colors.white,
-                    ),
-                    onPressed: onBack ?? () => Navigator.of(context).maybePop(),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlayStyle,
+      child: SizedBox(
+        height: height,
+        child: Container(
+          color: bgColor,
+          padding: EdgeInsets.only(bottom: bottomGap),
+          child: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.arrow_back,
+                          color: backgroundColor == null
+                              ? Colors.black
+                              : Colors.white,
+                        ),
+                        onPressed:
+                            onBack ?? () => Navigator.of(context).maybePop(),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          title,
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: backgroundColor == null
+                                        ? Colors.black
+                                        : Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                        ),
+                      ),
+                      if (trailing != null) trailing!,
+                      if (showHelp) ...[
+                        Image.asset(
+                          FileConstants.bharatConnectColor,
+                          height: 15.h,
+                          width: 50.w,
+                        ),
+                        IconButton(
+                          onPressed: onHelp ?? () {},
+                          icon: Icon(
+                            Icons.help_outline,
                             color: backgroundColor == null
                                 ? Colors.black
                                 : Colors.white,
-                            fontWeight: FontWeight.w700,
                           ),
-                    ),
+                        ),
+                      ],
+                    ],
                   ),
-                  if (trailing != null) trailing!,
-                  if (showHelp) ...[
-                    Image.asset(
-                      FileConstants.bharatConnectColor,
-                      height: 15.h,
-                      width: 50.w,
-                    ),
-                    IconButton(
-                      onPressed: onHelp ?? () {},
-                      icon: Icon(
-                        Icons.help_outline,
-                        color: backgroundColor == null
-                            ? Colors.black
-                            : Colors.white,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+                ),
+                Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: Colors.black.withOpacity(0.08),
+                ),
+              ],
             ),
-            Divider(
-              height: 1,
-              thickness: 1,
-              color: Colors.black.withOpacity(0.08),
-            ),
-          ],
+          ),
         ),
       ),
     );

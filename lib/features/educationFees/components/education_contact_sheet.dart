@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_colors.dart';
@@ -270,8 +271,9 @@ class _ContactsListSection extends StatelessWidget {
             Padding(
               padding: EdgeInsets.symmetric(vertical: 20.h),
               child: const Center(
-                child: CircularProgressIndicator(
+                child: SpinKitCircle(
                   color: AppColors.primary,
+                  size: 48,
                 ),
               ),
             )

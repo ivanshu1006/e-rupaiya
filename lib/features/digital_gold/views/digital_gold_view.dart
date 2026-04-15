@@ -126,165 +126,171 @@ class DigitalGoldView extends HookConsumerWidget {
     final prefixText = isBuyingInRupees.value ? '₹' : '';
 
     return Scaffold(
-      extendBody: true,
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: theme.pageBackground,
       body: Stack(
         children: [
           Positioned.fill(
             child: DecoratedBox(
-              decoration: BoxDecoration(gradient: theme.buyGradient),
+              decoration: BoxDecoration(
+                gradient: theme.buyGradient,
+              ),
             ),
           ),
           SafeArea(
             bottom: false,
-            child: Column(
-              children: [
-                GoldHeader(
-                  title: isSell ? theme.sellTitle : theme.buyTitle,
-                  onBack: () => context.pop(),
-                  onHelp: () {},
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(16.w, 6.h, 16.w, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        GestureDetector(
-                          onTap: () => context.push(
-                            '${RouteConstants.digitalGoldLocker}?metal=${theme.queryValue}',
-                          ),
-                          child: GoldBalanceCard(
-                            balance: '₹${balanceValue.toStringAsFixed(0)}',
-                            // changeText: '↑ ₹50(10%)',
-                            changeText: '',
-                            backgroundColor: theme.balanceCardColor,
-                            label: theme.balanceLabel,
-                            borderColor: metal == DigitalMetal.silver
-                                ? Colors.white
-                                : const Color(0xffFFBF2B),
-                          ),
-                        ),
-                        SizedBox(height: 16.h),
-                        GoldProviderSection(
-                          title: isSell
-                              ? 'Selling To MMTC-PAMP'
-                              : 'Buying From MMTC-PAMP',
-                          subtitle: theme.providerSubtitle,
-                          showChevron: isSell,
-                        ),
-                        SizedBox(height: 16.h),
-                        GoldBuyCard(
-                          isBuyingInRupees: isBuyingInRupees.value,
-                          onUnitChanged: (value) {
-                            isBuyingInRupees.value = value;
-                            if (value) {
-                              amountController.text = '500';
-                            } else {
-                              amountController.text = '0.5';
-                            }
-                          },
-                          amountController: amountController,
-                          quickAmounts: quickAmounts,
-                          onAmountSelected: (value) {
-                            if (isSell) {
-                              amountController.text = value.toString();
-                              return;
-                            }
-                            if (isBuyingInRupees.value) {
-                              amountController.text = value.toString();
-                            } else {
-                              final grams = value * 0.5;
-                              amountController.text = grams.toStringAsFixed(1);
-                            }
-                          },
-                          leftToggleLabel:
-                              isSell ? 'Sell In Rupees' : 'Buy In Rupees',
-                          rightToggleLabel:
-                              isSell ? 'Sell In Grams' : 'Buy In Grams',
-                          priceText: isSell
-                              ? 'Selling Price: ₹${priceValue.toStringAsFixed(2)}/G + 3% GST'
-                              : 'Buy Price: ₹${priceValue.toStringAsFixed(2)}/G + 3% GST',
-                          trailingText: trailingText,
-                          cardColor: Colors.white,
-                          chipGradient: theme.quickChipGradient,
-                          toggleActiveColor: theme.toggleActiveColor,
-                          prefixText: prefixText,
-                        ),
-                        if (error.value != null) ...[
-                          SizedBox(height: 10.h),
-                          Text(
-                            error.value!.replaceFirst('Exception: ', ''),
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Colors.red,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                          ),
-                        ],
-                        SizedBox(height: 24.h),
-                      ],
-                    ),
+            child: Container(
+              color: Colors.transparent,
+              child: Column(
+                children: [
+                  GoldHeader(
+                    title: isSell ? theme.sellTitle : theme.buyTitle,
+                    onBack: () => context.pop(),
+                    onHelp: () {},
                   ),
-                ),
-                SafeArea(
-                  top: false,
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
-                    child: GoldProceedButton(
-                      label: isSell ? 'Sell Now' : 'Proceed',
-                      onPressed: () async {
-                        await fetchPreview(silent: false);
-                        final lastError = error.value?.toLowerCase() ?? '';
-                        if (lastError.contains('kyc not completed')) {
-                          AppSnackbar.show(
-                            'Please complete kyc first',
-                            type: AppSnackbarType.error,
-                          );
-                          context.push(RouteConstants.kycVerification);
-                          return;
-                        }
-                        final data = preview.value;
-                        if (data == null) return;
-                        if (!data.kycStatus) {
-                          AppSnackbar.show(
-                            'Please complete kyc first',
-                            type: AppSnackbarType.error,
-                          );
-                          context.push(RouteConstants.kycVerification);
-                          return;
-                        }
-
-                        if (data.isUserRegistered) {
-                          KDialog.instance.openSheet(
-                            dialog: GoldPaymentSummarySheet(
-                              amount: data.totalAmount,
-                              preview: data,
-                              metal: metal,
-                              onBuyNow: () {
-                                context.push(
-                                  '${RouteConstants.digitalGoldSuccess}?metal=${theme.queryValue}',
-                                );
-                              },
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(16.w, 6.h, 16.w, 0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          GestureDetector(
+                            onTap: () => context.push(
+                              '${RouteConstants.digitalGoldLocker}?metal=${theme.queryValue}',
                             ),
-                          );
-                          return;
-                        }
-                        final parsed =
-                            int.tryParse(amountController.text.trim()) ?? 0;
-                        context.push(
-                          '${RouteConstants.digitalGoldDetails}?metal=${theme.queryValue}',
-                          extra: {
-                            'amount': parsed,
-                            'preview': data,
-                          },
-                        );
-                      },
+                            child: GoldBalanceCard(
+                              balance: '₹${balanceValue.toStringAsFixed(0)}',
+                              // changeText: '↑ ₹50(10%)',
+                              changeText: '',
+                              backgroundColor: theme.balanceCardColor,
+                              label: theme.balanceLabel,
+                              borderColor: metal == DigitalMetal.silver
+                                  ? Colors.white
+                                  : const Color(0xffFFBF2B),
+                            ),
+                          ),
+                          SizedBox(height: 16.h),
+                          GoldProviderSection(
+                            title: isSell
+                                ? 'Selling To MMTC-PAMP'
+                                : 'Buying From MMTC-PAMP',
+                            subtitle: theme.providerSubtitle,
+                            showChevron: isSell,
+                          ),
+                          SizedBox(height: 16.h),
+                          GoldBuyCard(
+                            isBuyingInRupees: isBuyingInRupees.value,
+                            onUnitChanged: (value) {
+                              isBuyingInRupees.value = value;
+                              if (value) {
+                                amountController.text = '500';
+                              } else {
+                                amountController.text = '0.5';
+                              }
+                            },
+                            amountController: amountController,
+                            quickAmounts: quickAmounts,
+                            onAmountSelected: (value) {
+                              if (isSell) {
+                                amountController.text = value.toString();
+                                return;
+                              }
+                              if (isBuyingInRupees.value) {
+                                amountController.text = value.toString();
+                              } else {
+                                final grams = value * 0.5;
+                                amountController.text =
+                                    grams.toStringAsFixed(1);
+                              }
+                            },
+                            leftToggleLabel:
+                                isSell ? 'Sell In Rupees' : 'Buy In Rupees',
+                            rightToggleLabel:
+                                isSell ? 'Sell In Grams' : 'Buy In Grams',
+                            priceText: isSell
+                                ? 'Selling Price: ₹${priceValue.toStringAsFixed(2)}/G + 3% GST'
+                                : 'Buy Price: ₹${priceValue.toStringAsFixed(2)}/G + 3% GST',
+                            trailingText: trailingText,
+                            cardColor: Colors.white,
+                            chipGradient: theme.quickChipGradient,
+                            toggleActiveColor: theme.toggleActiveColor,
+                            prefixText: prefixText,
+                          ),
+                          if (error.value != null) ...[
+                            SizedBox(height: 10.h),
+                            Text(
+                              error.value!.replaceFirst('Exception: ', ''),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                          ],
+                          SizedBox(height: 24.h),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                  SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
+                      child: GoldProceedButton(
+                        label: isSell ? 'Sell Now' : 'Proceed',
+                        onPressed: () async {
+                          await fetchPreview(silent: false);
+                          final lastError = error.value?.toLowerCase() ?? '';
+                          if (lastError.contains('kyc not completed')) {
+                            AppSnackbar.show(
+                              'Please complete kyc first',
+                              type: AppSnackbarType.error,
+                            );
+                            context.push(RouteConstants.kycVerification);
+                            return;
+                          }
+                          final data = preview.value;
+                          if (data == null) return;
+                          if (!data.kycStatus) {
+                            AppSnackbar.show(
+                              'Please complete kyc first',
+                              type: AppSnackbarType.error,
+                            );
+                            context.push(RouteConstants.kycVerification);
+                            return;
+                          }
+
+                          if (data.isUserRegistered) {
+                            KDialog.instance.openSheet(
+                              dialog: GoldPaymentSummarySheet(
+                                amount: data.totalAmount,
+                                preview: data,
+                                metal: metal,
+                                onBuyNow: () {
+                                  context.push(
+                                    '${RouteConstants.digitalGoldSuccess}?metal=${theme.queryValue}',
+                                  );
+                                },
+                              ),
+                            );
+                            return;
+                          }
+                          final parsed =
+                              int.tryParse(amountController.text.trim()) ?? 0;
+                          context.push(
+                            '${RouteConstants.digitalGoldDetails}?metal=${theme.queryValue}',
+                            extra: {
+                              'amount': parsed,
+                              'preview': data,
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

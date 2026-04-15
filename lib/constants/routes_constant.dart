@@ -4,6 +4,7 @@ class RouteConstants {
   static const String otp = '/otp';
   static const String splash = '/splash';
   static const String home = '/';
+  static const String homeSearchView = '/home-search';
   static const String otpSuccess = '/otp-success';
   static const String addPin = '/add-pin';
   static const String languageSelection = '/language';

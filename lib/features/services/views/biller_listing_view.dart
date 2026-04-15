@@ -52,16 +52,16 @@ class BillerListingView extends HookConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: MyAppBar(
+        title: 'Fetch Your Provider',
+        showHelp: true,
+        onBack: () => context.pop(),
+        onHelp: () {
+          context.pop();
+        },
+      ),
       body: Column(
         children: [
-          MyAppBar(
-            title: 'Fetch Your Provider',
-            showHelp: true,
-            onBack: () => context.pop(),
-            onHelp: () {
-              context.pop();
-            },
-          ),
           // Search bar
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),

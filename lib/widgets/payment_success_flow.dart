@@ -55,12 +55,30 @@ class PaymentThankYouScreen extends StatefulWidget {
   State<PaymentThankYouScreen> createState() => _PaymentThankYouScreenState();
 }
 
-class _PaymentThankYouScreenState extends State<PaymentThankYouScreen> {
+class _PaymentThankYouScreenState extends State<PaymentThankYouScreen>
+    with SingleTickerProviderStateMixin {
   Timer? _timer;
+  late AnimationController _animationController;
+  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _animationController.forward();
+
     if (widget.playSound) {
       _PaymentSoundController.play();
     }
@@ -76,63 +94,66 @@ class _PaymentThankYouScreenState extends State<PaymentThankYouScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _animationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFF4EF),
-      body: SafeArea(
-        child: Column(
-          children: [
-            const Spacer(flex: 2),
-            Image.asset(
-              widget.gifPath,
-              height: 140,
-              fit: BoxFit.contain,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              widget.title,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
+    return SlideTransition(
+        position: _slideAnimation,
+        child: Scaffold(
+          backgroundColor: const Color(0xFFFFF4EF),
+          body: SafeArea(
+            child: Column(
+              children: [
+                const Spacer(flex: 2),
+                Image.asset(
+                  widget.gifPath,
+                  height: 140,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  widget.title,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    widget.subtitle,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textPrimary.withOpacity(0.75),
+                          height: 1.4,
+                        ),
                   ),
+                ),
+                const Spacer(flex: 3),
+                Text(
+                  widget.poweredByText,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textPrimary.withOpacity(0.65),
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Image.asset(
+                  widget.poweredByLogo.isEmpty
+                      ? FileConstants.bharatConnect
+                      : widget.poweredByLogo,
+                  height: 40,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(height: 24),
+              ],
             ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Text(
-                widget.subtitle,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textPrimary.withOpacity(0.75),
-                      height: 1.4,
-                    ),
-              ),
-            ),
-            const Spacer(flex: 3),
-            Text(
-              widget.poweredByText,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textPrimary.withOpacity(0.65),
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Image.asset(
-              widget.poweredByLogo.isEmpty
-                  ? FileConstants.bharatConnect
-                  : widget.poweredByLogo,
-              height: 40,
-              fit: BoxFit.contain,
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
+          ),
+        ));
   }
 }
 

@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -72,7 +73,12 @@ class _CreditCardTransactionsScreenState
           ),
           Expanded(
             child: state.isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(
+                    child: SpinKitCircle(
+                      color: AppColors.primary,
+                      size: 48,
+                    ),
+                  )
                 : CustomScrollView(
                     slivers: [
                       SliverPadding(

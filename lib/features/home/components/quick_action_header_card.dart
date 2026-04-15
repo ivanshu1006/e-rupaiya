@@ -58,7 +58,7 @@ class QuickActionHeaderCard extends StatelessWidget {
               child: CircleAvatar(
                 radius: 26.r,
                 backgroundColor: AppColors.primary.withOpacity(0.12),
-                child: _LeadingIcon(
+                child: LeadingIcon(
                   asset: leadingAsset,
                   url: leadingImageUrl,
                 ),
@@ -141,8 +141,9 @@ class QuickActionHeaderCard extends StatelessWidget {
   }
 }
 
-class _LeadingIcon extends StatelessWidget {
-  const _LeadingIcon({
+class LeadingIcon extends StatelessWidget {
+  const LeadingIcon({
+    super.key,
     required this.asset,
     required this.url,
   });

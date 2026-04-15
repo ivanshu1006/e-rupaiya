@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -26,7 +28,8 @@ class ExitAppDialog extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.primary.withOpacity(0.08),
+                      const Color.fromARGB(255, 247, 243, 242)
+                          .withOpacity(0.08),
                       Colors.white,
                     ],
                     begin: Alignment.topLeft,
@@ -115,9 +118,12 @@ class ExitAppDialog extends StatelessWidget {
                             onConfirm();
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
+                            backgroundColor: AppColors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(22.r),
+                            ),
+                            side: BorderSide(
+                              color: AppColors.primary.withOpacity(0.25),
                             ),
                             elevation: 0,
                             padding: EdgeInsets.symmetric(vertical: 12.h),
@@ -125,7 +131,7 @@ class ExitAppDialog extends StatelessWidget {
                           child: const Text(
                             'Yes',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: Colors.black,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -136,19 +142,21 @@ class ExitAppDialog extends StatelessWidget {
                         child: OutlinedButton(
                           onPressed: () => Navigator.of(context).pop(),
                           style: OutlinedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(22.r),
-                            ),
                             side: BorderSide(
                               color: AppColors.primary.withOpacity(0.25),
                             ),
-                            foregroundColor: AppColors.textPrimary,
+                            backgroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(22.r),
+                            ),
+
+                            // foregroundColor: AppColors.textPrimary,
                             padding: EdgeInsets.symmetric(vertical: 12.h),
                           ),
                           child: const Text(
                             'No',
                             style: TextStyle(
-                              color: AppColors.textPrimary,
+                              color: AppColors.white,
                               fontWeight: FontWeight.w700,
                             ),
                           ),

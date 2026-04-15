@@ -100,7 +100,7 @@ class TransactionDetailScreen extends StatelessWidget {
         children: [
           TransactionStatusAppBar(
             title: statusMeta.label,
-            height: 150,
+            height: 130,
             backgroundColor: statusMeta.color,
             onBack: () => context.pop(),
           ),
