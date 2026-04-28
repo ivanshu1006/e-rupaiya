@@ -16,6 +16,7 @@ class AppSnackbar {
     SnackBarBehavior? behavior,
     EdgeInsetsGeometry? margin,
     AppSnackbarType type = AppSnackbarType.info,
+    AppSnackbarPosition position = AppSnackbarPosition.top,
   }) {
     final context = navigatorKey.currentContext ?? messengerKey.currentContext;
     if (context == null) return;
@@ -28,6 +29,65 @@ class AppSnackbar {
       overlay = null;
     }
 
+    final resolvedType = _inferType(
+      message,
+      fallback: type,
+      hasOverride: backgroundColor != null || textColor != null,
+    );
+
+    // Slightly longer by default for warnings/errors so the message is readable.
+    final resolvedDuration = duration == const Duration(seconds: 2) &&
+            (resolvedType == AppSnackbarType.error ||
+                resolvedType == AppSnackbarType.warning)
+        ? const Duration(seconds: 4)
+        : duration;
+
+    if (position == AppSnackbarPosition.bottom) {
+      final messenger = messengerKey.currentState;
+      if (messenger != null) {
+        _currentEntry?.remove();
+        _currentEntry = null;
+
+        final theme = _SnackbarTheme.resolve(
+          resolvedType,
+          backgroundOverride: backgroundColor,
+          textOverride: textColor,
+        );
+
+        final accent = _SnackbarAccent.resolve(resolvedType);
+        final bottomInset = MediaQuery.of(context).viewPadding.bottom;
+        final resolvedMargin = margin ??
+            EdgeInsets.fromLTRB(
+              16,
+              0,
+              16,
+              12 + bottomInset,
+            );
+
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              behavior: behavior ?? SnackBarBehavior.floating,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              duration: resolvedDuration,
+              margin: resolvedMargin,
+              padding: EdgeInsets.zero,
+              content: _BottomSnackBarContent(
+                message: message,
+                accentColor: accent,
+                backgroundColor: backgroundColor ?? Colors.white,
+                textColor: textColor ?? AppColors.textPrimary,
+                icon: theme.icon,
+                onClose: messenger.hideCurrentSnackBar,
+              ),
+            ),
+          );
+        return;
+      }
+    }
+
     if (overlay == null) {
       if (!_pending) {
         _pending = true;
@@ -37,9 +97,10 @@ class AppSnackbar {
             message,
             backgroundColor: backgroundColor,
             textColor: textColor,
-            duration: duration,
+            duration: resolvedDuration,
             behavior: behavior,
             margin: margin,
+            position: position,
           );
         });
       }
@@ -47,11 +108,6 @@ class AppSnackbar {
     }
 
     _currentEntry?.remove();
-    final resolvedType = _inferType(
-      message,
-      fallback: type,
-      hasOverride: backgroundColor != null || textColor != null,
-    );
     final resolved = _SnackbarTheme.resolve(
       resolvedType,
       backgroundOverride: backgroundColor,
@@ -64,7 +120,7 @@ class AppSnackbar {
         backgroundColor: resolved.background,
         textColor: resolved.text,
         icon: resolved.icon,
-        duration: duration,
+        duration: resolvedDuration,
         onDismissed: () {
           _currentEntry?.remove();
           _currentEntry = null;
@@ -73,6 +129,92 @@ class AppSnackbar {
     );
 
     overlay.insert(_currentEntry!);
+  }
+}
+
+class _BottomSnackBarContent extends StatelessWidget {
+  const _BottomSnackBarContent({
+    required this.message,
+    required this.accentColor,
+    required this.backgroundColor,
+    required this.textColor,
+    required this.icon,
+    required this.onClose,
+  });
+
+  final String message;
+  final Color accentColor;
+  final Color backgroundColor;
+  final Color textColor;
+  final IconData icon;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: accentColor.withOpacity(0.25),
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x1A000000),
+              blurRadius: 18,
+              offset: Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: accentColor.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  color: accentColor,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  message,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: textColor,
+                        fontWeight: FontWeight.w600,
+                        height: 1.25,
+                      ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              InkWell(
+                onTap: onClose,
+                borderRadius: BorderRadius.circular(14),
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Icon(
+                    Icons.close_rounded,
+                    size: 18,
+                    color: textColor.withOpacity(0.75),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -278,6 +420,8 @@ class _TopSnackBarState extends State<_TopSnackBar>
 
 enum AppSnackbarType { info, success, error, warning }
 
+enum AppSnackbarPosition { top, bottom }
+
 class _SnackbarTheme {
   const _SnackbarTheme({
     required this.background,
@@ -294,40 +438,39 @@ class _SnackbarTheme {
     Color? backgroundOverride,
     Color? textOverride,
   }) {
-    if (backgroundOverride != null || textOverride != null) {
-      return _SnackbarTheme(
-        background: backgroundOverride ?? AppColors.green,
-        text: textOverride ?? Colors.white,
-        icon: _iconFor(type),
-      );
-    }
-    switch (type) {
-      case AppSnackbarType.success:
-        return const _SnackbarTheme(
-          background: AppColors.green,
-          text: Colors.white,
-          icon: Icons.check_circle_outline,
-        );
-      case AppSnackbarType.error:
-        return const _SnackbarTheme(
-          background: AppColors.red,
-          text: Colors.white,
-          icon: Icons.error_outline,
-        );
-      case AppSnackbarType.warning:
-        return const _SnackbarTheme(
-          background: Color(0xFFF57C00),
-          text: Colors.white,
-          icon: Icons.warning_amber_outlined,
-        );
-      case AppSnackbarType.info:
-      default:
-        return const _SnackbarTheme(
-          background: AppColors.primary,
-          text: Colors.white,
-          icon: Icons.notifications_active_outlined,
-        );
-    }
+    const baseInfo = _SnackbarTheme(
+      background: AppColors.primary,
+      text: Colors.white,
+      icon: Icons.notifications_active_outlined,
+    );
+    const baseSuccess = _SnackbarTheme(
+      background: AppColors.green,
+      text: Colors.white,
+      icon: Icons.check_circle_outline,
+    );
+    const baseError = _SnackbarTheme(
+      background: Color(0xFFE53935),
+      text: Colors.white,
+      icon: Icons.error_outline,
+    );
+    const baseWarning = _SnackbarTheme(
+      background: Color(0xFFF57C00),
+      text: Colors.white,
+      icon: Icons.warning_amber_outlined,
+    );
+
+    final base = switch (type) {
+      AppSnackbarType.success => baseSuccess,
+      AppSnackbarType.error => baseError,
+      AppSnackbarType.warning => baseWarning,
+      AppSnackbarType.info => baseInfo,
+    };
+
+    return _SnackbarTheme(
+      background: backgroundOverride ?? base.background,
+      text: textOverride ?? base.text,
+      icon: base.icon,
+    );
   }
 
   static IconData _iconFor(AppSnackbarType type) {
@@ -341,6 +484,24 @@ class _SnackbarTheme {
       case AppSnackbarType.info:
       default:
         return Icons.notifications_active_outlined;
+    }
+  }
+}
+
+class _SnackbarAccent {
+  const _SnackbarAccent._();
+
+  static Color resolve(AppSnackbarType type) {
+    switch (type) {
+      case AppSnackbarType.success:
+        return AppColors.green;
+      case AppSnackbarType.error:
+        return AppColors.red;
+      case AppSnackbarType.warning:
+        return const Color(0xFFF57C00);
+      case AppSnackbarType.info:
+      default:
+        return AppColors.primary;
     }
   }
 }

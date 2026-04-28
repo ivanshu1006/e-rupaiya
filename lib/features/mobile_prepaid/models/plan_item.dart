@@ -7,6 +7,7 @@ class PlanItem {
     this.planName = '',
     this.eCoins = 0,
     this.benefitImages = const [],
+    this.additionalBenefits = const [],
   });
 
   final int amount;
@@ -16,6 +17,7 @@ class PlanItem {
   final String planName;
   final int eCoins;
   final List<String> benefitImages;
+  final List<AdditionalBenefit> additionalBenefits;
 
   factory PlanItem.fromJson(Map<String, dynamic> json) {
     final rsValue = json['rs'];
@@ -29,6 +31,17 @@ class PlanItem {
     final benefitImages = rawImages is List
         ? rawImages.map((e) => e.toString()).toList()
         : <String>[];
+    final rawAdditionalBenefits = json['additional_benefits'];
+    final additionalBenefits = rawAdditionalBenefits is List
+        ? rawAdditionalBenefits
+            .whereType<Map>()
+            .map((item) => AdditionalBenefit.fromJson(
+                  item.map(
+                    (key, value) => MapEntry('$key', value),
+                  ),
+                ))
+            .toList()
+        : <AdditionalBenefit>[];
     return PlanItem(
       amount: amount,
       validity: (json['validity'] ?? '').toString(),
@@ -37,6 +50,25 @@ class PlanItem {
       planName: (json['planname'] ?? json['plan_name'] ?? '').toString(),
       eCoins: eCoins,
       benefitImages: benefitImages,
+      additionalBenefits: additionalBenefits,
+    );
+  }
+}
+
+class AdditionalBenefit {
+  const AdditionalBenefit({
+    required this.text,
+    this.image,
+  });
+
+  final String text;
+  final String? image;
+
+  factory AdditionalBenefit.fromJson(Map<String, dynamic> json) {
+    final image = json['image']?.toString().trim();
+    return AdditionalBenefit(
+      text: (json['text'] ?? '').toString(),
+      image: (image?.isEmpty ?? true) ? null : image,
     );
   }
 }

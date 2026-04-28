@@ -140,13 +140,28 @@ class SpinAndWinView extends HookConsumerWidget {
       KDialog.instance.openDialog(
         dialog: SpinResultDialog(
           reward: reward,
-          onPrimaryTap: () {
-            Navigator.of(context).pop();
+          onPrimaryTap: () async {
             if (reward.type == SpinRewardType.betterLuck ||
                 reward.type == SpinRewardType.extraSpin) {
               spinCount.value += 1;
             } else {
-              profileController.fetchProfile();
+              await profileController.fetchProfile();
+              final updated = ref
+                  .read(profileControllerProvider)
+                  .profile
+                  ?.normalSpinRemaining;
+              if (updated != null) {
+                spinCount.value = updated;
+              }
+              final error =
+                  ref.read(profileControllerProvider).errorMessage?.trim();
+              if (error != null && error.isNotEmpty && context.mounted) {
+                AppSnackbar.show(
+                  error,
+                  backgroundColor: Colors.red,
+                  textColor: Colors.white,
+                );
+              }
             }
           },
         ),

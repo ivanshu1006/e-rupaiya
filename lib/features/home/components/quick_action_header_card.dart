@@ -2,10 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
+import '../../../widgets/app_network_image.dart';
 
 class QuickActionHeaderCard extends StatelessWidget {
   const QuickActionHeaderCard({
@@ -87,7 +87,7 @@ class QuickActionHeaderCard extends StatelessWidget {
                       subtitle,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppColors.textPrimary.withOpacity(0.65),
-                            fontSize: 11.sp,
+                            fontSize: 10.sp,
                           ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -156,6 +156,26 @@ class LeadingIcon extends StatelessWidget {
     final resolvedAsset = (asset ?? '').trim();
     final resolvedUrl = (url ?? '').trim();
 
+    // Prefer remote icon (when present) over any provided fallback asset.
+    if (resolvedUrl.isNotEmpty) {
+      return AppNetworkImage(
+        url: resolvedUrl,
+        width: 34,
+        height: 34,
+        fit: BoxFit.contain,
+        showShimmer: false,
+        placeholder: Center(
+          child: Image.asset(
+            FileConstants.loadingGif,
+            width: 24,
+            height: 24,
+            fit: BoxFit.cover,
+          ),
+        ),
+        errorWidget: _fallbackPlaceholder(context),
+      );
+    }
+
     if (resolvedAsset.isNotEmpty) {
       return Image.asset(
         resolvedAsset,
@@ -165,42 +185,17 @@ class LeadingIcon extends StatelessWidget {
       );
     }
 
-    if (resolvedUrl.isEmpty) {
-      return Icon(
-        Icons.flash_on_outlined,
-        color: AppColors.primary.withOpacity(0.7),
-        size: 24,
-      );
-    }
-
-    final isSvg = resolvedUrl.toLowerCase().endsWith('.svg');
-    if (isSvg) {
-      return SvgPicture.network(
-        resolvedUrl,
-        width: 34,
-        height: 34,
-        fit: BoxFit.contain,
-        colorFilter: null,
-        placeholderBuilder: (_) => _fallbackPlaceholder(context),
-      );
-    }
-    return Image.network(
-      resolvedUrl,
-      width: 34,
-      height: 34,
-      fit: BoxFit.contain,
-      errorBuilder: (_, __, ___) => _fallbackPlaceholder(context),
-    );
+    return _fallbackPlaceholder(context);
   }
 
   Widget _fallbackPlaceholder(BuildContext context) {
     return Container(
       width: 34,
       height: 34,
-      color: AppColors.primary.withOpacity(0.08),
+      color: AppColors.white,
       child: Icon(
-        Icons.wifi_calling_3_outlined,
-        color: AppColors.primary.withOpacity(0.6),
+        Icons.broken_image_outlined,
+        color: AppColors.textPrimary.withOpacity(0.5),
         size: 24,
       ),
     );

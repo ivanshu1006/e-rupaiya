@@ -11,6 +11,7 @@ import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
 import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/custom_elevated_button.dart';
+import '../../paymentgateway/razorpay_guard.dart';
 import '../../paymentgateway/razorpay_service.dart';
 import '../../profile/controllers/profile_controller.dart';
 import '../models/digital_gold_otp_response.dart';
@@ -251,6 +252,8 @@ class GoldPaymentSummarySheet extends HookConsumerWidget {
                         );
                         return;
                       }
+
+                      if (!RazorpayGuard.ensureNotPaused(ref)) return;
 
                       isSubmitting.value = true;
                       try {

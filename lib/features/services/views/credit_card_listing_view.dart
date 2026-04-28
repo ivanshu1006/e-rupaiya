@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_colors.dart';
-import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
 import '../../../widgets/app_network_image.dart';
 import '../../../widgets/my_app_bar.dart';
@@ -49,16 +48,9 @@ class CreditCardListingView extends HookConsumerWidget {
           MyAppBar(
             title: 'Select Your Bank',
             onBack: () => context.pop(),
-            trailing: Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Image.asset(
-                FileConstants.bharatConnect,
-                height: 22,
-              ),
-            ),
           ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: SearchTextfield(
               hintText: 'Search bank name',
               controller: searchController,
@@ -84,40 +76,47 @@ class CreditCardListingView extends HookConsumerWidget {
                     ]
                   : null,
               child: SingleChildScrollView(
+                primary: false,
+                padding: EdgeInsets.zero,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 0),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: topPicks.length,
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 1.0,
-                        ),
-                        itemBuilder: (context, index) {
-                          final biller = topPicks[index];
-                          return _BillerGridTile(
-                            biller: biller,
-                            onTap: () {
-                              ref
-                                  .read(billerDetailControllerProvider.notifier)
-                                  .selectBiller(biller);
-                              context.push(
-                                RouteConstants.billerDetail,
-                                extra: BillerDetailArgs(
-                                  biller: biller,
-                                  isCreditCard: true,
-                                  paymentType: 'Credit card',
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          const spacing = 12.0;
+                          const columns = 3;
+                          final tileWidth = (constraints.maxWidth -
+                                  (spacing * (columns - 1))) /
+                              columns;
+                          return Wrap(
+                            spacing: spacing,
+                            runSpacing: spacing,
+                            children: [
+                              for (final biller in topPicks)
+                                SizedBox(
+                                  width: tileWidth,
+                                  child: _BillerGridTile(
+                                    biller: biller,
+                                    onTap: () {
+                                      ref
+                                          .read(billerDetailControllerProvider
+                                              .notifier)
+                                          .selectBiller(biller);
+                                      context.push(
+                                        RouteConstants.billerDetail,
+                                        extra: BillerDetailArgs(
+                                          biller: biller,
+                                          isCreditCard: true,
+                                          paymentType: 'Credit card',
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
-                              );
-                            },
+                            ],
                           );
                         },
                       ),

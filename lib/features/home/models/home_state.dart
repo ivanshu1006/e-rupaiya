@@ -25,7 +25,7 @@ class HomeState {
   // null = not yet fetched, [] = fetched & empty, [...] = has data
   final List<CreditCardItem>? creditCardActions;
   final List<Data>? rechargeActions;
-  final List<BannerModel>? banners;
+  final Map<String, List<BannerModel>>? banners;
 
   static const _sentinel = Object();
 
@@ -58,8 +58,9 @@ class HomeState {
       rechargeActions: rechargeActions == _sentinel
           ? this.rechargeActions
           : rechargeActions as List<Data>?,
-      banners:
-          banners == _sentinel ? this.banners : banners as List<BannerModel>?,
+      banners: banners == _sentinel
+          ? this.banners
+          : banners as Map<String, List<BannerModel>>?,
     );
   }
 }

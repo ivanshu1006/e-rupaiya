@@ -5,7 +5,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../constants/app_colors.dart';
 import '../../../widgets/app_divider.dart';
-import '../../../widgets/custom_elevated_button.dart';
+import '../../../widgets/k_dialog.dart';
+import 'plan_details_sheet.dart';
 import '../models/plan_item.dart';
 
 class PlanCard extends StatelessWidget {
@@ -23,6 +24,15 @@ class PlanCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onViewDetails;
   final VoidCallback? onPayNow;
+
+  void _openPlanDetailsSheet(BuildContext context) {
+    KDialog.instance.openSheet(
+      dialog: PlanDetailsSheet(
+        plan: plan,
+        onProceedToPay: onPayNow ?? onTap,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +70,10 @@ class PlanCard extends StatelessWidget {
               ),
               SizedBox(height: 12.h),
               // Row 2: Validity | Data | Benefit images
-              _PlanInfoRow(plan: plan),
+              _PlanInfoRow(
+                plan: plan,
+                onBenefitsTap: () => _openPlanDetailsSheet(context),
+              ),
               SizedBox(height: 12.h),
               const AppDivider(),
               SizedBox(height: 10.h),
@@ -79,27 +92,31 @@ class PlanCard extends StatelessWidget {
               ),
               SizedBox(height: 14.h),
               // View Details + Pay Now row
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: onViewDetails ?? onTap,
-                    child: Text(
-                      'View Details',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12.sp,
-                          ),
+              Container(
+                margin: EdgeInsets.only(bottom: 4.h),
+                padding: EdgeInsets.symmetric(horizontal: 4.w),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: onViewDetails ?? onTap,
+                      child: Text(
+                        'View Details',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12.sp,
+                            ),
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  SizedBox(
-                    width: 120.w,
-                    child: _PlanPayNowButton(
-                      onTap: onPayNow ?? onTap,
+                    const Spacer(),
+                    SizedBox(
+                      width: 160.w,
+                      child: _PlanPayNowButton(
+                        onTap: onPayNow ?? onTap,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -162,16 +179,20 @@ class _PlanPriceRow extends StatelessWidget {
 }
 
 class _PlanInfoRow extends StatelessWidget {
-  const _PlanInfoRow({required this.plan});
+  const _PlanInfoRow({
+    required this.plan,
+    this.onBenefitsTap,
+  });
 
   final PlanItem plan;
+  final VoidCallback? onBenefitsTap;
 
   @override
   Widget build(BuildContext context) {
     final hasValidity = plan.validity.isNotEmpty;
-    final dataValue = _extractDataValue(plan);
+    final dataValue = extractPlanDataValue(plan);
     final hasData = dataValue.isNotEmpty;
-    final hasBenefitImages = plan.benefitImages.isNotEmpty;
+    final hasBenefitImages = plan.additionalBenefits.isNotEmpty;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -196,22 +217,14 @@ class _PlanInfoRow extends StatelessWidget {
               ),
             ),
             if (hasBenefitImages)
-              _PlanBenefitImages(images: plan.benefitImages),
+              _PlanBenefitImages(
+                benefits: plan.additionalBenefits,
+                onTap: onBenefitsTap,
+              ),
           ],
         );
       },
     );
-  }
-
-  String _extractDataValue(PlanItem plan) {
-    final direct = plan.data.trim();
-    if (direct.isNotEmpty) return direct;
-    final description = plan.description;
-    if (description.isEmpty) return '';
-    final match = RegExp(r'Data\s*[:\-]\s*([^|]+)', caseSensitive: false)
-        .firstMatch(description);
-    if (match == null) return '';
-    return match.group(1)?.trim() ?? '';
   }
 }
 
@@ -251,68 +264,92 @@ class _PlanInfoColumn extends StatelessWidget {
 }
 
 class _PlanBenefitImages extends StatelessWidget {
-  const _PlanBenefitImages({required this.images});
+  const _PlanBenefitImages({
+    required this.benefits,
+    this.onTap,
+  });
 
-  final List<String> images;
+  final List<AdditionalBenefit> benefits;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    const maxVisible = 3;
-    final visibleImages = images.take(maxVisible).toList();
-    final remaining = images.length - maxVisible;
+    const maxVisible = 5;
+    final visibleBenefits = benefits.take(maxVisible).toList();
+    final remaining = benefits.length - maxVisible;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: (visibleImages.length * 22.0).w + 8.w,
-          height: 26.h,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              for (int i = 0; i < visibleImages.length; i++)
-                Positioned(
-                  left: (i * 22.0).w,
-                  child: Container(
-                    width: 30.w,
-                    height: 30.w,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2.w),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: Image.network(
-                        visibleImages[i],
-                        width: 30.w,
-                        height: 30.w,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: Colors.grey.shade200,
-                          child: Icon(Icons.image, size: 14.sp),
-                        ),
-                      ),
-                    ),
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: (visibleBenefits.length * 22.0).w + 8.w,
+            height: 26.h,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                for (int i = 0; i < visibleBenefits.length; i++)
+                  Positioned(
+                    left: (i * 22.0).w,
+                    child: _BenefitIconAvatar(benefit: visibleBenefits[i]),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
-        if (remaining > 0)
-          Text(
-            '+$remaining',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                  fontSize: 13.sp,
-                ),
+          if (remaining > 0)
+            Text(
+              '+$remaining',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                    fontSize: 13.sp,
+                  ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BenefitIconAvatar extends StatelessWidget {
+  const _BenefitIconAvatar({required this.benefit});
+
+  final AdditionalBenefit benefit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 30.w,
+      height: 30.w,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 2.w),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 4,
           ),
-      ],
+        ],
+      ),
+      child: ClipOval(
+        child: benefit.image == null
+            ? Container(
+                color: Colors.grey.shade200,
+                child: Icon(Icons.card_giftcard, size: 14.sp),
+              )
+            : Image.network(
+                benefit.image!,
+                width: 30.w,
+                height: 30.w,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: Colors.grey.shade200,
+                  child: Icon(Icons.image, size: 14.sp),
+                ),
+              ),
+      ),
     );
   }
 }
@@ -324,12 +361,26 @@ class _PlanPayNowButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomElevatedButton(
-      height: 36.h,
-      width: double.infinity,
-      onPressed: onTap,
-      label: 'Pay Now',
-      uppercaseLabel: false,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        alignment: Alignment.center,
+        padding: EdgeInsets.symmetric(
+          horizontal: 12.w,
+          vertical: 8.h,
+        ),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE85A2C),
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        child: Text(
+          'Pay Now',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+        ),
+      ),
     );
   }
 }

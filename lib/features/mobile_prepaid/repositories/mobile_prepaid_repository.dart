@@ -7,7 +7,9 @@ import '../../../services/dio_service.dart';
 import '../../../services/logger_service.dart';
 import '../models/operator_info.dart';
 import '../models/operator_option.dart';
+import '../models/latest_transaction.dart';
 import '../models/plan_item.dart';
+import '../models/recharge_result.dart';
 import '../models/region_option.dart';
 
 class MobilePrepaidRepository {
@@ -127,7 +129,7 @@ class MobilePrepaidRepository {
     }
   }
 
-  Future<String> recharge({
+  Future<RechargeResult> recharge({
     required String mobile,
     required int amount,
     required String operatorName,
@@ -156,15 +158,26 @@ class MobilePrepaidRepository {
       final statusText = statusValue?.toString() ?? '';
       final message = _extractRechargeMessage(payload);
       final isSuccess = _isRechargeSuccess(statusValue, statusText);
+      final transactionId = (payload['transaction_id'] ??
+              payload['transactionId'] ??
+              payload['transaction_id'.toUpperCase()] ??
+              '')
+          .toString()
+          .trim();
+      final dateTime =
+          (payload['dateDate'] ?? payload['date_time'] ?? payload['date'] ?? '')
+              .toString()
+              .trim();
 
-      if (!isSuccess) {
-        throw Exception(
-          message.isNotEmpty ? message : 'Recharge failed. Please try again.',
-        );
-      }
-
-      if (message.isNotEmpty) return message;
-      return 'Recharge completed.';
+      return RechargeResult(
+        status: statusText,
+        message: message.isNotEmpty
+            ? message
+            : (isSuccess ? 'Recharge completed.' : 'Recharge failed.'),
+        transactionId: transactionId,
+        dateTime: dateTime,
+        isSuccess: isSuccess,
+      );
     } catch (e, stackTrace) {
       logger.error(
         'Failed to recharge',
@@ -180,6 +193,7 @@ class MobilePrepaidRepository {
     if (normalized == 'success' || normalized == 'ok' || normalized == 'true') {
       return true;
     }
+    if (normalized == 'failed' || normalized == 'failure') return false;
     if (statusValue is int) {
       return statusValue >= 200 && statusValue < 300;
     }
@@ -203,6 +217,40 @@ class MobilePrepaidRepository {
             .trim();
     if (direct.isNotEmpty) return direct;
     return '';
+  }
+
+  Future<List<LatestTransaction>> fetchLatestTransactions({
+    required String service,
+  }) async {
+    try {
+      final response = await _dio.get(
+        ApiConstants.latestTransactionsEndpoint(service: service),
+      );
+      final payload = _normalizePayload(response.data);
+      final data = payload['data'];
+      if (data is List) {
+        return data
+            .whereType<Map>()
+            .map((e) => LatestTransaction.fromJson(
+                  e.map((key, value) => MapEntry(key.toString(), value)),
+                ))
+            .toList();
+      }
+      if (data is List<dynamic>) {
+        return data
+            .map((e) =>
+                LatestTransaction.fromJson(e as Map<String, dynamic>? ?? {}))
+            .toList();
+      }
+      return [];
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to fetch latest transactions',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
   }
 
   Map<String, dynamic> _normalizePayload(Object? data) {

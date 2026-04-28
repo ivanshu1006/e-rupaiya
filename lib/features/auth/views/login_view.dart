@@ -850,7 +850,7 @@ class LoginView extends HookConsumerWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Image.asset(
-                                  FileConstants.logo,
+                                  FileConstants.erupaiyaLogo,
                                   height: 48.h,
                                   width: 48.h,
                                 ),

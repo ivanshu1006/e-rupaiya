@@ -11,6 +11,8 @@ import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/custom_elevated_button.dart';
 import '../../../widgets/k_dialog.dart';
 import '../../../widgets/payment_success_flow.dart';
+import '../../profile/utils/receipt_actions.dart';
+import '../../paymentgateway/razorpay_guard.dart';
 import '../../paymentgateway/razorpay_service.dart';
 import '../../profile/controllers/profile_controller.dart';
 import '../../services/controllers/biller_detail_controller.dart';
@@ -66,8 +68,8 @@ String _paymentSubtitle(_PaymentOutcome outcome) {
           "Please wait a few moments - we'll notify you once the transaction is confirmed.";
     case _PaymentOutcome.failure:
       return 'Unfortunately, your transaction could not be completed.'
-          'Please check your payment details or try again later.'
-          'If the amount has been deducted, it will be refunded automatically within a few business days.';
+          'Please check your payment details or try again.';
+    // 'If the amount has been deducted, it will be refunded automatically within a few business days.';
     case _PaymentOutcome.insufficient:
       return 'You do not have enough balance to complete this payment.';
   }
@@ -102,9 +104,9 @@ Color _paymentStatusColor(_PaymentOutcome outcome) {
     case _PaymentOutcome.pending:
       return Colors.amber;
     case _PaymentOutcome.failure:
-      return Colors.red;
+      return Colors.white;
     case _PaymentOutcome.insufficient:
-      return const Color.fromARGB(255, 255, 255, 255);
+      return Colors.white;
   }
 }
 
@@ -127,6 +129,7 @@ void _openPaymentResultFlow(
   required double amount,
   required String billerName,
   required String txId,
+  String? transactionDateTime,
 }) {
   void goHome(BuildContext localContext) {
     // Refresh wallet balance when returning home after any payment
@@ -139,6 +142,19 @@ void _openPaymentResultFlow(
       if (!localContext.mounted) return;
       navigatorKey.currentContext?.go(RouteConstants.home);
     });
+  }
+
+  String formatNow() {
+    final now = DateTime.now();
+    final dd = now.day.toString().padLeft(2, '0');
+    final mm = now.month.toString().padLeft(2, '0');
+    final yyyy = now.year.toString();
+    var hour = now.hour;
+    final minute = now.minute.toString().padLeft(2, '0');
+    final ampm = hour >= 12 ? 'pm' : 'am';
+    hour = hour % 12;
+    if (hour == 0) hour = 12;
+    return '$dd/$mm/$yyyy:$hour:$minute$ampm';
   }
 
   final details = [
@@ -156,9 +172,18 @@ void _openPaymentResultFlow(
         value: '#$txId',
         copyable: true,
       ),
+    if (transactionDateTime != null)
+      PaymentDetailItem(
+        label: 'Date & Time',
+        value: transactionDateTime.trim().isEmpty
+            ? formatNow()
+            : transactionDateTime.trim(),
+      ),
   ];
   final isFailure = outcome == _PaymentOutcome.failure ||
       outcome == _PaymentOutcome.insufficient;
+  final showSupportShareActions =
+      outcome == _PaymentOutcome.success || isFailure;
   void Function(BuildContext) onContinue = isFailure
       ? (screenContext) {
           Navigator.of(screenContext).pop();
@@ -188,15 +213,26 @@ void _openPaymentResultFlow(
                           outcome == _PaymentOutcome.insufficient
                       ? FileConstants.errorBanner
                       : '',
-                  emphasizeSubtitle: outcome == _PaymentOutcome.failure ||
-                      outcome == _PaymentOutcome.insufficient,
-                  showFailureActions: isFailure,
+                  emphasizeSubtitle: showSupportShareActions,
+                  showFailureActions: showSupportShareActions,
+                  showBackButton: isFailure,
                   showRatingSheet: outcome == _PaymentOutcome.success,
                   transactionId: txId,
                   continueText:
                       isFailure ? 'Retry Payment' : 'Continue to Home',
                   playSound: outcome == _PaymentOutcome.success,
                   onContinue: onContinue,
+                  onContactSupport: showSupportShareActions
+                      ? (c) => c.push(RouteConstants.helpSupport)
+                      : null,
+                  onShareReceipt: showSupportShareActions
+                      ? (c, transactionId) =>
+                          ReceiptActions.handleReceiptAction(
+                            c,
+                            transactionId: transactionId,
+                            action: ReceiptAction.share,
+                          )
+                      : null,
                 ),
               ),
             );
@@ -219,14 +255,24 @@ void _openPaymentResultFlow(
                   outcome == _PaymentOutcome.insufficient
               ? FileConstants.errorBanner
               : '',
-          emphasizeSubtitle: outcome == _PaymentOutcome.failure ||
-              outcome == _PaymentOutcome.insufficient,
-          showFailureActions: isFailure,
+          emphasizeSubtitle: showSupportShareActions,
+          showFailureActions: showSupportShareActions,
+          showBackButton: isFailure,
           showRatingSheet: outcome == _PaymentOutcome.success,
           transactionId: txId,
           continueText: isFailure ? 'Retry Payment' : 'Continue to Home',
           playSound: false,
           onContinue: onContinue,
+          onContactSupport: showSupportShareActions
+              ? (c) => c.push(RouteConstants.helpSupport)
+              : null,
+          onShareReceipt: showSupportShareActions
+              ? (c, transactionId) => ReceiptActions.handleReceiptAction(
+                    c,
+                    transactionId: transactionId,
+                    action: ReceiptAction.share,
+                  )
+              : null,
         ),
       ),
     );
@@ -272,6 +318,7 @@ class _PaymentBottomSheetState extends ConsumerState<PaymentBottomSheet> {
     required double amount,
     required String billerName,
   }) async {
+    if (!RazorpayGuard.ensureNotPaused(ref)) return;
     await RazorpayService.instance.openCheckout(
       amount: amount,
       name: billerName,
@@ -509,9 +556,16 @@ class _PaymentBottomSheetState extends ConsumerState<PaymentBottomSheet> {
 }
 
 class PrepaidPaymentBottomSheet extends ConsumerStatefulWidget {
-  const PrepaidPaymentBottomSheet({super.key, required this.amount});
+  const PrepaidPaymentBottomSheet({
+    super.key,
+    required this.amount,
+    required this.onRecharge,
+    this.billerName = 'Mobile Prepaid',
+  });
 
   final int amount;
+  final String billerName;
+  final Future<void> Function({String? referenceId}) onRecharge;
 
   @override
   ConsumerState<PrepaidPaymentBottomSheet> createState() =>
@@ -542,25 +596,30 @@ class _PrepaidPaymentBottomSheetState
     required double amount,
     required String billerName,
   }) async {
+    if (!RazorpayGuard.ensureNotPaused(ref)) return;
     await RazorpayService.instance.openCheckout(
       amount: amount,
       name: billerName,
       description: 'Recharge',
       onSuccess: (paymentId) async {
         if (!mounted) return;
-        final controller = ref.read(mobilePrepaidControllerProvider.notifier);
-        await controller.recharge(referenceId: paymentId);
+        await widget.onRecharge(referenceId: paymentId);
         if (!mounted) return;
         final latestState = ref.read(mobilePrepaidControllerProvider);
         final outcome = latestState.errorMessage != null
             ? _resolvePaymentOutcome(null, latestState.errorMessage)
             : _PaymentOutcome.success;
+        final resolvedTxId =
+            (latestState.rechargeTransactionId ?? '').isNotEmpty
+                ? latestState.rechargeTransactionId!
+                : paymentId;
         _openPaymentResultFlow(
           context,
           outcome: outcome,
           amount: amount,
           billerName: billerName,
-          txId: paymentId,
+          txId: resolvedTxId,
+          transactionDateTime: latestState.rechargeDateTime,
         );
         final message = latestState.errorMessage?.trim().toLowerCase();
         if (latestState.errorMessage != null &&
@@ -593,7 +652,6 @@ class _PrepaidPaymentBottomSheetState
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(mobilePrepaidControllerProvider);
-    final controller = ref.read(mobilePrepaidControllerProvider.notifier);
     final isPaying = state.isRecharging;
     final availableECoins = _availableECoins();
     final canUseECoins = availableECoins > 0;
@@ -686,42 +744,38 @@ class _PrepaidPaymentBottomSheetState
                         ? null
                         : () async {
                             if (_useECoins && remainingAmount == 0) {
-                              controller.recharge();
-                              // Listen for state changes
-                              ref.listenManual(
-                                mobilePrepaidControllerProvider,
-                                (previous, next) {
-                                  if (!context.mounted) return;
-                                  if (next.rechargeMessage != null &&
-                                      next.rechargeMessage !=
-                                          previous?.rechargeMessage) {
-                                    Navigator.of(context).pop();
-                                    _openPaymentResultFlow(
-                                      context,
-                                      outcome: _PaymentOutcome.success,
-                                      amount: widget.amount.toDouble(),
-                                      billerName: 'Mobile Prepaid',
-                                      txId: '',
-                                    );
-                                  }
-                                  if (next.errorMessage != null &&
-                                      next.errorMessage !=
-                                          previous?.errorMessage) {
-                                    Navigator.of(context).pop();
-                                    final outcome = _resolvePaymentOutcome(
+                              await widget.onRecharge();
+                              if (!context.mounted) return;
+                              final latestState =
+                                  ref.read(mobilePrepaidControllerProvider);
+                              Navigator.of(context).pop();
+                              final outcome = latestState.errorMessage != null
+                                  ? _resolvePaymentOutcome(
                                       null,
-                                      next.errorMessage,
-                                    );
-                                    _openPaymentResultFlow(
-                                      context,
-                                      outcome: outcome,
-                                      amount: widget.amount.toDouble(),
-                                      billerName: 'Mobile Prepaid',
-                                      txId: '',
-                                    );
-                                  }
-                                },
+                                      latestState.errorMessage,
+                                    )
+                                  : _PaymentOutcome.success;
+                              final resolvedTxId =
+                                  (latestState.rechargeTransactionId ?? '')
+                                          .isNotEmpty
+                                      ? latestState.rechargeTransactionId!
+                                      : '';
+                              _openPaymentResultFlow(
+                                context,
+                                outcome: outcome,
+                                amount: widget.amount.toDouble(),
+                                billerName: widget.billerName,
+                                txId: resolvedTxId,
+                                transactionDateTime:
+                                    latestState.rechargeDateTime,
                               );
+                              if (latestState.errorMessage != null) {
+                                AppSnackbar.show(
+                                  latestState.errorMessage!,
+                                  backgroundColor: Colors.red,
+                                  textColor: Colors.white,
+                                );
+                              }
                               return;
                             }
 
@@ -730,7 +784,7 @@ class _PrepaidPaymentBottomSheetState
                                 : widget.amount.toDouble();
                             await _startRazorpay(
                               amount: amountToPay,
-                              billerName: 'Mobile Prepaid',
+                              billerName: widget.billerName,
                             );
                           },
                     label: isPaying ? 'Processing' : buttonLabel,

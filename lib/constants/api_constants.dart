@@ -110,4 +110,25 @@ class ApiConstants {
       '$baseUrl/api/kyc/aadhaar/verify-otp';
   static String notificationReadEndpoint(String id) =>
       '$baseUrl/api/notification/read/$id';
+
+  static String pageEndpoint(String slug) => '$baseUrl/api/pages/$slug';
+
+  static const String supportLatestTransactionsEndpoint =
+      '$baseUrl/api/support/tickets/latest-transactions';
+
+  static String latestTransactionsEndpoint({required String service}) =>
+      '$baseUrl/api/latest-transactions?service=$service';
+
+  static const String faqsEndpoint = '$baseUrl/api/faqs';
+
+  static const String supportCreateTicketEndpoint =
+      '$baseUrl/api/support/ticket/create';
+
+  static const String supportTicketsEndpoint = '$baseUrl/api/support/tickets';
+
+  static String supportTicketDetailsEndpoint(String id) =>
+      '$baseUrl/api/support/ticket/details/$id';
+
+  static const String supportTicketReplyEndpoint =
+      '$baseUrl/api/support/ticket/reply';
 }

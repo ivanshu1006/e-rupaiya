@@ -2,6 +2,9 @@
 
 import 'dart:developer';
 
+import 'package:e_rupaiya/features/mobile_prepaid/components/recharge_quick_action_card.dart';
+import 'package:e_rupaiya/features/paymentgateway/razorpay_guard.dart';
+import 'package:e_rupaiya/features/paymentgateway/razorpay_service.dart';
 import 'package:e_rupaiya/features/services/models/biller_detail_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
@@ -24,8 +27,9 @@ import '../../../widgets/k_dialog.dart';
 import '../../../widgets/my_app_bar.dart';
 import '../../../widgets/param_dropdown_field.dart';
 import '../../../widgets/search_textfield.dart';
-import '../../home/components/quick_action_card.dart';
 import '../../mobile_prepaid/components/payment_bottom_sheet.dart';
+import '../../mobile_prepaid/controllers/contacts_cache_controller.dart';
+import '../../profile/controllers/profile_controller.dart';
 import '../controllers/biller_detail_controller.dart';
 import '../models/bill_response_model.dart';
 import '../models/biller_detail_args.dart';
@@ -43,22 +47,95 @@ class BillerDetailView extends HookConsumerWidget {
     final biller = detailState.selectedBiller ?? args?.biller;
     final detail = detailState.billerDetail;
     final bill = detailState.billResponse;
+    final profileState = ref.watch(profileControllerProvider);
     final customerParamsInput = detailState.customerParamsInput ?? {};
     final inputControllers =
         useMemoized(() => <String, TextEditingController>{});
     final billAmountController = useTextEditingController();
     final selectedAmountType = useState(_PaymentAmountType.totalOutstanding);
     final permissionService = useMemoized(() => const PermissionService());
+    final contactsController =
+        ref.read(contactsCacheControllerProvider.notifier);
     final isCreditCardFlow = args?.isCreditCard ?? false;
     final bottomInset = MediaQuery.of(context).viewPadding.bottom;
     final mobilePrefill = args?.mobileNumber?.trim();
     final last4Prefill = args?.cardLast4?.trim();
+    final loggedInMobile = profileState.profile?.mobile.trim();
     final isGasCylinder = useMemoized(
       () => _isGasCylinderBiller(biller?.billerName ?? ''),
       [biller?.billerName],
     );
     final showBillSample = useState(false);
     final fieldErrors = useState<Map<String, String?>>({});
+    final gasPolicyMessage = useState<String?>(null);
+    final isSubscription = _isSubscriptionFlow(
+      paymentType: args?.paymentType,
+      detailCategory: detail?.billerCategoryName,
+      billerName: biller?.billerName,
+    );
+    final showSubscriptionSummary = isSubscription && bill != null;
+
+    Map<String, String?> gasCylinderInlineErrors(BillerDetail detail) {
+      final errors = <String, String?>{};
+      final visible = detail.customerParams.where((p) => p.visibility).toList();
+      if (visible.isEmpty) return errors;
+
+      for (final p in visible) {
+        final key = p.paramName.toLowerCase();
+        final isLpg =
+            key.contains('lpg') || key.contains('gas') || key.contains('id');
+        final isContact = key.contains('contact') ||
+            key.contains('mobile') ||
+            key.contains('registered');
+        if (isLpg || isContact) {
+          errors[p.paramName] =
+              'Please enter either Registered Contact Number or LPG ID.';
+        }
+      }
+
+      // If we failed to match, fall back to marking all visible fields.
+      if (errors.isEmpty) {
+        for (final p in visible) {
+          errors[p.paramName] =
+              'Please enter either Registered Contact Number or LPG ID.';
+        }
+      }
+      return errors;
+    }
+
+    Map<String, String?> mapFetchBillValidationToFields({
+      required String message,
+      required BillerDetail? detail,
+      required bool isGasCylinder,
+    }) {
+      final trimmed = message.trim();
+      if (trimmed.isEmpty || detail == null) return const {};
+
+      String normalize(String input) =>
+          input.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+      final normalizedMessage = normalize(trimmed);
+      if (normalizedMessage.isEmpty) return const {};
+
+      if (isGasCylinder &&
+          (normalizedMessage.contains('lpg') ||
+              normalizedMessage.contains('registeredcontact') ||
+              normalizedMessage.contains('registeredmobil'))) {
+        return gasCylinderInlineErrors(detail);
+      }
+
+      final errors = <String, String?>{};
+      for (final param in detail.customerParams.where((p) => p.visibility)) {
+        final name = param.paramName.trim();
+        if (name.isEmpty) continue;
+        final normalizedName = normalize(name);
+        if (normalizedName.isEmpty) continue;
+        if (normalizedMessage.contains(normalizedName)) {
+          errors[param.paramName] = trimmed;
+        }
+      }
+      return errors;
+    }
 
     useEffect(() {
       final argBiller = args?.biller;
@@ -72,11 +149,58 @@ class BillerDetailView extends HookConsumerWidget {
       return null;
     }, [args?.biller.billerId]);
 
+    // Fetch profile for gas cylinder flow mobile prefill (if needed).
+    useEffect(() {
+      if (!isGasCylinder) return null;
+      Future.microtask(() async {
+        if (loggedInMobile != null && loggedInMobile.isNotEmpty) return;
+        if (profileState.isFetching) return;
+        await ref.read(profileControllerProvider.notifier).fetchProfile();
+      });
+      return null;
+    }, [isGasCylinder, loggedInMobile, profileState.isFetching]);
+
+    // Prefetch contacts early so opening the picker is instant.
+    useEffect(() {
+      Future.microtask(() async {
+        final granted = await permissionService.hasContactsPermission();
+        if (!granted) return;
+        await contactsController.fetchIfNeeded();
+      });
+      return null;
+    }, const []);
+
     ref.listen<BillerDetailState>(billerDetailControllerProvider,
         (previous, next) {
       final message = next.errorMessage;
       if (message != null && message.isNotEmpty) {
         if (previous?.errorMessage != message) {
+          // Inline validation errors for fetch-bill form (instead of snackbars).
+          final isOnInputForm =
+              next.billResponse == null && next.billerDetail != null;
+          if (isOnInputForm) {
+            if (isGasCylinder && _isGasBookingPolicyMessage(message)) {
+              gasPolicyMessage.value = message;
+              fieldErrors.value = {};
+              return;
+            }
+            if (gasPolicyMessage.value != null) {
+              gasPolicyMessage.value = null;
+            }
+            final inline = mapFetchBillValidationToFields(
+              message: message,
+              detail: next.billerDetail,
+              isGasCylinder: isGasCylinder,
+            );
+            if (inline.isNotEmpty) {
+              fieldErrors.value = {
+                ...fieldErrors.value,
+                ...inline,
+              };
+
+              return;
+            }
+          }
           if (isCreditCardFlow && _isNoBillDueMessage(message)) {
             KDialog.instance.openDialog(
               barrierDismissible: true,
@@ -113,6 +237,15 @@ class BillerDetailView extends HookConsumerWidget {
       return null;
     }, [bill]);
 
+    useEffect(() {
+      if (bill != null || detailState.errorMessage == null) {
+        if (gasPolicyMessage.value != null) {
+          gasPolicyMessage.value = null;
+        }
+      }
+      return null;
+    }, [bill, detailState.errorMessage]);
+
     // Create controllers for each customer param
     if (detail != null) {
       for (final param in detail.customerParams) {
@@ -138,18 +271,22 @@ class BillerDetailView extends HookConsumerWidget {
                 (isCreditCardFlow &&
                     param.dataType.toUpperCase() == 'NUMERIC' &&
                     param.maxLength == 4);
+            final isGasLockedMobile = isGasCylinder && isMobileField;
             log(
               'Prefill check: name=${param.paramName} '
               'mobile=$mobilePrefill last4=$last4Prefill '
               'isMobile=$isMobileField isLast4=$isLastFourField',
             );
-            if (mobilePrefill != null &&
+            if (isGasLockedMobile &&
+                loggedInMobile != null &&
+                loggedInMobile.isNotEmpty) {
+              tc.text = _sanitizePhone(loggedInMobile);
+              log('Prefilled gas mobile for ${param.paramName}: ${tc.text}');
+            } else if (mobilePrefill != null &&
                 mobilePrefill.isNotEmpty &&
                 isMobileField) {
               tc.text = _sanitizePhone(mobilePrefill);
-              log(
-                'Prefilled mobile for ${param.paramName}: ${tc.text}',
-              );
+              log('Prefilled mobile for ${param.paramName}: ${tc.text}');
             } else if (last4Prefill != null &&
                 last4Prefill.isNotEmpty &&
                 isLastFourField) {
@@ -189,7 +326,12 @@ class BillerDetailView extends HookConsumerWidget {
             (isCreditCardFlow &&
                 param.dataType.toUpperCase() == 'NUMERIC' &&
                 param.maxLength == 4);
-        if (mobilePrefill != null &&
+        final isGasLockedMobile = isGasCylinder && isMobileField;
+        if (isGasLockedMobile &&
+            loggedInMobile != null &&
+            loggedInMobile.isNotEmpty) {
+          tc.text = _sanitizePhone(loggedInMobile);
+        } else if (mobilePrefill != null &&
             mobilePrefill.isNotEmpty &&
             isMobileField) {
           tc.text = _sanitizePhone(mobilePrefill);
@@ -202,7 +344,7 @@ class BillerDetailView extends HookConsumerWidget {
         }
       }
       return null;
-    }, [detail, mobilePrefill, last4Prefill]);
+    }, [detail, mobilePrefill, last4Prefill, loggedInMobile, isGasCylinder]);
 
     return PopScope(
       canPop: detailState.billResponse == null,
@@ -238,20 +380,30 @@ class BillerDetailView extends HookConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Provider card
-                          QuickActionCard(
+                          SimpleQuickActionCard(
                             title: biller.billerName,
                             subtitle: '',
-                            amount: 'Change',
-                            buttonLabel: '',
-                            imageUrl: biller.iconUrl,
-                            showTail: true,
-                            showLeadingImage: true,
-                            onTap: () {
+                            leadingImageUrl: biller.iconUrl,
+                            actionLabel: 'Change',
+                            onAction: () {
                               controller.reset();
                               context.pop();
                             },
                           ),
+                          // // Provider card
+                          // QuickActionCard(
+                          //   title: biller.billerName,
+                          //   subtitle: '',
+                          //   amount: 'Change',
+                          //   buttonLabel: '',
+                          //   imageUrl: biller.iconUrl,
+                          //   showTail: true,
+                          //   showLeadingImage: true,
+                          //   onTap: () {
+                          //     controller.reset();
+                          //     context.pop();
+                          //   },
+                          // ),
                           const SizedBox(height: 24),
 
                           // --- Loading detail ---
@@ -276,6 +428,14 @@ class BillerDetailView extends HookConsumerWidget {
                               ),
                               const SizedBox(height: 16),
                             ],
+                            if (isSubscription) ...[
+                              const _InfoNoteCard(
+                                text:
+                                    'Subscription starts immediately upon payment. Please check the phone number before proceeding.',
+                                showLogo: false,
+                              ),
+                              const SizedBox(height: 16),
+                            ],
                             ...detail.customerParams
                                 .where((p) => p.visibility)
                                 .map((param) {
@@ -283,6 +443,8 @@ class BillerDetailView extends HookConsumerWidget {
                               final isLastFour =
                                   _isLastFourParam(param.paramName);
                               final isMobile = _isMobileParam(param.paramName);
+                              final isGasLockedMobile =
+                                  isGasCylinder && isMobile;
                               final isDate =
                                   DateFormatHelper.isDateParam(param.paramName);
                               final dateFormat = isDate
@@ -291,6 +453,9 @@ class BillerDetailView extends HookConsumerWidget {
                                   : null;
                               final errorText =
                                   fieldErrors.value[param.paramName];
+                              final label = isGasLockedMobile
+                                  ? 'Mobile Number'
+                                  : 'Enter Your ${param.paramName}';
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 16),
                                 child: Column(
@@ -300,7 +465,7 @@ class BillerDetailView extends HookConsumerWidget {
                                       children: [
                                         Flexible(
                                           child: Text(
-                                            'Enter Your ${param.paramName}',
+                                            label,
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .bodyMedium
@@ -336,6 +501,9 @@ class BillerDetailView extends HookConsumerWidget {
                                                 Map.from(fieldErrors.value)
                                                   ..remove(param.paramName);
                                           }
+                                          if (gasPolicyMessage.value != null) {
+                                            gasPolicyMessage.value = null;
+                                          }
                                         },
                                       )
                                     else if (param.hasDropdown)
@@ -351,11 +519,23 @@ class BillerDetailView extends HookConsumerWidget {
                                                 Map.from(fieldErrors.value)
                                                   ..remove(param.paramName);
                                           }
+                                          if (gasPolicyMessage.value != null) {
+                                            gasPolicyMessage.value = null;
+                                          }
                                         },
                                       )
                                     else
                                       TextField(
                                         controller: tc,
+                                        readOnly: isGasLockedMobile,
+                                        enableInteractiveSelection:
+                                            !isGasLockedMobile,
+                                        showCursor:
+                                            isGasLockedMobile ? false : null,
+                                        onTap: isGasLockedMobile
+                                            ? () =>
+                                                FocusScope.of(context).unfocus()
+                                            : null,
                                         keyboardType:
                                             param.dataType == 'NUMERIC'
                                                 ? TextInputType.number
@@ -369,6 +549,9 @@ class BillerDetailView extends HookConsumerWidget {
                                                 Map.from(fieldErrors.value)
                                                   ..remove(param.paramName);
                                           }
+                                          if (gasPolicyMessage.value != null) {
+                                            gasPolicyMessage.value = null;
+                                          }
                                         },
                                         decoration: InputDecoration(
                                           hintText: _buildParamHint(param),
@@ -379,7 +562,8 @@ class BillerDetailView extends HookConsumerWidget {
                                           prefixIcon: isLastFour
                                               ? _MaskedPrefix()
                                               : null,
-                                          suffixIcon: isMobile
+                                          suffixIcon: (isMobile &&
+                                                  !isGasLockedMobile)
                                               ? IconButton(
                                                   icon: const Icon(
                                                     Icons.contact_phone,
@@ -390,10 +574,18 @@ class BillerDetailView extends HookConsumerWidget {
                                                         await _pickContactNumber(
                                                       context,
                                                       permissionService,
+                                                      contactsController:
+                                                          contactsController,
                                                     );
                                                     if (picked != null &&
                                                         picked.isNotEmpty) {
                                                       tc?.text = picked;
+                                                    }
+                                                    if (gasPolicyMessage
+                                                            .value !=
+                                                        null) {
+                                                      gasPolicyMessage.value =
+                                                          null;
                                                     }
                                                   },
                                                 )
@@ -438,6 +630,32 @@ class BillerDetailView extends HookConsumerWidget {
                                 ),
                               );
                             }),
+                            if (gasPolicyMessage.value != null) ...[
+                              _GasPolicyBanner(
+                                message: gasPolicyMessage.value!,
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                          ]
+
+                          // --- Subscription summary ---
+                          else if (detail != null &&
+                              showSubscriptionSummary) ...[
+                            _SubscriptionSummaryCard(
+                              mobileNumber: _resolveSubscriptionMobile(
+                                  customerParamsInput),
+                              plan:
+                                  _resolveSubscriptionPlan(customerParamsInput),
+                              amount: _resolveSubscriptionAmount(
+                                customerParamsInput,
+                                billAmountController.text,
+                                bill,
+                              ),
+                              onChange: () {
+                                controller.clearBill();
+                              },
+                            ),
+                            const SizedBox(height: 12),
                           ]
 
                           // --- Compact bill view ---
@@ -481,29 +699,12 @@ class BillerDetailView extends HookConsumerWidget {
                             ),
                           ],
 
-                          if (detail != null && bill == null) ...[
+                          if (detail != null &&
+                              (bill == null || showSubscriptionSummary)) ...[
                             const SizedBox(height: 12),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: AppColors.lightBorder.withOpacity(0.7),
-                                ),
-                              ),
-                              child: Text(
-                                'By proceeding further, you allow E-Rupaiya to store your bill details, fetch current and future bills, and send you reminders.',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: AppColors.textPrimary
-                                          .withOpacity(0.7),
-                                      height: 1.5,
-                                    ),
-                              ),
+                            const _InfoNoteCard(
+                              text:
+                                  'By proceeding further, you allow E-Rupaiya to store your bill details, fetch current and future bills, and send you reminders.',
                             ),
                             const SizedBox(height: 8),
                           ],
@@ -536,18 +737,90 @@ class BillerDetailView extends HookConsumerWidget {
                           ValueListenableBuilder<TextEditingValue>(
                             valueListenable: billAmountController,
                             builder: (context, value, _) {
-                              final payLabel = bill != null
-                                  // ? 'Pay \u20B9${_resolvedPayAmount(billAmountController, bill).toStringAsFixed(0)}'
-                                  ? 'Proceed to Pay'
-                                  : 'CONFIRM';
+                              final payLabel = showSubscriptionSummary
+                                  ? 'Pay Now'
+                                  : (bill != null
+                                      // ? 'Pay \u20B9${_resolvedPayAmount(billAmountController, bill).toStringAsFixed(0)}'
+                                      ? 'Proceed to Pay'
+                                      : 'CONFIRM');
                               final enteredAmount =
                                   _parseEnteredAmount(value.text);
-                              final shouldDisablePay =
-                                  bill != null && (enteredAmount ?? 0) <= 0;
+                              final subscriptionAmount = showSubscriptionSummary
+                                  ? _resolveSubscriptionAmount(
+                                      customerParamsInput,
+                                      value.text,
+                                      bill,
+                                    )
+                                  : null;
+                              final shouldDisablePay = showSubscriptionSummary
+                                  ? (subscriptionAmount ?? 0) <= 0
+                                  : (bill != null && (enteredAmount ?? 0) <= 0);
                               return CustomElevatedButton(
                                 onPressed: shouldDisablePay
                                     ? null
                                     : () {
+                                        if (showSubscriptionSummary) {
+                                          final amountToPay =
+                                              subscriptionAmount ?? 0;
+                                          final mobile =
+                                              _resolveSubscriptionMobile(
+                                            customerParamsInput,
+                                          );
+                                          final name = (biller.billerName ?? '')
+                                                  .trim()
+                                                  .isNotEmpty
+                                              ? biller.billerName.trim()
+                                              : 'Subscription';
+                                          if (!RazorpayGuard.ensureNotPaused(
+                                            ref,
+                                          )) {
+                                            return;
+                                          }
+                                          RazorpayService.instance.openCheckout(
+                                            amount: amountToPay,
+                                            name: name,
+                                            description:
+                                                'Subscription bill payment',
+                                            prefill: {
+                                              if (mobile.isNotEmpty)
+                                                'contact': mobile,
+                                            },
+                                            onSuccess: (paymentId) async {
+                                              if (paymentId.isEmpty) {
+                                                AppSnackbar.show(
+                                                  'Payment succeeded but payment id is missing. Please try again.',
+                                                  type: AppSnackbarType.error,
+                                                );
+                                                return;
+                                              }
+
+                                              // If the bill is available we can complete BBPS payment; otherwise
+                                              // we only allow Razorpay checkout for UI testing.
+                                              await controller.payBill(
+                                                amount: amountToPay,
+                                                refIdOverride: paymentId,
+                                                isCreditCardFlow:
+                                                    isCreditCardFlow,
+                                                paymentTypeOverride:
+                                                    args?.paymentType,
+                                              );
+
+                                              AppSnackbar.show(
+                                                'Payment successful',
+                                                type: AppSnackbarType.success,
+                                              );
+                                            },
+                                            onFailure: (message) {
+                                              AppSnackbar.show(
+                                                message.isEmpty
+                                                    ? 'Payment failed. Please try again.'
+                                                    : message,
+                                                type: AppSnackbarType.error,
+                                              );
+                                            },
+                                          );
+                                          return;
+                                        }
                                         if (bill == null) {
                                           // Validate all visible params
                                           final visibleParams = detail
@@ -582,21 +855,33 @@ class BillerDetailView extends HookConsumerWidget {
                                           if (isGasCylinder &&
                                               visibleParams.isNotEmpty &&
                                               values.isEmpty) {
-                                            AppSnackbar.show(
-                                                'Please enter either Registered Contact Number or LPG ID.',
-                                                type: AppSnackbarType.error);
+                                            fieldErrors.value =
+                                                gasCylinderInlineErrors(detail);
                                             return;
                                           }
 
                                           if (values.isNotEmpty) {
+                                            if (gasPolicyMessage.value !=
+                                                null) {
+                                              gasPolicyMessage.value = null;
+                                            }
                                             controller.fetchBill(
                                               customerParams: values,
                                             );
                                           }
                                         } else if (!detailState
                                             .showFullDetails) {
-                                          // Show full details
-                                          controller.toggleFullDetails();
+                                          // Open payment bottom sheet (details expansion is via the
+                                          // down-arrow in the bill card, not the pay CTA).
+                                          final amountToPay = enteredAmount ??
+                                              bill.amountInRupees;
+                                          _showPaymentSheet(
+                                            context,
+                                            amountToPay,
+                                            isCreditCardFlow: isCreditCardFlow,
+                                            paymentTypeOverride:
+                                                args?.paymentType,
+                                          );
                                         } else {
                                           // Open payment bottom sheet
                                           final amountToPay = enteredAmount ??
@@ -613,6 +898,7 @@ class BillerDetailView extends HookConsumerWidget {
                                 label: payLabel,
                                 showArrow: false,
                                 uppercaseLabel: false,
+                                height: 38.h,
                               );
                             },
                           ),
@@ -697,11 +983,283 @@ class BillerDetailView extends HookConsumerWidget {
   }
 }
 
+class _InfoNoteCard extends StatelessWidget {
+  const _InfoNoteCard({
+    required this.text,
+    this.showLogo = true,
+  });
+
+  final String text;
+  final bool showLogo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.lightBorder.withOpacity(0.7),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (showLogo) ...[
+            Image.asset(FileConstants.bharatConnectColor, height: 18),
+            const SizedBox(width: 8),
+          ],
+          Expanded(
+            child: Text(
+              text,
+              softWrap: true,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 10,
+                    color: AppColors.textPrimary.withOpacity(0.7),
+                    height: 1.5,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GasPolicyBanner extends StatelessWidget {
+  const _GasPolicyBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF7A0000),
+            Color(0xFFB00000),
+          ],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Text(
+        message.trim(),
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              height: 1.4,
+            ),
+      ),
+    );
+  }
+}
+
+class _SubscriptionSummaryCard extends StatelessWidget {
+  const _SubscriptionSummaryCard({
+    required this.mobileNumber,
+    required this.plan,
+    required this.amount,
+    required this.onChange,
+  });
+
+  final String mobileNumber;
+  final String plan;
+  final double amount;
+  final VoidCallback onChange;
+
+  @override
+  Widget build(BuildContext context) {
+    final resolvedMobile = mobileNumber.trim().isEmpty ? '-' : mobileNumber;
+    final resolvedPlan = plan.trim().isEmpty ? '-' : plan;
+    final amountText = amount <= 0 ? '-' : '₹${amount.toStringAsFixed(2)}';
+
+    Widget stackedField({
+      required String label,
+      required String value,
+    }) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textPrimary.withOpacity(0.7),
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  height: 1.25,
+                ),
+          ),
+        ],
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.lightBorder.withOpacity(0.7)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          stackedField(label: 'Mobile Number', value: resolvedMobile),
+          const SizedBox(height: 16),
+          stackedField(label: 'Plan', value: resolvedPlan),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Text(
+                'Amount To Pay',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const Spacer(),
+              Text(
+                amountText,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 24,
+                    ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 bool _isGasCylinderBiller(String name) {
   final value = name.toLowerCase();
   return value.contains('gas') ||
       value.contains('lpg') ||
       value.contains('cylinder');
+}
+
+bool _isGasBookingPolicyMessage(String message) {
+  final text = message.trim().toLowerCase();
+  if (text.isEmpty) return false;
+  if (!text.contains('dear customer')) return false;
+  return text.contains('booking policy') ||
+      text.contains('eligible booking date') ||
+      text.contains('lpg refill') ||
+      text.contains('refill was delivered');
+}
+
+bool _isSubscriptionFlow({
+  required String? paymentType,
+  required String? detailCategory,
+  required String? billerName,
+}) {
+  bool isSubscriptionText(String? value) {
+    final text = (value ?? '').trim().toLowerCase();
+    if (text.isEmpty) return false;
+    return text == 'subscription' || text.contains('subscription');
+  }
+
+  if (isSubscriptionText(paymentType)) return true;
+  if (isSubscriptionText(detailCategory)) return true;
+
+  final name = (billerName ?? '').trim().toLowerCase();
+  if (name.isEmpty) return false;
+  const hints = [
+    'subscription',
+    'hotstar',
+    'ott',
+    'netflix',
+    'prime',
+    'sony',
+    'zee',
+  ];
+  return hints.any(name.contains);
+}
+
+String _resolveSubscriptionMobile(Map<String, String> params) {
+  if (params.isEmpty) return '';
+  for (final entry in params.entries) {
+    final key = entry.key.toLowerCase();
+    if (key.contains('mobile') ||
+        key.contains('phone') ||
+        key.contains('contact')) {
+      return entry.value.trim();
+    }
+  }
+  return params.values.first.trim();
+}
+
+String _resolveSubscriptionPlan(Map<String, String> params) {
+  if (params.isEmpty) return '';
+  for (final entry in params.entries) {
+    final key = entry.key.toLowerCase();
+    if (key.contains('plan') ||
+        key.contains('package') ||
+        key.contains('product')) {
+      return entry.value.trim();
+    }
+  }
+  if (params.values.length >= 2) {
+    return params.values.elementAt(1).trim();
+  }
+  return '';
+}
+
+double _resolveSubscriptionAmount(
+  Map<String, String> params,
+  String enteredAmountRaw,
+  BillResponse? bill,
+) {
+  final entered = _parseEnteredAmount(enteredAmountRaw);
+  if (entered != null && entered > 0) return entered;
+  if (bill != null) return bill.amountInRupees;
+
+  final plan = _resolveSubscriptionPlan(params);
+  final parsed = _parseAmountFromPlan(plan);
+  if (parsed != null && parsed > 0) return parsed;
+
+  return 0;
+}
+
+double? _parseAmountFromPlan(String raw) {
+  final text = raw.trim();
+  if (text.isEmpty) return null;
+
+  final explicit = RegExp(
+    r'(?:₹|rs\.?|inr|@)\s*([0-9]+(?:\.[0-9]+)?)',
+    caseSensitive: false,
+  ).firstMatch(text);
+  if (explicit != null) {
+    return double.tryParse(explicit.group(1) ?? '');
+  }
+
+  final numbers = RegExp(r'([0-9]+(?:\.[0-9]+)?)').allMatches(text).toList();
+  if (numbers.isEmpty) return null;
+  return double.tryParse(numbers.last.group(1) ?? '');
 }
 
 class _MaskedPrefix extends StatelessWidget {
@@ -831,9 +1389,8 @@ String _sanitizePhone(String raw) {
 }
 
 Future<String?> _pickContactNumber(
-  BuildContext context,
-  PermissionService permissionService,
-) async {
+    BuildContext context, PermissionService permissionService,
+    {required ContactsCacheController contactsController}) async {
   final status = await Permission.contacts.status;
   if (status.isPermanentlyDenied) {
     final openSettings = await showDialog<bool>(
@@ -873,37 +1430,97 @@ Future<String?> _pickContactNumber(
     return null;
   }
 
-  try {
-    final contacts = await FlutterContacts.getContacts(withProperties: true);
-    if (contacts.isEmpty) {
-      AppSnackbar.show(
-        'No contacts found.',
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
+  // Open the sheet immediately; contacts load inside via cache controller.
+  return showModalBottomSheet<String>(
+    context: context,
+    useRootNavigator: true,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (context) {
+      return _ContactPickerSheetHost(
+        onReload: contactsController.reload,
+        onEnsureLoaded: contactsController.fetchIfNeeded,
       );
+    },
+  );
+}
+
+class _ContactPickerSheetHost extends HookConsumerWidget {
+  const _ContactPickerSheetHost({
+    required this.onReload,
+    required this.onEnsureLoaded,
+  });
+
+  final Future<void> Function() onReload;
+  final Future<void> Function() onEnsureLoaded;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(contactsCacheControllerProvider);
+
+    useEffect(() {
+      Future.microtask(onEnsureLoaded);
       return null;
+    }, const []);
+
+    final contacts = state.contacts;
+    final isLoading = state.isLoading;
+    final error = state.errorMessage;
+
+    if (isLoading && contacts.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.fromLTRB(16, 12, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(height: 8),
+            SizedBox(
+              height: 24,
+              width: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: AppColors.primary,
+              ),
+            ),
+            SizedBox(height: 10),
+            Text('Loading contacts...'),
+          ],
+        ),
+      );
     }
 
-    return showModalBottomSheet<String>(
-      context: context,
-      useRootNavigator: true,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) {
-        return _ContactPickerSheet(contacts: contacts);
-      },
-    );
-  } catch (_) {
-    AppSnackbar.show(
-      'Unable to access contacts.',
-      backgroundColor: Colors.red,
-      textColor: Colors.white,
-    );
-    return null;
+    if (error != null && error.isNotEmpty && contacts.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Unable to load contacts.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.red.shade600,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onReload,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Try Again'),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return _ContactPickerSheet(contacts: contacts);
   }
 }
 
@@ -1214,7 +1831,7 @@ class _AmountDisplayCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              if (_hasValidBillPeriod(bill.billPeriod))
+              if (_hasValidBillPeriod(_resolveBillMonth(bill)))
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1223,7 +1840,7 @@ class _AmountDisplayCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    'Bill for ${_formatBillPeriod(bill.billPeriod)}',
+                    'Bill for ${_formatBillPeriod(_resolveBillMonth(bill))}',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
@@ -1278,6 +1895,12 @@ class _AmountDisplayCard extends StatelessWidget {
       }
     }
     return period;
+  }
+
+  String _resolveBillMonth(BillResponse bill) {
+    final fromAdditional = bill.additionalParams['Bill Month']?.trim() ?? '';
+    if (fromAdditional.isNotEmpty) return fromAdditional;
+    return bill.billPeriod.trim();
   }
 
   bool _hasValidBillPeriod(String period) {
@@ -1648,8 +2271,8 @@ class _CreditCardAmountCard extends StatelessWidget {
                 bottom: 0,
                 child: Image.asset(
                   FileConstants.ellipse7,
-                  width: 60.w,
-                  height: 60.w,
+                  width: 70.w,
+                  height: 65.h,
                   fit: BoxFit.cover,
                 ),
               ),

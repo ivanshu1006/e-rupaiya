@@ -47,7 +47,7 @@ class OtpSuccessView extends HookConsumerWidget {
                 const SizedBox(height: 48),
                 Center(
                   child: Image.asset(
-                    FileConstants.logo,
+                    FileConstants.erupaiyaLogo,
                     height: 48,
                   ),
                 ),

@@ -12,6 +12,7 @@ import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/custom_elevated_button.dart';
 import '../../../widgets/k_dialog.dart';
 import '../../../widgets/my_app_bar.dart';
+import '../../paymentgateway/razorpay_guard.dart';
 import '../../paymentgateway/razorpay_service.dart';
 import '../../profile/models/transaction_history_entry.dart';
 import '../components/education_payment_sheets.dart';
@@ -51,6 +52,7 @@ class EducationFeesTutorsView extends HookConsumerWidget {
         dialog: EducationPaymentSummarySheet(
           amount: amount,
           onPayNow: (payable) async {
+            if (!RazorpayGuard.ensureNotPaused(ref)) return;
             await RazorpayService.instance.openCheckout(
               amount: payable,
               name: tutor.name.isEmpty ? 'Education Fees' : tutor.name,

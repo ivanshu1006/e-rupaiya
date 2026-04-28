@@ -1,6 +1,7 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../services/logger_service.dart';
+import '../models/latest_transaction.dart';
 import '../models/mobile_prepaid_state.dart';
 import '../models/plan_item.dart';
 import '../models/operator_info.dart';
@@ -15,6 +16,14 @@ final mobilePrepaidControllerProvider =
   (ref) => MobilePrepaidController(
     repository: ref.watch(mobilePrepaidRepositoryProvider),
   ),
+);
+
+final latestRechargeTransactionsProvider =
+    FutureProvider.autoDispose<List<LatestTransaction>>(
+  (ref) async {
+    final repo = ref.watch(mobilePrepaidRepositoryProvider);
+    return repo.fetchLatestTransactions(service: 'recharge');
+  },
 );
 
 class MobilePrepaidController extends StateNotifier<MobilePrepaidState> {
@@ -168,9 +177,12 @@ class MobilePrepaidController extends StateNotifier<MobilePrepaidState> {
       isRecharging: true,
       errorMessage: null,
       rechargeMessage: null,
+      rechargeStatus: null,
+      rechargeTransactionId: null,
+      rechargeDateTime: null,
     );
     try {
-      final message = await _repository.recharge(
+      final result = await _repository.recharge(
         mobile: state.mobile,
         amount: state.selectedPlan!.amount,
         desc: state.selectedPlan!.description,
@@ -179,7 +191,13 @@ class MobilePrepaidController extends StateNotifier<MobilePrepaidState> {
       );
       state = state.copyWith(
         isRecharging: false,
-        rechargeMessage: message,
+        rechargeStatus: result.status,
+        rechargeTransactionId: result.transactionId,
+        rechargeDateTime: result.dateTime,
+        rechargeMessage: result.isSuccess ? result.message : null,
+        errorMessage: result.isSuccess
+            ? null
+            : (result.message.isEmpty ? null : result.message),
       );
     } catch (e, stackTrace) {
       logger.error(
@@ -189,6 +207,58 @@ class MobilePrepaidController extends StateNotifier<MobilePrepaidState> {
       );
       state = state.copyWith(
         isRecharging: false,
+        rechargeStatus: null,
+        errorMessage: _errorMessageFromException(e),
+      );
+    }
+  }
+
+  Future<void> rechargeWithPlan({
+    required PlanItem plan,
+    String? referenceId,
+  }) async {
+    if (state.operatorInfo == null || state.mobile.isEmpty) {
+      state = state.copyWith(
+        errorMessage: 'Please select an operator before proceeding.',
+      );
+      return;
+    }
+
+    state = state.copyWith(
+      isRecharging: true,
+      errorMessage: null,
+      rechargeMessage: null,
+      rechargeStatus: null,
+      rechargeTransactionId: null,
+      rechargeDateTime: null,
+    );
+    try {
+      final result = await _repository.recharge(
+        mobile: state.mobile,
+        amount: plan.amount,
+        desc: plan.description,
+        operatorName: state.operatorInfo!.operatorName,
+        referenceId: referenceId ?? '',
+      );
+      state = state.copyWith(
+        isRecharging: false,
+        rechargeStatus: result.status,
+        rechargeTransactionId: result.transactionId,
+        rechargeDateTime: result.dateTime,
+        rechargeMessage: result.isSuccess ? result.message : null,
+        errorMessage: result.isSuccess
+            ? null
+            : (result.message.isEmpty ? null : result.message),
+      );
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to recharge',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      state = state.copyWith(
+        isRecharging: false,
+        rechargeStatus: null,
         errorMessage: _errorMessageFromException(e),
       );
     }

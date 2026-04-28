@@ -4,6 +4,8 @@ import 'dart:async';
 
 import 'package:e_rupaiya/constants/app_text_styles.dart';
 import 'package:e_rupaiya/features/home/components/home_shimmer.dart';
+import 'package:e_rupaiya/features/profile/views/my_wallet_view.dart';
+import 'package:e_rupaiya/features/spinandear/views/spin_and_win_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -16,7 +18,9 @@ import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
+import '../../../services/location_service.dart';
 import '../../../services/notification_badge_service.dart';
+import '../../../services/push_notification_service.dart';
 import '../../../widgets/app_network_image.dart';
 import '../../../widgets/custom_elevated_button.dart';
 import '../../../widgets/k_dialog.dart';
@@ -42,19 +46,11 @@ class HomeView extends HookConsumerWidget {
     final tabController = ref.watch(homeTabControllerProvider);
     final lastTabIndex = useRef<int>(tabController.index);
     final isExitDialogOpen = useRef<bool>(false);
+    final didRequestPermissions = useRef<bool>(false);
     final tabs = [
       const _HomeContent(),
       const OffersView(),
-      // const ScanUserScreen(),
-      SizedBox(
-        height: 200,
-        child: Center(
-          child: Text(
-            'Scan User Coming Soon',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-        ),
-      ),
+      const SpinAndWinView(),
       const TransactionHistoryScreen(),
       const NotificationsScreen(),
     ];
@@ -63,14 +59,21 @@ class HomeView extends HookConsumerWidget {
       fontSize: 12.sp,
       fontWeight: FontWeight.w600,
       color: Colors.black,
+      height: 1,
     );
+    final spinNavTextStyle = navTextStyle.copyWith(fontSize: 13.sp);
     final inactiveNavColor = AppColors.textPrimary.withOpacity(0.45);
+    final navIconBoxSize = 25.r;
+    final middleNavIconBoxSize = 40.r;
+    final spinCircleSize = middleNavIconBoxSize + 25.r;
     final navItems = [
       PersistentBottomNavBarItem(
+        contentPadding: 0,
         icon: _BottomIcon(
           asset: FileConstants.paybills,
           size: 20.r,
           color: AppColors.primary,
+          yOffset: 2.h,
         ),
         // inactiveIcon: _BottomIcon(
         //   asset: FileConstants.erupaiyaLogo,
@@ -78,75 +81,105 @@ class HomeView extends HookConsumerWidget {
         //   color: inactiveNavColor,
         // ),
         title: 'Pay Bills',
-        iconSize: 30.r,
+        iconSize: navIconBoxSize,
         textStyle: navTextStyle,
         activeColorPrimary: Colors.black,
         inactiveColorPrimary: inactiveNavColor,
       ),
       PersistentBottomNavBarItem(
+        contentPadding: 0,
         icon: _BottomIcon(
           asset: FileConstants.offers,
           size: 20.r,
           color: AppColors.primary,
+          yOffset: 2.h,
         ),
         inactiveIcon: _BottomIcon(
           asset: FileConstants.offers,
           size: 20.r,
           color: inactiveNavColor,
+          yOffset: 2.h,
         ),
         title: 'Offers',
-        iconSize: 30.r,
+        iconSize: navIconBoxSize,
         textStyle: navTextStyle,
         activeColorPrimary: Colors.black,
         inactiveColorPrimary: inactiveNavColor,
       ),
       PersistentBottomNavBarItem(
-        icon: _GradientFabIcon(
-          asset: FileConstants.scanUser,
-          size: 20.r,
+        icon: _BottomCircleIcon(
+          asset: FileConstants.homeSpin,
+          circleSize: spinCircleSize,
+          iconSize: 54.r,
+          backgroundColor: AppColors.primary,
           iconColor: Colors.white,
+          yOffset: 2.h,
         ),
-        inactiveIcon: _GradientFabIcon(
-          asset: FileConstants.scanUser,
-          size: 20.r,
-          iconColor: Colors.white.withOpacity(0.75),
+        inactiveIcon: _BottomCircleIcon(
+          asset: FileConstants.homeSpin,
+          circleSize: spinCircleSize,
+          iconSize: 52.r,
+          backgroundColor: AppColors.primary,
+          iconColor: Colors.white,
+          yOffset: 2.h,
         ),
-        title: 'Scan User',
-        iconSize: 30.r,
-        textStyle: navTextStyle,
-        activeColorPrimary: AppColors.primary,
-        inactiveColorPrimary: inactiveNavColor,
-      ),
-      PersistentBottomNavBarItem(
-        icon: _BottomIcon(
-          asset: FileConstants.history,
-          size: 20.r,
-          color: AppColors.primary,
-        ),
-        inactiveIcon: _BottomIcon(
-          asset: FileConstants.history,
-          size: 20.r,
-          color: inactiveNavColor,
-        ),
-        title: 'History',
-        iconSize: 30.r,
-        textStyle: navTextStyle,
+        title: 'Spin & Win',
+        iconSize: spinCircleSize,
+        textStyle: spinNavTextStyle,
         activeColorPrimary: Colors.black,
         inactiveColorPrimary: inactiveNavColor,
+        // icon: _GradientFabIcon(
+        //   asset: FileConstants.scanUser,
+        //   size: 20.r,
+        //   iconColor: Colors.white,
+        // ),
+        // inactiveIcon: _GradientFabIcon(
+        //   asset: FileConstants.scanUser,
+        //   size: 20.r,
+        //   iconColor: Colors.white.withOpacity(0.75),
+        // ),
+        // title: 'Scan User',
+        // iconSize: 30.r,
+        // textStyle: navTextStyle,
+        // activeColorPrimary: AppColors.primary,
+        // inactiveColorPrimary: inactiveNavColor,
       ),
       PersistentBottomNavBarItem(
+        contentPadding: 0,
         icon: _BottomIcon(
-          asset: FileConstants.notification,
+          asset: FileConstants.homeAlerts,
           size: 20.r,
           color: AppColors.primary,
+          yOffset: 2.h,
         ),
         inactiveIcon: _BottomIcon(
-          asset: FileConstants.notification,
+          asset: FileConstants.homeAlerts,
           size: 20.r,
           color: inactiveNavColor,
+          yOffset: 2.h,
         ),
         title: 'Alerts',
-        iconSize: 30.r,
+        iconSize: navIconBoxSize,
+        textStyle: navTextStyle,
+        activeColorPrimary: Colors.black,
+        inactiveColorPrimary: inactiveNavColor,
+      ),
+      PersistentBottomNavBarItem(
+        contentPadding: 0,
+        icon: _BottomIcon(
+          asset: FileConstants.homeHistory,
+          size: 18.r,
+          color: AppColors.primary,
+          yOffset: 2.h,
+        ),
+        inactiveIcon: _BottomIcon(
+          asset: FileConstants.homeHistory,
+          size: 18.r,
+          color: inactiveNavColor,
+          yOffset: 2.h,
+        ),
+        title: 'History',
+        iconSize: navIconBoxSize,
         textStyle: navTextStyle,
         activeColorPrimary: Colors.black,
         inactiveColorPrimary: inactiveNavColor,
@@ -165,6 +198,19 @@ class HomeView extends HookConsumerWidget {
       tabController.addListener(listener);
       return () => tabController.removeListener(listener);
     }, [tabController]);
+
+    useEffect(() {
+      if (didRequestPermissions.value) return null;
+      didRequestPermissions.value = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.microtask(() async {
+          await PushNotificationService.ensurePermissionsRequested();
+          await LocationService.initialize();
+        });
+      });
+      return null;
+    }, const []);
+
     Future<void> showExitDialog() async {
       if (isExitDialogOpen.value) return;
       isExitDialogOpen.value = true;
@@ -184,6 +230,10 @@ class HomeView extends HookConsumerWidget {
       canPop: false,
       onPopInvoked: (didPop) {
         if (didPop) return;
+        if (tabController.index != 0) {
+          tabController.jumpToTab(0);
+          return;
+        }
         showExitDialog();
       },
       child: PersistentTabView(
@@ -191,14 +241,14 @@ class HomeView extends HookConsumerWidget {
         controller: tabController,
         screens: tabs,
         items: navItems,
-        navBarStyle: NavBarStyle.style15,
+        navBarStyle: NavBarStyle.simple,
         decoration: NavBarDecoration(
           borderRadius: BorderRadius.circular(0),
           // color: Colors.white,
           colorBehindNavBar: Colors.white,
         ),
-        navBarHeight: 58.h,
-        padding: EdgeInsets.only(top: 6.h, bottom: 8.h),
+        navBarHeight: 64.h,
+        padding: EdgeInsets.only(top: 2.h, bottom: 10.h),
         backgroundColor: Colors.white,
         hideNavigationBarWhenKeyboardAppears: true,
         confineToSafeArea: true,
@@ -377,18 +427,67 @@ class _BottomIcon extends StatelessWidget {
     required this.asset,
     this.size = 26,
     this.color,
+    this.yOffset = 0,
   });
   final String asset;
   final double size;
   final Color? color;
+  final double yOffset;
 
   @override
   Widget build(BuildContext context) {
-    return Image.asset(
-      asset,
-      height: size,
-      width: size,
-      color: color ?? const Color.fromARGB(255, 248, 245, 244),
+    return Transform.translate(
+      offset: Offset(0, yOffset),
+      child: Image.asset(
+        asset,
+        height: size,
+        width: size,
+        color: color ?? const Color.fromARGB(255, 248, 245, 244),
+      ),
+    );
+  }
+}
+
+class _BottomCircleIcon extends StatelessWidget {
+  const _BottomCircleIcon({
+    required this.asset,
+    required this.circleSize,
+    required this.iconSize,
+    required this.backgroundColor,
+    required this.iconColor,
+    this.yOffset = 0,
+  });
+
+  final String asset;
+  final double circleSize;
+  final double iconSize;
+  final Color backgroundColor;
+  final Color iconColor;
+  final double yOffset;
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.translate(
+      offset: Offset(0, yOffset),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Container(
+          height: circleSize,
+          width: circleSize,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: backgroundColor,
+          ),
+          child: Center(
+            child: Image.asset(
+              asset,
+              height: iconSize,
+              width: iconSize,
+              color: iconColor,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -485,30 +584,39 @@ class _HomeTopBar extends StatelessWidget {
                 fit: BoxFit.contain,
               ),
             ),
-            SizedBox(width: 8.w),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16.r),
-              ),
-              child: Row(
-                children: [
-                  Image.asset(
-                    FileConstants.coin_3d,
-                    width: compact ? 14.w : 16.w,
-                    height: compact ? 14.w : 16.w,
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MyWalletView(),
                   ),
-                  SizedBox(width: 6.w),
-                  Text(
-                    displayBalance,
-                    style: textStyle.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: compact ? 10.sp : 11.sp,
+                );
+              },
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+                child: Row(
+                  children: [
+                    Image.asset(
+                      FileConstants.coin_3d,
+                      width: compact ? 14.w : 16.w,
+                      height: compact ? 14.w : 16.w,
                     ),
-                  ),
-                ],
+                    SizedBox(width: 6.w),
+                    Text(
+                      displayBalance,
+                      style: textStyle.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: compact ? 10.sp : 11.sp,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -701,7 +809,7 @@ class _CurvedIconGrid extends StatelessWidget {
       builder: (context, constraints) {
         final spacing = 10.w;
         final tileWidth = (constraints.maxWidth - spacing * 3) / 4;
-        final tileHeight = tileWidth * 1.4;
+        final tileHeight = tileWidth * 1.45;
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: List.generate(4, (index) {
@@ -741,6 +849,11 @@ class _CurvedIconTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final labelWords = label.trim().split(RegExp(r'\s+'));
+    final isTwoWordLabel = labelWords.length == 2;
+    final displayLabel =
+        isTwoWordLabel ? '${labelWords.first}\n${labelWords.last}' : label;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8.r),
@@ -766,9 +879,10 @@ class _CurvedIconTile extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: EdgeInsets.fromLTRB(6.w, 10.h, 6.w, 6.h),
+                padding: EdgeInsets.fromLTRB(6.w, 10.h, 6.w, 8.h),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
                       height: 50.r,
@@ -800,14 +914,16 @@ class _CurvedIconTile extends StatelessWidget {
                         ),
                       ),
                     ),
-                    SizedBox(height: 2.h),
-                    Expanded(
-                      child: Text(
-                        label,
-                        maxLines: 2,
-                        textAlign: TextAlign.center,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.bodySmallSemibold(context),
+                    SizedBox(height: 6.h),
+                    Flexible(
+                      child: Center(
+                        child: Text(
+                          displayLabel,
+                          maxLines: 2,
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.bodySmallSemibold(context),
+                        ),
                       ),
                     ),
                     SizedBox(height: 2.h),
@@ -873,8 +989,10 @@ class _PayBillsCard extends StatelessWidget {
   }
 
   bool _isBookGasService(QuickActionService service) {
-    const gasNames = ['LPG Gas', 'Book Gas Cylinder', 'Pipe Gas', 'Book Gas'];
-    return gasNames.contains(service.name);
+    final name = service.name.trim().toLowerCase();
+    // Ring highlight only for "Book Gas" style actions (not all gas types).
+    return name.contains('book') &&
+        (name.contains('gas') || name.contains('lpg'));
   }
 
   @override
@@ -909,7 +1027,7 @@ class _PayBillsCard extends StatelessWidget {
         LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
-            final height = width / imageAspectRatio - 20.h;
+            final height = width / imageAspectRatio - 4.h;
             final tileWidth = width * 0.18;
             final bookTileWidth = width * 0.2;
             final horizontalInset = width * 0.06;
@@ -970,7 +1088,7 @@ class _PayBillsCard extends StatelessWidget {
                   ),
                   positionedTile(
                     x: width * 0.15,
-                    y: height * 0.56,
+                    y: height * 0.5,
                     service: bookGas,
                     tileW: bookTileWidth,
                   ),
@@ -986,7 +1104,7 @@ class _PayBillsCard extends StatelessWidget {
                   Positioned(
                     right: width * 0.01,
                     // left: width * 0.01,
-                    bottom: height * -0.00,
+                    bottom: height * 0.01,
                     child: _ExploreUtilitiesRow(onTap: onExploreTap),
                   ),
                 ],
@@ -994,8 +1112,8 @@ class _PayBillsCard extends StatelessWidget {
             );
           },
         ),
-        SizedBox(height: 18.h),
-        const _ReferStrip(),
+        // SizedBox(height: 18.h),
+        // const _ReferStrip(),
       ],
     );
   }
@@ -1032,11 +1150,12 @@ class _ExploreUtilitiesRow extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(10.r),
       child: Container(
+        height: 38.h,
         width: 220.w,
         padding: EdgeInsets.symmetric(horizontal: 0.w, vertical: 6.h),
         decoration: BoxDecoration(
           color: const Color(0xFFFBE6DE),
-          borderRadius: BorderRadius.circular(10.r),
+          borderRadius: BorderRadius.circular(8.r),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1087,16 +1206,11 @@ class _ReferStrip extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [
-              Color(0xFFFF794E),
-              Color(0xFF99482F),
-            ],
-            stops: [-0.3508, 1],
-          ),
           borderRadius: BorderRadius.circular(8.r),
+          image: DecorationImage(
+            image: AssetImage(FileConstants.referBg),
+            fit: BoxFit.cover,
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1123,13 +1237,12 @@ class _ReferStrip extends StatelessWidget {
                 style: GoogleFonts.bricolageGrotesque(
                   textStyle: Theme.of(context).textTheme.bodySmall,
                   color: Colors.white,
+                  letterSpacing: -0.25,
                   fontWeight: FontWeight.w600,
                   fontSize: 10.sp,
                 ),
               ),
             ),
-            SizedBox(width: 8.w),
-            Icon(Icons.celebration, size: 14.r, color: Colors.white),
           ],
         ),
       ),
@@ -1162,7 +1275,7 @@ class _InvestmentTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: backgroundGradient == null ? Colors.white : null,
         gradient: backgroundGradient,
-        borderRadius: BorderRadius.circular(12.r),
+        borderRadius: BorderRadius.circular(8.r),
         border: Border.all(color: borderColor, width: 1),
       ),
       child: Row(
@@ -1215,7 +1328,7 @@ class _ImageBanner extends StatelessWidget {
       asset,
       height: height,
       width: double.infinity,
-      fit: BoxFit.fill,
+      fit: BoxFit.contain,
       cacheWidth: cacheWidth,
       filterQuality: FilterQuality.low,
     );
@@ -1733,49 +1846,83 @@ class _HomeContent extends HookConsumerWidget {
       return null;
     }, const []);
 
-    // Pull banners dynamically from your updated state
-    final banners = homeState.banners ?? [];
-    final bannerPage = useState(0);
-    final bannerController = useMemoized(() => PageController(), const []);
+    final topBanners = homeState.banners?['top'] ?? [];
+    final middleBanners = homeState.banners?['middle'] ?? [];
+    final bottomBanners = homeState.banners?['bottom'] ?? [];
+    final bankingInvestmentBanners =
+        homeState.banners?['banking_investment'] ?? [];
+
+    final topBannerPage = useState(0);
+    final topBannerController = useMemoized(() => PageController(), const []);
     useEffect(() {
-      if (banners.length < 2) return null;
+      if (topBanners.length < 2) return null;
       final timer = Timer.periodic(const Duration(seconds: 3), (_) {
-        if (!bannerController.hasClients) return;
-        final next = (bannerPage.value + 1) % banners.length;
-        bannerController.animateToPage(
+        if (!topBannerController.hasClients) return;
+        final next = (topBannerPage.value + 1) % topBanners.length;
+        topBannerController.animateToPage(
           next.toInt(),
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeInOut,
         );
       });
       return timer.cancel;
-    }, [
-      banners.length
-    ]); // depend on length so timer updates once API returns data
+    }, [topBanners.length]);
 
-    final showBannerPlaceholder = homeState.isFetching && banners.isEmpty;
+    final showBannerPlaceholder = homeState.isFetching && topBanners.isEmpty;
     final bannerAreaHeight =
-        (banners.isNotEmpty || showBannerPlaceholder) ? 100.h : 0.h;
+        (topBanners.isNotEmpty || showBannerPlaceholder) ? 100.h : 0.h;
 
-    final educationBanners = useMemoized(
-      () => [FileConstants.homeBanner12, FileConstants.homeBanner10],
-    );
-    final educationBannerPage = useState(0);
-    final educationBannerController =
+    final middleBannerPage = useState(0);
+    final middleBannerController =
         useMemoized(() => PageController(), const []);
     useEffect(() {
-      if (educationBanners.length < 2) return null;
+      if (middleBanners.length < 2) return null;
       final timer = Timer.periodic(const Duration(seconds: 3), (_) {
-        if (!educationBannerController.hasClients) return;
-        final next = (educationBannerPage.value + 1) % educationBanners.length;
-        educationBannerController.animateToPage(
+        if (!middleBannerController.hasClients) return;
+        final next = (middleBannerPage.value + 1) % middleBanners.length;
+        middleBannerController.animateToPage(
           next,
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeInOut,
         );
       });
       return timer.cancel;
-    }, const []);
+    }, [middleBanners.length]);
+
+    final bottomBannerPage = useState(0);
+    final bottomBannerController =
+        useMemoized(() => PageController(), const []);
+    useEffect(() {
+      if (bottomBanners.length < 2) return null;
+      final timer = Timer.periodic(const Duration(seconds: 3), (_) {
+        if (!bottomBannerController.hasClients) return;
+        final next = (bottomBannerPage.value + 1) % bottomBanners.length;
+        bottomBannerController.animateToPage(
+          next,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
+      });
+      return timer.cancel;
+    }, [bottomBanners.length]);
+
+    final bankingBannerPage = useState(0);
+    final bankingBannerController =
+        useMemoized(() => PageController(), const []);
+    useEffect(() {
+      if (bankingInvestmentBanners.length < 2) return null;
+      final timer = Timer.periodic(const Duration(seconds: 3), (_) {
+        if (!bankingBannerController.hasClients) return;
+        final next =
+            (bankingBannerPage.value + 1) % bankingInvestmentBanners.length;
+        bankingBannerController.animateToPage(
+          next,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
+      });
+      return timer.cancel;
+    }, [bankingInvestmentBanners.length]);
 
     final quickActions = homeState.quickActions;
 
@@ -1823,7 +1970,7 @@ class _HomeContent extends HookConsumerWidget {
 
     final initials = profileState.profile?.initials.isNotEmpty == true
         ? profileState.profile!.initials
-        : 'DN';
+        : 'IP';
     final walletBalance = profileState.profile?.walletBalance ?? 0.0;
     final payBillsCategory = quickActions == null
         ? null
@@ -1836,10 +1983,24 @@ class _HomeContent extends HookConsumerWidget {
         : findCategory(quickActions, ['insurance', 'rent', 'property']);
 
     return Scaffold(
-      // backgroundColor: AppColors.gradientEnd,
+      backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          // Container(color: AppColors.gradientEnd),
+          const Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFFF835C),
+                    Color(0xFF994F37),
+                  ],
+                  stops: [0.0, 0.3807],
+                ),
+              ),
+            ),
+          ),
           RefreshIndicator(
               color: AppColors.primary,
               onRefresh: () => Future.wait([
@@ -1870,7 +2031,7 @@ class _HomeContent extends HookConsumerWidget {
                           40.h +
                           14.h +
                           bannerAreaHeight +
-                          (banners.length > 1 ? 16.h : 0.h),
+                          (topBanners.length > 1 ? 16.h : 0.h),
                       flexibleSpace: FlexibleSpaceBar(
                         collapseMode: CollapseMode.none,
                         background: Container(
@@ -1908,16 +2069,16 @@ class _HomeContent extends HookConsumerWidget {
                                       borderRadius: BorderRadius.circular(14.r),
                                     ),
                                   )
-                                else if (banners.isNotEmpty)
+                                else if (topBanners.isNotEmpty)
                                   SizedBox(
                                     height: 100.h,
                                     child: PageView.builder(
-                                      controller: bannerController,
+                                      controller: topBannerController,
                                       onPageChanged: (page) =>
-                                          bannerPage.value = page,
-                                      itemCount: banners.length,
+                                          topBannerPage.value = page,
+                                      itemCount: topBanners.length,
                                       itemBuilder: (_, index) {
-                                        final banner = banners[index];
+                                        final banner = topBanners[index];
                                         return Padding(
                                           padding: EdgeInsets.symmetric(
                                               horizontal: 4.w),
@@ -1937,7 +2098,7 @@ class _HomeContent extends HookConsumerWidget {
                                                     .image, // Access API url
                                                 width: double.infinity,
                                                 height: 100.h,
-                                                fit: BoxFit.fill,
+                                                fit: BoxFit.contain,
                                                 placeholder: AppNetworkImage(
                                                   url: '',
                                                   width: double.infinity,
@@ -1951,16 +2112,17 @@ class _HomeContent extends HookConsumerWidget {
                                     ),
                                   ),
                                 SizedBox(height: 4.h),
-                                if (banners.length > 1)
+                                if (topBanners.length > 1)
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: List.generate(
-                                      banners.length,
+                                      topBanners.length,
                                       (index) => Padding(
                                         padding: EdgeInsets.symmetric(
                                             horizontal: 3.w),
                                         child: _Dot(
-                                            active: bannerPage.value == index),
+                                            active:
+                                                topBannerPage.value == index),
                                       ),
                                     ),
                                   ),
@@ -2015,15 +2177,15 @@ class _HomeContent extends HookConsumerWidget {
                       SliverToBoxAdapter(
                         child: ClipRRect(
                           borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(24.r),
-                            topRight: Radius.circular(24.r),
+                            topLeft: Radius.circular(18.r),
+                            topRight: Radius.circular(18.r),
                           ),
                           child: Container(
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(24.r),
-                                topRight: Radius.circular(24.r),
+                                topLeft: Radius.circular(18.r),
+                                topRight: Radius.circular(18.r),
                               ),
                               boxShadow: const [
                                 BoxShadow(
@@ -2068,11 +2230,11 @@ class _HomeContent extends HookConsumerWidget {
                                             child: GestureDetector(
                                               onTap: () {
                                                 context.push(
-                                                  RouteConstants.digitalGold,
+                                                  '${RouteConstants.digitalGold}?entry=home',
                                                 );
                                               },
                                               child: _InvestmentTile(
-                                                label: 'Digital Gold',
+                                                label: 'Buy Gold',
                                                 iconAsset: FileConstants
                                                     .digitalGoldGif,
                                                 arrowAsset:
@@ -2081,15 +2243,15 @@ class _HomeContent extends HookConsumerWidget {
                                                     const Color(0xFFE0C46A),
                                                 textColor:
                                                     const Color(0xFF8B6B12),
-                                                backgroundGradient:
-                                                    const LinearGradient(
-                                                  begin: Alignment.centerLeft,
-                                                  end: Alignment.centerRight,
-                                                  colors: [
-                                                    Color(0xFFFFFFFF),
-                                                    Color(0xFFFFF4D5),
-                                                  ],
-                                                ),
+                                                // backgroundGradient:
+                                                //     const LinearGradient(
+                                                //   begin: Alignment.centerLeft,
+                                                //   end: Alignment.centerRight,
+                                                //   colors: [
+                                                //     Color(0xFFFFFFFF),
+                                                //     Color(0xFFFFF4D5),
+                                                //   ],
+                                                // ),
                                               ),
                                             ),
                                           ),
@@ -2098,11 +2260,11 @@ class _HomeContent extends HookConsumerWidget {
                                             child: GestureDetector(
                                               onTap: () {
                                                 context.push(
-                                                  '${RouteConstants.digitalGold}?metal=silver',
+                                                  '${RouteConstants.digitalGold}?metal=silver&entry=home',
                                                 );
                                               },
                                               child: _InvestmentTile(
-                                                label: 'Digital Silver',
+                                                label: 'Buy Silver',
                                                 iconAsset: FileConstants
                                                     .digitalSilverGif,
                                                 arrowAsset:
@@ -2111,30 +2273,74 @@ class _HomeContent extends HookConsumerWidget {
                                                     const Color(0xFFE1E1E1),
                                                 textColor:
                                                     const Color(0xFF6B6B6B),
-                                                backgroundGradient:
-                                                    const LinearGradient(
-                                                  begin: Alignment.centerLeft,
-                                                  end: Alignment.centerRight,
-                                                  colors: [
-                                                    Color(0xFFFFFFFF),
-                                                    Color(0xFFF5F5F5),
-                                                  ],
-                                                ),
+                                                // backgroundGradient:
+                                                //     const LinearGradient(
+                                                //   begin: Alignment.centerLeft,
+                                                //   end: Alignment.centerRight,
+                                                //   colors: [
+                                                //     Color(0xFFFFFFFF),
+                                                //     Color(0xFFF5F5F5),
+                                                //   ],
+                                                // ),
                                               ),
                                             ),
                                           ),
                                         ],
                                       ),
-                                      SizedBox(height: 18.h),
+                                    ],
+                                  ),
+                                ),
+                                if (bankingInvestmentBanners.isNotEmpty) ...[
+                                  SizedBox(height: 18.h),
+                                  InkWell(
+                                    onTap: () {
+                                      context.push(
+                                        '${RouteConstants.digitalGold}?entry=home',
+                                      );
+                                    },
+                                    child: SizedBox(
+                                      height: 60.h,
+                                      width: double.infinity,
+                                      child: PageView.builder(
+                                        controller: bankingBannerController,
+                                        onPageChanged: (page) =>
+                                            bankingBannerPage.value = page,
+                                        itemCount:
+                                            bankingInvestmentBanners.length,
+                                        itemBuilder: (_, index) =>
+                                            AppNetworkImage(
+                                          url: bankingInvestmentBanners[index]
+                                              .image,
+                                          width: double.infinity,
+                                          height: 60.h,
+                                          fit: BoxFit.contain,
+                                          placeholder: AppNetworkImage(
+                                            url: '',
+                                            width: double.infinity,
+                                            height: 60.h,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                Padding(
+                                  padding:
+                                      EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
                                       const _SectionHeader(
-                                          title: 'Education & Lifestyle'),
+                                        title: 'Education & Lifestyle',
+                                      ),
                                       SizedBox(height: 12.h),
                                       _CurvedIconGrid(
                                         services: educationCategory?.services ??
                                             const [],
                                         onTap: handleServiceTap,
                                       ),
-                                      SizedBox(height: 14.h),
+                                      SizedBox(height: 18.h),
                                     ],
                                   ),
                                 ),
@@ -2143,56 +2349,60 @@ class _HomeContent extends HookConsumerWidget {
                                       EdgeInsets.symmetric(horizontal: 16.w),
                                   child: Column(
                                     children: [
-                                      SizedBox(
-                                        height: 110.h,
-                                        child: PageView.builder(
-                                          controller: educationBannerController,
-                                          onPageChanged: (page) =>
-                                              educationBannerPage.value = page,
-                                          itemCount: educationBanners.length,
-                                          itemBuilder: (_, index) => Padding(
-                                            padding: EdgeInsets.symmetric(
-                                                horizontal: 4.w),
-                                            child: ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(14.r),
-                                              child: Image.asset(
-                                                educationBanners[index],
+                                      if (middleBanners.isNotEmpty)
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(8.r),
+                                          child: SizedBox(
+                                            height: 110.h,
+                                            child: PageView.builder(
+                                              controller:
+                                                  middleBannerController,
+                                              onPageChanged: (page) =>
+                                                  middleBannerPage.value = page,
+                                              itemCount: middleBanners.length,
+                                              itemBuilder: (_, index) =>
+                                                  AppNetworkImage(
+                                                url: middleBanners[index].image,
                                                 width: double.infinity,
-                                                fit: BoxFit.fill,
-                                                alignment: Alignment.centerLeft,
-                                                cacheWidth: bannerCacheWidth,
-                                                filterQuality:
-                                                    FilterQuality.low,
+                                                height: 110.h,
+                                                fit: BoxFit.contain,
+                                                placeholder: AppNetworkImage(
+                                                  url: '',
+                                                  width: double.infinity,
+                                                  height: 110.h,
+                                                ),
                                               ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                      SizedBox(height: 6.h),
-                                      if (educationBanners.length > 1)
+                                      if (middleBanners.isNotEmpty)
+                                        SizedBox(height: 6.h),
+                                      if (middleBanners.length > 1)
                                         Row(
                                           mainAxisAlignment:
                                               MainAxisAlignment.center,
                                           children: List.generate(
-                                            educationBanners.length,
+                                            middleBanners.length,
                                             (index) => Padding(
                                               padding: EdgeInsets.symmetric(
                                                   horizontal: 3.w),
                                               child: _Dot(
                                                 active:
-                                                    educationBannerPage.value ==
+                                                    middleBannerPage.value ==
                                                         index,
                                               ),
                                             ),
                                           ),
                                         ),
+                                      if (middleBanners.isNotEmpty)
+                                        SizedBox(height: 18.h),
                                     ],
                                   ),
                                 ),
                                 Padding(
                                   padding: EdgeInsets.fromLTRB(
-                                      16.w, 18.h, 16.w, 12.h),
+                                      16.w, 0.h, 16.w, 12.h),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -2286,13 +2496,48 @@ class _HomeContent extends HookConsumerWidget {
                                     ],
                                   ),
                                 ),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: InsuranceBannerCarousel(
-                                    onApply: () =>
-                                        handleServiceTap('Insurance'),
+                                if (bottomBanners.isNotEmpty) ...[
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 130.h,
+                                    child: PageView.builder(
+                                      controller: bottomBannerController,
+                                      onPageChanged: (page) =>
+                                          bottomBannerPage.value = page,
+                                      itemCount: bottomBanners.length,
+                                      itemBuilder: (_, index) =>
+                                          AppNetworkImage(
+                                        url: bottomBanners[index].image,
+                                        width: double.infinity,
+                                        height: 130.h,
+                                        fit: BoxFit.cover,
+                                        placeholder: AppNetworkImage(
+                                          url: '',
+                                          width: double.infinity,
+                                          height: 130.h,
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  SizedBox(height: 6.h),
+                                  if (bottomBanners.length > 1)
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: List.generate(
+                                        bottomBanners.length,
+                                        (index) => Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: 3.w,
+                                          ),
+                                          child: _Dot(
+                                            active:
+                                                bottomBannerPage.value == index,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
                                 Container(
                                   decoration: const BoxDecoration(
                                     color: Color(0XFFFDFDFD),

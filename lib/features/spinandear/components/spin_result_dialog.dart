@@ -7,7 +7,7 @@ import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
 import '../models/spin_reward.dart';
 
-class SpinResultDialog extends StatelessWidget {
+class SpinResultDialog extends StatefulWidget {
   const SpinResultDialog({
     super.key,
     required this.reward,
@@ -15,10 +15,18 @@ class SpinResultDialog extends StatelessWidget {
   });
 
   final SpinReward reward;
-  final VoidCallback onPrimaryTap;
+  final Future<void> Function() onPrimaryTap;
+
+  @override
+  State<SpinResultDialog> createState() => _SpinResultDialogState();
+}
+
+class _SpinResultDialogState extends State<SpinResultDialog> {
+  bool _isSubmitting = false;
 
   @override
   Widget build(BuildContext context) {
+    final reward = widget.reward;
     final isBetterLuck = reward.type == SpinRewardType.betterLuck;
     final isExtraSpin = reward.type == SpinRewardType.extraSpin;
 
@@ -78,7 +86,18 @@ class SpinResultDialog extends StatelessWidget {
               width: double.infinity,
               height: 44,
               child: ElevatedButton(
-                onPressed: onPrimaryTap,
+                onPressed: _isSubmitting
+                    ? null
+                    : () async {
+                        setState(() => _isSubmitting = true);
+                        try {
+                          await widget.onPrimaryTap();
+                          if (!context.mounted) return;
+                          Navigator.of(context, rootNavigator: true).pop();
+                        } finally {
+                          if (mounted) setState(() => _isSubmitting = false);
+                        }
+                      },
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
                       isBetterLuck ? Colors.grey.shade500 : AppColors.primary,

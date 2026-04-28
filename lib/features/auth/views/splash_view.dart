@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -22,6 +23,13 @@ class SplashView extends HookConsumerWidget {
     final authState = ref.watch(authControllerProvider);
     final timerDone = useState(false);
     final assetsReady = useState(false);
+
+    useEffect(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        FlutterNativeSplash.remove();
+      });
+      return null;
+    }, const []);
 
     // Start a one-shot timer that fires after the splash duration.
     useEffect(() {
@@ -64,10 +72,12 @@ class SplashView extends HookConsumerWidget {
       var isActive = true;
       Future<void> preload() async {
         try {
+          if (!context.mounted) return;
           await precacheImage(
             AssetImage(FileConstants.splashGif),
             context,
           );
+          if (!context.mounted) return;
           await precacheImage(
             AssetImage(FileConstants.bharatConnectColor),
             context,

@@ -13,6 +13,9 @@ class MobilePrepaidState {
     this.selectedPlan,
     this.errorMessage,
     this.rechargeMessage,
+    this.rechargeStatus,
+    this.rechargeTransactionId,
+    this.rechargeDateTime,
   });
 
   final bool isFetching;
@@ -25,6 +28,9 @@ class MobilePrepaidState {
   final PlanItem? selectedPlan;
   final String? errorMessage;
   final String? rechargeMessage;
+  final String? rechargeStatus;
+  final String? rechargeTransactionId;
+  final String? rechargeDateTime;
 
   List<String> get categories => plansByCategory.keys.toList();
 
@@ -54,6 +60,9 @@ class MobilePrepaidState {
     PlanItem? selectedPlan,
     Object? errorMessage = _sentinel,
     Object? rechargeMessage = _sentinel,
+    Object? rechargeStatus = _sentinel,
+    Object? rechargeTransactionId = _sentinel,
+    Object? rechargeDateTime = _sentinel,
   }) {
     return MobilePrepaidState(
       isFetching: isFetching ?? this.isFetching,
@@ -70,6 +79,15 @@ class MobilePrepaidState {
       rechargeMessage: rechargeMessage == _sentinel
           ? this.rechargeMessage
           : rechargeMessage as String?,
+      rechargeStatus: rechargeStatus == _sentinel
+          ? this.rechargeStatus
+          : rechargeStatus as String?,
+      rechargeTransactionId: rechargeTransactionId == _sentinel
+          ? this.rechargeTransactionId
+          : rechargeTransactionId as String?,
+      rechargeDateTime: rechargeDateTime == _sentinel
+          ? this.rechargeDateTime
+          : rechargeDateTime as String?,
     );
   }
 }

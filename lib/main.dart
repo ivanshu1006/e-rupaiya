@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -14,11 +15,12 @@ import 'services/push_notification_service.dart';
 import 'widgets/app_snackbar.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final binding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: binding);
   // NoScreenshot.instance.screenshotOff();
   await dotenv.load(fileName: '.env');
-  await PushNotificationService.initialize();
-  await LocationService.initialize();
+  await PushNotificationService.initialize(requestPermissions: false);
+  await LocationService.initialize(requestPermission: false);
   runApp(
     const ProviderScope(
       child: MyApp(),
@@ -38,6 +40,11 @@ class MyApp extends HookConsumerWidget {
       // ScreenSecurityService.enableSecure();
       return appLockService.dispose;
     }, const []);
+    useEffect(() {
+      // Allows PushNotificationService to navigate after notification taps.
+      PushNotificationService.markUiReady();
+      return null;
+    }, const []);
     return ScreenUtilInit(
       designSize: const Size(360, 690),
       minTextAdapt: true,
@@ -52,7 +59,7 @@ class MyApp extends HookConsumerWidget {
           );
         },
         scaffoldMessengerKey: AppSnackbar.messengerKey,
-        title: 'E-Rupaiya',
+        title: 'eRupaiya',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
           textTheme: GoogleFonts.bricolageGrotesqueTextTheme(),

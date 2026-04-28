@@ -1,6 +1,8 @@
 // ignore_for_file: deprecated_member_use
 
+import 'package:e_rupaiya/constants/file_constants.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../constants/app_colors.dart';
 
@@ -28,11 +30,12 @@ class SearchTextfield extends StatelessWidget {
         hintStyle: TextStyle(
           color: AppColors.textPrimary.withOpacity(0.4),
           fontWeight: FontWeight.w400,
+          fontSize: 12.sp,
         ),
-        prefixIcon: Icon(
-          Icons.search,
-          color: AppColors.textPrimary.withOpacity(0.4),
-        ),
+        // prefixIcon: Icon(
+        //   Icons.search,
+        //   color: AppColors.textPrimary.withOpacity(0.4),
+        // ),
         suffixIcon: onFilterPressed == null
             ? (controller.text.isNotEmpty
                 ? IconButton(
@@ -42,9 +45,14 @@ class SearchTextfield extends StatelessWidget {
                       onChange?.call('');
                     },
                   )
-                : Icon(
-                    Icons.circle_outlined,
-                    color: AppColors.primary.withOpacity(0.5),
+                : Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Image.asset(
+                      FileConstants.orangeSearch,
+                      width: 20,
+                      height: 20,
+                      fit: BoxFit.contain,
+                    ),
                   ))
             : IconButton(
                 onPressed: onFilterPressed,

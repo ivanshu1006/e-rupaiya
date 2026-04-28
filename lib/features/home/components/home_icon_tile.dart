@@ -37,9 +37,7 @@ class HomeIconTile extends StatefulWidget {
 class _HomeIconTileState extends State<HomeIconTile>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ringController;
-  bool _ringLoopActive = false;
-  static const _ringDuration = Duration(milliseconds: 1000);
-  static const _ringPause = Duration(milliseconds: 500);
+  static const _ringDuration = Duration(milliseconds: 1200);
 
   @override
   void initState() {
@@ -49,7 +47,7 @@ class _HomeIconTileState extends State<HomeIconTile>
       duration: _ringDuration,
     );
     if (widget.showHalfRing) {
-      _startRingLoop();
+      _ringController.repeat();
     }
   }
 
@@ -58,33 +56,22 @@ class _HomeIconTileState extends State<HomeIconTile>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.showHalfRing != widget.showHalfRing) {
       if (widget.showHalfRing) {
-        _startRingLoop();
+        _ringController.repeat();
       } else {
-        _ringLoopActive = false;
         _ringController.stop();
       }
     }
   }
 
-  Future<void> _startRingLoop() async {
-    if (_ringLoopActive) return;
-    _ringLoopActive = true;
-    while (mounted && widget.showHalfRing && _ringLoopActive) {
-      await _ringController.forward(from: 0);
-      await Future.delayed(_ringPause);
-    }
-  }
-
   @override
   void dispose() {
-    _ringLoopActive = false;
     _ringController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final labelTextStyle = AppTextStyles.bodySmall(context);
+    final labelTextStyle = AppTextStyles.bodySmallSemibold(context);
     final labelWords = widget.label.trim().split(RegExp(r'\s+'));
     final isTwoWordLabel = labelWords.length == 2;
 
@@ -103,11 +90,12 @@ class _HomeIconTileState extends State<HomeIconTile>
                 AnimatedBuilder(
                   animation: _ringController,
                   builder: (context, child) {
+                    final ringSize = 62.r;
                     return Transform.rotate(
                       angle: _ringController.value * 2 * math.pi,
                       child: SizedBox(
-                        height: 54.r,
-                        width: 54.r,
+                        height: ringSize,
+                        width: ringSize,
                         child: CustomPaint(
                           painter: _HalfRingPainter(progress: 1),
                         ),

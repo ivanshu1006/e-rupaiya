@@ -55,6 +55,11 @@ class BillerRepository {
         'planMdmRequirement': planMdmRequirement,
       };
       for (final entry in customerParams.entries) {
+        final rawKey = entry.key.trim();
+        if (rawKey.toLowerCase() == 'service_name') {
+          data['service_name'] = entry.value;
+          continue;
+        }
         final key = _buildCustomerParamKey(entry.key);
         if (key.isNotEmpty) {
           data[key] = entry.value;
@@ -148,6 +153,10 @@ class BillerRepository {
 
   String _extractBillFetchErrorMessage(Map<String, dynamic> payload) {
     final body = payload['payload'] as Map<String, dynamic>? ?? {};
+    final topLevelMessage = payload['message']?.toString().trim();
+    if (topLevelMessage != null && topLevelMessage.isNotEmpty) {
+      return topLevelMessage;
+    }
     final message = body['message']?.toString().trim();
     if (message != null && message.isNotEmpty) return message;
     final errors = body['errors'];

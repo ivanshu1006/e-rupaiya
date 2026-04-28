@@ -23,6 +23,28 @@ class BillerDetailController extends StateNotifier<BillerDetailState> {
 
   final BillerRepository _repository;
 
+  bool _isGasCylinderBillerName(String value) {
+    final name = value.trim().toLowerCase();
+    if (name.isEmpty) return false;
+    return name.contains('gas') || name.contains('lpg') || name.contains('cylinder');
+  }
+
+  Map<String, String> _withBookGasServiceNameIfNeeded({
+    required Biller biller,
+    required BillerDetail detail,
+    required Map<String, String> customerParams,
+  }) {
+    final isGas = _isGasCylinderBillerName(biller.billerName) ||
+        _isGasCylinderBillerName(detail.billerCategoryName);
+    if (!isGas) return customerParams;
+
+    if (customerParams.containsKey('service_name')) return customerParams;
+    return {
+      ...customerParams,
+      'service_name': 'Book Gas',
+    };
+  }
+
   void selectBiller(Biller biller) {
     state = const BillerDetailState().copyWith(selectedBiller: biller);
     _fetchBillerDetail(biller.billerId);
@@ -63,9 +85,14 @@ class BillerDetailController extends StateNotifier<BillerDetailState> {
       customerParamsInput: customerParams,
     );
     try {
+      final paramsForApi = _withBookGasServiceNameIfNeeded(
+        biller: biller,
+        detail: detail,
+        customerParams: customerParams,
+      );
       final bill = await _repository.fetchBill(
         billerId: biller.billerId,
-        customerParams: customerParams,
+        customerParams: paramsForApi,
         planMdmRequirement: detail.planMdmRequirement.isNotEmpty
             ? detail.planMdmRequirement
             : 'NOT_SUPPORTED',

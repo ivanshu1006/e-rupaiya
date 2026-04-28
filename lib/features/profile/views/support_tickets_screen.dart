@@ -1,0 +1,245 @@
+// ignore_for_file: deprecated_member_use
+
+import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:intl/intl.dart';
+
+import '../../../constants/app_colors.dart';
+import '../../../constants/routes_constant.dart';
+import '../../../widgets/my_app_bar.dart';
+import '../controllers/support_tickets_controller.dart';
+import '../models/support_ticket.dart';
+
+class SupportTicketsScreen extends HookConsumerWidget {
+  const SupportTicketsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(supportTicketsControllerProvider);
+    final controller = ref.read(supportTicketsControllerProvider.notifier);
+
+    useEffect(() {
+      Future.microtask(controller.fetchTickets);
+      return null;
+    }, const []);
+
+    final lastError = useRef<String?>(null);
+    useEffect(() {
+      if (state.errorMessage != null && state.errorMessage != lastError.value) {
+        lastError.value = state.errorMessage;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.errorMessage!),
+              backgroundColor: Colors.red.shade400,
+            ),
+          );
+        });
+      }
+      return null;
+    }, [state.errorMessage]);
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Column(
+        children: [
+          const MyAppBar(title: 'Tickets'),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: controller.fetchTickets,
+              child: ListView(
+                padding: EdgeInsets.fromLTRB(16.w, 14.h, 16.w, 24.h),
+                children: [
+                  Text(
+                    'Open Tickets',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  SizedBox(height: 12.h),
+                  if (state.isLoading && state.tickets.isEmpty)
+                    Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20.h),
+                      child: const Center(
+                        child: SizedBox(
+                          height: 26,
+                          width: 26,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    )
+                  else if (state.tickets.isEmpty)
+                    Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 26.h),
+                        child: Text(
+                          'No tickets found',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
+                                color: AppColors.textPrimary.withOpacity(0.6),
+                              ),
+                        ),
+                      ),
+                    )
+                  else
+                    ...state.tickets.map(
+                      (ticket) => Padding(
+                        padding: EdgeInsets.only(bottom: 12.h),
+                        child: _TicketCard(
+                          ticket: ticket,
+                          onTap: () => context.push(
+                            RouteConstants.supportTicketDetail,
+                            extra: ticket.id,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TicketCard extends StatelessWidget {
+  const _TicketCard({
+    required this.ticket,
+    required this.onTap,
+  });
+
+  final SupportTicket ticket;
+  final VoidCallback onTap;
+
+  String get _title {
+    final issue = ticket.issueType.trim();
+    if (issue.isEmpty) return 'Ticket';
+    return 'Why $issue';
+  }
+
+  String get _subtitle {
+    final service = _serviceLabel(ticket.service);
+    final date = _formatDate(ticket.createdAtRaw);
+    if (date.isEmpty) return service;
+    return '$service  •  $date';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14.r),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14.r),
+          border: Border.all(color: AppColors.lightBorder),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _title,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  SizedBox(height: 6.h),
+                  Text(
+                    _subtitle,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textPrimary.withOpacity(0.6),
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            _TicketStatusChip(status: ticket.status),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TicketStatusChip extends StatelessWidget {
+  const _TicketStatusChip({required this.status});
+
+  final String status;
+
+  Color get _color {
+    final normalized = status.trim().toLowerCase();
+    if (normalized == 'resolved' || normalized == 'closed') {
+      return const Color(0xFF0E8B3E);
+    }
+    if (normalized == 'in_progress' || normalized == 'in progress') {
+      return const Color(0xFF9C6A00);
+    }
+    return const Color(0xFFB07B00);
+  }
+
+  String get _label {
+    final normalized = status.trim().toLowerCase();
+    if (normalized.isEmpty) return 'Open';
+    if (normalized == 'in_progress') return 'In Progress';
+    return normalized[0].toUpperCase() + normalized.substring(1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: _color,
+        borderRadius: BorderRadius.circular(10.r),
+      ),
+      child: Text(
+        _label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+            ),
+      ),
+    );
+  }
+}
+
+String _serviceLabel(String raw) {
+  final code = raw.trim().toUpperCase();
+  switch (code) {
+    case 'BBPS':
+      return 'Rent & Utility Payments';
+    case 'EDUCATION':
+      return 'Education Payments';
+    case 'METAL':
+      return 'Metal Payments';
+    default:
+      return raw.isEmpty ? 'Service' : raw;
+  }
+}
+
+String _formatDate(String raw) {
+  final s = raw.trim();
+  if (s.isEmpty) return '';
+  final parsed = DateTime.tryParse(s.replaceFirst(' ', 'T'));
+  if (parsed == null) return s;
+  return DateFormat("d MMM''yy").format(parsed);
+}

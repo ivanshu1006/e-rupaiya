@@ -1,264 +1,242 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
 import '../../../widgets/k_dialog.dart';
 import '../../../widgets/my_app_bar.dart';
-import '../components/language_chip.dart';
 import '../components/policy_banner_card.dart';
 import '../components/policy_section_title.dart';
+import '../components/support_transaction_card.dart';
+import '../controllers/help_support_controller.dart';
+import '../models/help_topic.dart';
+import 'recent_payment_help_screen.dart';
 
-class HelpSupportScreen extends HookWidget {
+class HelpSupportScreen extends HookConsumerWidget {
   const HelpSupportScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final language = useState(LanguageOption.english);
-    String t(String en, String hi) =>
-        language.value == LanguageOption.hindi ? hi : en;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(helpSupportControllerProvider);
+    final controller = ref.read(helpSupportControllerProvider.notifier);
+
+    useEffect(() {
+      Future.microtask(controller.fetch);
+      return null;
+    }, const []);
+
+    final lastError = useRef<String?>(null);
+    useEffect(() {
+      if (state.errorMessage != null && state.errorMessage != lastError.value) {
+        lastError.value = state.errorMessage;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.errorMessage!),
+              backgroundColor: Colors.red.shade400,
+            ),
+          );
+        });
+      }
+      return null;
+    }, [state.errorMessage]);
+
+    final videoTopics =
+        state.helpTopics.where((t) => t.videoKey != null).toList();
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          MyAppBar(title: t('Help & Support', 'Help & Support')),
+          const MyAppBar(title: 'Help & Support'),
           Expanded(
             child: Column(
               children: [
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(0, 4.h, 0, 0.h),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16.w),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      t('Help & Support', 'Help & Support'),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
-                                            color: AppColors.textPrimary,
-                                            fontWeight: FontWeight.w700,
+                  child: RefreshIndicator(
+                    onRefresh: controller.fetch,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: EdgeInsets.fromLTRB(0, 4.h, 0, 0.h),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.w),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Help & Support',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(
+                                        color: AppColors.textPrimary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                ),
+                                SizedBox(height: 12.h),
+                                _TicketsCard(
+                                  onTap: () => context
+                                      .push(RouteConstants.supportTickets),
+                                ),
+                                SizedBox(height: 18.h),
+                                Text(
+                                  'Latest Transactions',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(
+                                        color: AppColors.textPrimary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                ),
+                                SizedBox(height: 12.h),
+                                SizedBox(
+                                  height: 90.h,
+                                  child: state.isLoading &&
+                                          state.latestTransactions.isEmpty
+                                      ? const Center(
+                                          child: SizedBox(
+                                            height: 24,
+                                            width: 24,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: AppColors.primary,
+                                            ),
                                           ),
+                                        )
+                                      : state.latestTransactions.isEmpty
+                                          ? Center(
+                                              child: Text(
+                                                'No recent transactions',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.copyWith(
+                                                      color: AppColors
+                                                          .textPrimary
+                                                          .withOpacity(0.6),
+                                                    ),
+                                              ),
+                                            )
+                                          : ListView.separated(
+                                              scrollDirection: Axis.horizontal,
+                                              itemCount: state
+                                                  .latestTransactions.length,
+                                              separatorBuilder: (_, __) =>
+                                                  SizedBox(width: 12.w),
+                                              itemBuilder: (_, index) =>
+                                                  SupportTransactionCard(
+                                                transaction: state
+                                                    .latestTransactions[index],
+                                                onTap: () {
+                                                  Navigator.of(context).push(
+                                                    MaterialPageRoute(
+                                                      builder: (_) =>
+                                                          RecentPaymentHelpScreen(
+                                                        transaction: state
+                                                                .latestTransactions[
+                                                            index],
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                ),
+                                SizedBox(height: 20.h),
+                                PolicyBannerCard(
+                                  imageAsset: FileConstants.homeBanner12,
+                                ),
+                                SizedBox(height: 16.h),
+                                const PolicySectionTitle(text: 'Help Topics'),
+                                SizedBox(height: 10.h),
+                                if (state.isLoading && state.helpTopics.isEmpty)
+                                  Padding(
+                                    padding:
+                                        EdgeInsets.symmetric(vertical: 16.h),
+                                    child: const Center(
+                                      child: SizedBox(
+                                        height: 24,
+                                        width: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                else if (state.helpTopics.isEmpty)
+                                  Padding(
+                                    padding:
+                                        EdgeInsets.symmetric(vertical: 16.h),
+                                    child: Center(
+                                      child: Text(
+                                        'No help topics available',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: AppColors.textPrimary
+                                                  .withOpacity(0.6),
+                                            ),
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  ...state.helpTopics.map(
+                                    (topic) => _HelpTopicTile(
+                                      title: topic.title,
+                                      onTap: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => HelpTopicDetailView(
+                                              topic: topic,
+                                            ),
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ),
-                                  LanguageChip(
-                                    value: language.value,
-                                    onChanged: (value) =>
-                                        language.value = value,
+                                if (videoTopics.isNotEmpty) ...[
+                                  SizedBox(height: 18.h),
+                                  const PolicySectionTitle(
+                                    text: 'Recommended Videos',
                                   ),
-                                ],
-                              ),
-                              SizedBox(height: 12.h),
-                              _TicketsCard(
-                                onTap: () => context.push(RouteConstants.faq),
-                              ),
-                              SizedBox(height: 18.h),
-                              Text(
-                                'Bill Details',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(
-                                      color: AppColors.textPrimary,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                              ),
-                              SizedBox(height: 12.h),
-                              SizedBox(
-                                height: 128.h,
-                                child: ListView(
-                                  scrollDirection: Axis.horizontal,
-                                  children: const [
-                                    _BillDetailCard(),
-                                    _BillDetailCard(),
-                                    _BillDetailCard(),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 20.h),
-                              PolicyBannerCard(
-                                imageAsset: FileConstants.homeBanner12,
-                              ),
-                              SizedBox(height: 16.h),
-                              PolicySectionTitle(
-                                text: t('Help Topics', 'सहायता विषय'),
-                              ),
-                              SizedBox(height: 10.h),
-                              _HelpTopicTile(
-                                title: t(
-                                  'How can I keep my payments safe on e-Rupaiya?',
-                                  'मैं e‑Rupaiya पर अपने भुगतान सुरक्षित कैसे रखूँ?',
-                                ),
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => HelpTopicDetailView(
-                                        title: t(
-                                          'How can I keep my payments safe on e-Rupaiya?',
-                                          'मैं e‑Rupaiya पर अपने भुगतान सुरक्षित कैसे रखूँ?',
-                                        ),
-                                        description: t(
-                                          'To keep your payments safe on e‑Rupaiya, always use a strong password and never share your OTP or PIN. Enable app security features like fingerprint or face lock, avoid using public Wi‑Fi for transactions, and regularly check your transaction history. Update the app frequently to stay protected from security threats.',
-                                          'अपने भुगतान सुरक्षित रखने के लिए मजबूत पासवर्ड रखें और OTP या PIN साझा न करें। फिंगरप्रिंट या फेस लॉक सक्षम करें, सार्वजनिक Wi‑Fi पर लेनदेन से बचें और अपने ट्रांजैक्शन नियमित रूप से जांचें। सुरक्षा के लिए ऐप अपडेट करते रहें।',
-                                        ),
+                                  SizedBox(height: 10.h),
+                                  SizedBox(
+                                    height: 108.h,
+                                    child: ListView.separated(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: videoTopics.length,
+                                      separatorBuilder: (_, __) =>
+                                          SizedBox(width: 10.w),
+                                      itemBuilder: (_, index) =>
+                                          _VideoTopicCard(
+                                        topic: videoTopics[index],
                                       ),
-                                    ),
-                                  );
-                                },
-                              ),
-                              _HelpTopicTile(
-                                title: t(
-                                  'How do I add my bank account on e-Rupaiya?',
-                                  'मैं e‑Rupaiya पर अपना बैंक अकाउंट कैसे जोड़ूँ?',
-                                ),
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => HelpTopicDetailView(
-                                        title: t(
-                                          'How do I add my bank account on e-Rupaiya?',
-                                          'मैं e‑Rupaiya पर अपना बैंक अकाउंट कैसे जोड़ूँ?',
-                                        ),
-                                        description: t(
-                                          'Go to Profile > Bank Accounts, tap Add Account, and verify with your mobile number. Once verified, your account will be linked for payments.',
-                                          'प्रोफाइल > बैंक अकाउंट्स में जाएं, Add Account पर टैप करें और अपने मोबाइल नंबर से सत्यापन करें। सत्यापित होने के बाद आपका अकाउंट लिंक हो जाएगा।',
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                              _HelpTopicTile(
-                                title: t(
-                                  'How can I pay my bills using e-Rupaiya?',
-                                  'मैं e‑Rupaiya से बिल भुगतान कैसे करूँ?',
-                                ),
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => HelpTopicDetailView(
-                                        title: t(
-                                          'How can I pay my bills using e-Rupaiya?',
-                                          'मैं e‑Rupaiya से बिल भुगतान कैसे करूँ?',
-                                        ),
-                                        description: t(
-                                          'Select the bill category, choose your provider, enter the required details, and confirm payment. You will receive a confirmation once payment succeeds.',
-                                          'बिल श्रेणी चुनें, प्रदाता चुनें, आवश्यक जानकारी भरें और भुगतान की पुष्टि करें। सफल भुगतान के बाद पुष्टि मिल जाएगी।',
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                              _HelpTopicTile(
-                                title: t(
-                                  'How do I earn coins on e-Rupaiya?',
-                                  'मैं e‑Rupaiya पर कॉइन्स कैसे कमाऊँ?',
-                                ),
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => HelpTopicDetailView(
-                                        title: t(
-                                          'How do I earn coins on e-Rupaiya?',
-                                          'मैं e‑Rupaiya पर कॉइन्स कैसे कमाऊँ?',
-                                        ),
-                                        description: t(
-                                          'Earn coins by completing eligible payments, referrals, and participating in app offers. Coin availability may vary by campaign.',
-                                          'योग्य भुगतान, रेफरल और ऑफ़र में भाग लेने पर कॉइन्स मिलते हैं। कॉइन्स की उपलब्धता अभियान के अनुसार बदल सकती है।',
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                              _HelpTopicTile(
-                                title: t(
-                                  'How can I redeem my coins?',
-                                  'मैं अपने कॉइन्स रिडीम कैसे करूँ?',
-                                ),
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => HelpTopicDetailView(
-                                        title: t(
-                                          'How can I redeem my coins?',
-                                          'मैं अपने कॉइन्स रिडीम कैसे करूँ?',
-                                        ),
-                                        description: t(
-                                          'Go to Rewards, choose a redemption option, and confirm. Coins will be applied instantly if available.',
-                                          'Rewards सेक्शन में जाएं, रिडेम्प्शन विकल्प चुनें और पुष्टि करें। उपलब्ध होने पर कॉइन्स तुरंत लागू हो जाएंगे।',
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                              _HelpTopicTile(
-                                title: t(
-                                  'What should I do if my payment fails?',
-                                  'यदि भुगतान विफल हो जाए तो मुझे क्या करना चाहिए?',
-                                ),
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => HelpTopicDetailView(
-                                        title: t(
-                                          'What should I do if my payment fails?',
-                                          'यदि भुगतान विफल हो जाए तो मुझे क्या करना चाहिए?',
-                                        ),
-                                        description: t(
-                                          'If a payment fails, wait a few minutes and check your transaction history. If the amount was deducted, it will be reversed within the standard refund timeline. You can also contact support from the Help Center.',
-                                          'भुगतान विफल हो तो कुछ मिनट प्रतीक्षा करें और ट्रांजैक्शन हिस्ट्री जांचें। यदि राशि कटी है तो मानक रिफंड समय में वापस हो जाएगी। आप हेल्प सेंटर से सपोर्ट भी ले सकते हैं।',
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                              SizedBox(height: 18.h),
-                              PolicySectionTitle(
-                                text:
-                                    t('Recommended Videos', 'सुझाए गए वीडियो'),
-                              ),
-                              SizedBox(height: 10.h),
-                              Row(
-                                children: [
-                                  const Expanded(
-                                    child: _VideoCard(
-                                      color: Color(0xFFFFE1D6),
-                                    ),
-                                  ),
-                                  SizedBox(width: 10.w),
-                                  const Expanded(
-                                    child: _VideoCard(
-                                      color: Color(0xFFEFEFEF),
                                     ),
                                   ),
                                 ],
-                              ),
-                              SizedBox(height: 20.h),
-                            ],
+                                SizedBox(height: 20.h),
+                              ],
+                            ),
                           ),
-                        ),
-                        _ContactHelpCard(
-                          onTap: () =>
-                              context.push(RouteConstants.helpCenterChat),
-                        ),
-                      ],
+                          _ContactHelpCard(
+                            onTap: () =>
+                                context.push(RouteConstants.helpCenterChat),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -349,133 +327,95 @@ class _TicketsCard extends StatelessWidget {
   }
 }
 
-class _BillDetailCard extends StatelessWidget {
-  const _BillDetailCard();
+class _VideoTopicCard extends StatelessWidget {
+  const _VideoTopicCard({required this.topic});
+
+  final HelpTopic topic;
+
+  String? get _thumbnailUrl {
+    final key = topic.videoKey;
+    if (key == null) return null;
+    return 'https://img.youtube.com/vi/$key/hqdefault.jpg';
+  }
+
+  Future<void> _open() async {
+    final raw = topic.video?.trim();
+    final key = topic.videoKey;
+    final resolved = raw != null && raw.isNotEmpty
+        ? Uri.tryParse(raw)
+        : (key != null
+            ? Uri.parse('https://www.youtube.com/watch?v=$key')
+            : null);
+    if (resolved == null) return;
+    await launchUrl(resolved, mode: LaunchMode.externalApplication);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 220.w,
-      margin: EdgeInsets.only(right: 12.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(color: AppColors.lightBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF4F4F4),
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(14.r),
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Utility Payment',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                ),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0E8B3E),
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
-                  child: Text(
-                    'Successful',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-            child: Row(
-              children: [
-                Container(
-                  height: 32.h,
-                  width: 32.h,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF0EB),
-                    borderRadius: BorderRadius.circular(8.r),
-                    border: Border.all(color: AppColors.lightBorder),
-                  ),
-                  child: const Icon(
-                    Icons.bolt,
+    final thumb = _thumbnailUrl;
+    return InkWell(
+      onTap: _open,
+      borderRadius: BorderRadius.circular(12.r),
+      child: Container(
+        width: 220.w,
+        height: 108.h,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: AppColors.lightBorder),
+          color: const Color(0xFFF4F4F4),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12.r),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (thumb != null)
+                CachedNetworkImage(
+                  imageUrl: thumb,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) =>
+                      Container(color: const Color(0xFFEFEFEF)),
+                  errorWidget: (_, __, ___) =>
+                      Container(color: const Color(0xFFEFEFEF)),
+                )
+              else
+                Container(color: const Color(0xFFEFEFEF)),
+              Container(
+                alignment: Alignment.center,
+                child: Container(
+                  height: 36.h,
+                  width: 36.h,
+                  decoration: const BoxDecoration(
                     color: Color(0xFFEA5A30),
+                    shape: BoxShape.circle,
                   ),
+                  child: const Icon(Icons.play_arrow, color: Colors.white),
                 ),
-                SizedBox(width: 10.w),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Maharashtra State E...',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                      SizedBox(height: 2.h),
-                      Text(
-                        'Ivanshu Patil... 8 Mar\'26',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: AppColors.textPrimary.withOpacity(0.6),
-                            ),
+              ),
+              Positioned(
+                left: 10.w,
+                right: 10.w,
+                bottom: 8.h,
+                child: Text(
+                  topic.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    shadows: const [
+                      Shadow(
+                        blurRadius: 10,
+                        color: Colors.black54,
+                        offset: Offset(0, 2),
                       ),
                     ],
                   ),
                 ),
-                Text(
-                  '₹160.00',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _VideoCard extends StatelessWidget {
-  const _VideoCard({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 84.h,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(12.r),
+        ),
       ),
     );
   }
@@ -518,7 +458,7 @@ class _ContactHelpCard extends StatelessWidget {
           SizedBox(height: 10.h),
           const _ContactRow(
             icon: Icons.call_outlined,
-            text: 'support@erupaiya.com',
+            text: '+917350735046',
           ),
           SizedBox(height: 16.h),
           Row(
@@ -622,15 +562,25 @@ class _DividerDot extends StatelessWidget {
 class HelpTopicDetailView extends HookWidget {
   const HelpTopicDetailView({
     super.key,
-    required this.title,
-    required this.description,
+    required this.topic,
   });
 
-  final String title;
-  final String description;
+  final HelpTopic topic;
 
   @override
   Widget build(BuildContext context) {
+    Future<void> openVideo() async {
+      final raw = topic.video?.trim();
+      final key = topic.videoKey;
+      final resolved = raw != null && raw.isNotEmpty
+          ? Uri.tryParse(raw)
+          : (key != null
+              ? Uri.parse('https://www.youtube.com/watch?v=$key')
+              : null);
+      if (resolved == null) return;
+      await launchUrl(resolved, mode: LaunchMode.externalApplication);
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const MyAppBar(
@@ -643,39 +593,59 @@ class HelpTopicDetailView extends HookWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              title,
+              topic.title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,
                   ),
             ),
             SizedBox(height: 14.h),
-            Container(
-              height: 150.h,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFE1D6),
+            if (topic.imageUrl != null && topic.imageUrl!.isNotEmpty)
+              ClipRRect(
                 borderRadius: BorderRadius.circular(14.r),
-                border: Border.all(color: const Color(0xFFE7B6A8)),
-              ),
-              child: Center(
-                child: Container(
-                  height: 36.h,
-                  width: 36.h,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFEA5A30),
-                    shape: BoxShape.circle,
+                child: AspectRatio(
+                  aspectRatio: 343 / 150,
+                  child: CachedNetworkImage(
+                    imageUrl: topic.imageUrl!,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) =>
+                        Container(color: const Color(0xFFF0F0F0)),
+                    errorWidget: (_, __, ___) =>
+                        Container(color: const Color(0xFFF0F0F0)),
                   ),
-                  child: const Icon(
-                    Icons.play_arrow,
-                    color: Colors.white,
+                ),
+              )
+            else if (topic.videoKey != null)
+              InkWell(
+                onTap: openVideo,
+                borderRadius: BorderRadius.circular(14.r),
+                child: Container(
+                  height: 150.h,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFE1D6),
+                    borderRadius: BorderRadius.circular(14.r),
+                    border: Border.all(color: const Color(0xFFE7B6A8)),
+                  ),
+                  child: Center(
+                    child: Container(
+                      height: 36.h,
+                      width: 36.h,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEA5A30),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.play_arrow,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
             SizedBox(height: 12.h),
             Text(
-              description,
+              topic.description,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppColors.textPrimary.withOpacity(0.75),
                     height: 1.5,

@@ -20,6 +20,7 @@ class FileConstants {
   static String ellipse14 = 'assets/images/png/Ellipse 14.png';
   static String ellipse7 = 'assets/images/png/Ellipse 7.png';
   static String sampleBill = 'assets/images/png/sample_bill.png';
+  static String orangeSearch = 'assets/images/png/home_icon/orangeSearch.png';
 
   // GIFS
   static String loadingGif = 'assets/images/png/loading.gif';
@@ -77,6 +78,7 @@ class FileConstants {
   static String schoolFees = 'assets/images/png/home_icon/schoolFees.png';
   static String collegeFees = 'assets/images/png/home_icon/collegeFees.png';
   static String gym = 'assets/images/png/home_icon/gym.png';
+  static String bottomBar = 'assets/images/png/home_icon/bottomBar.png';
 //   static String educationFees = 'assets/images/png/home_icon/educationFees.png';
   static String generalInsurance =
       'assets/images/png/home_icon/genInsurance.png';
@@ -91,12 +93,17 @@ class FileConstants {
   static String agentCollection =
       'assets/images/png/home_icon/agent_collection.png';
   static String eChalan = 'assets/images/png/home_icon/e_challan.png';
+  static String referBg = 'assets/images/png/home_icon/referBg.png';
   static String nps = 'assets/images/png/home_icon/nps.png';
   static String donation = 'assets/images/png/home_icon/donation.png';
   static String education = 'assets/images/png/home_icon/education.png';
   static String rLogo = 'assets/images/png/home_icon/r_logo.png';
   static String erupaiyaLogo = 'assets/images/png/home_icon/erupaiya_logo.png';
+  static String orangeRight = 'assets/images/png/orangeRight.png';
   static String wallet = 'assets/images/png/home_icon/wallet.png';
+  static String homeSpin = 'assets/images/png/home_icon/homeSpin.png';
+  static String homeHistory = 'assets/images/png/home_icon/homeHistory.png';
+  static String homeAlerts = 'assets/images/png/home_icon/homeAlerts.png';
   static String metro = 'assets/images/png/home_icon/metro.png';
   static String preCard = 'assets/images/png/home_icon/pre_card.png';
   static String homeBanner1 = 'assets/images/png/home_icon/home_banner1.png';

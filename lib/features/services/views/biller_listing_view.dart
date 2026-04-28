@@ -64,7 +64,7 @@ class BillerListingView extends HookConsumerWidget {
         children: [
           // Search bar
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: SearchTextfield(
               hintText: 'Search Service',
               controller: searchController,

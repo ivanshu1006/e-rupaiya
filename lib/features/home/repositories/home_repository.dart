@@ -15,8 +15,11 @@ class HomeRepository {
 
   final Dio _dio;
 
-  Future<({List<QuickActionCategory> categories, List<BannerModel> banners})>
-      fetchQuickActions({String? search}) async {
+  Future<
+      ({
+        List<QuickActionCategory> categories,
+        Map<String, List<BannerModel>> banners
+      })> fetchQuickActions({String? search}) async {
     try {
       final response = await _dio.get(
         ApiConstants.quickActionsEndpoint,
@@ -32,12 +35,17 @@ class HomeRepository {
       }
       final dataMap = payload?['data'] as Map<String, dynamic>? ?? {};
       final categories = <QuickActionCategory>[];
-      final banners = <BannerModel>[];
+      final banners = <String, List<BannerModel>>{};
 
       dataMap.forEach((key, value) {
-        if (key == 'banners' && value is List) {
-          banners.addAll(value
-              .map((e) => BannerModel.fromJson(e as Map<String, dynamic>)));
+        if (key == 'banners' && value is Map<String, dynamic>) {
+          value.forEach((bKey, bValue) {
+            if (bValue is List) {
+              banners[bKey] = bValue
+                  .map((e) => BannerModel.fromJson(e as Map<String, dynamic>))
+                  .toList();
+            }
+          });
         } else if (key != 'banners' && value is Map<String, dynamic>) {
           categories.add(QuickActionCategory.fromJson(value));
         }

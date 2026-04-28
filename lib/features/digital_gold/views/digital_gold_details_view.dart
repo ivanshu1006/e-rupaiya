@@ -24,11 +24,13 @@ class DigitalGoldDetailsView extends HookConsumerWidget {
     required this.amount,
     this.metal = DigitalMetal.gold,
     this.preview,
+    this.redirectToGoldOnSuccess = false,
   });
 
   final int amount;
   final DigitalMetal metal;
   final DigitalGoldPreview? preview;
+  final bool redirectToGoldOnSuccess;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -293,6 +295,14 @@ class DigitalGoldDetailsView extends HookConsumerWidget {
                     deliveryCountry: deliveryCountry.text.trim(),
                     deliveryMobile: deliveryMobile.text.trim(),
                   );
+                  if (!context.mounted) return;
+                  if (redirectToGoldOnSuccess || amount <= 0) {
+                    context.go(
+                      '${RouteConstants.digitalGold}?metal=${theme.queryValue}',
+                    );
+                    return;
+                  }
+
                   KDialog.instance.openSheet(
                     dialog: GoldPaymentSummarySheet(
                       amount: amount.toDouble(),

@@ -11,7 +11,7 @@ class MyAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.showHelp = true,
     this.onHelp,
     this.trailing,
-    this.height = 150,
+    this.height,
     this.backgroundColor,
   });
 
@@ -20,22 +20,30 @@ class MyAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showHelp;
   final VoidCallback? onHelp;
   final Widget? trailing;
-  final double height;
+  final double? height;
   final Color? backgroundColor;
 
+  double get _platformTopPadding {
+    final views = WidgetsBinding.instance.platformDispatcher.views;
+    if (views.isEmpty) return 0;
+    final view = views.first;
+    return view.padding.top / view.devicePixelRatio;
+  }
+
   @override
-  Size get preferredSize => Size.fromHeight(height);
+  Size get preferredSize =>
+      Size.fromHeight(height ?? (_platformTopPadding + kToolbarHeight + 1));
 
   @override
   Widget build(BuildContext context) {
-    final bottomGap = backgroundColor == null ? 20.h : 0.0;
     final bgColor = backgroundColor ?? Colors.white;
     final isDark =
         ThemeData.estimateBrightnessForColor(bgColor) == Brightness.dark;
-    final overlayStyle = (isDark
-            ? SystemUiOverlayStyle.light
-            : SystemUiOverlayStyle.dark)
-        .copyWith(statusBarColor: bgColor);
+    final overlayStyle =
+        (isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
+            .copyWith(statusBarColor: bgColor);
+    final topPadding = MediaQuery.paddingOf(context).top;
+    final resolvedHeight = height ?? (topPadding + kToolbarHeight + 1);
     // Old design (kept for reference)
     // return SizedBox(
     //   height: height,
@@ -124,17 +132,17 @@ class MyAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlayStyle,
       child: SizedBox(
-        height: height,
+        height: resolvedHeight,
         child: Container(
           color: bgColor,
-          padding: EdgeInsets.only(bottom: bottomGap),
-          child: SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                Padding(
+          child: Column(
+            children: [
+              SizedBox(height: topPadding),
+              SizedBox(
+                height: kToolbarHeight,
+                child: Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   child: Row(
                     children: [
                       IconButton(
@@ -180,13 +188,13 @@ class MyAppBar extends StatelessWidget implements PreferredSizeWidget {
                     ],
                   ),
                 ),
-                Divider(
-                  height: 1,
-                  thickness: 1,
-                  color: Colors.black.withOpacity(0.08),
-                ),
-              ],
-            ),
+              ),
+              Divider(
+                height: 1,
+                thickness: 1,
+                color: Colors.black.withOpacity(0.08),
+              ),
+            ],
           ),
         ),
       ),

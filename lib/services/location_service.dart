@@ -8,7 +8,8 @@ import 'logger_service.dart';
 class LocationService {
   LocationService._();
 
-  static Future<void> initialize() async {
+  static Future<void> initialize({bool requestPermission = true}) async {
+    if (!requestPermission) return;
     await _requestPermission();
   }
 

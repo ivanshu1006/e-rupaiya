@@ -36,6 +36,8 @@ class RouteConstants {
   static const String helpSupport = '/help-support';
   static const String helpCenterChat = '/help-center/chat';
   static const String faq = '/faq';
+  static const String supportTickets = '/support/tickets';
+  static const String supportTicketDetail = '/support/tickets/detail';
   static const String transactions = '/transactions';
   static const String transactionDetail = '/transactions/detail';
   static const String notifications = '/notifications';

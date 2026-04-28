@@ -12,6 +12,7 @@ import 'features/auth/views/pin_setup_view.dart';
 import 'features/auth/views/splash_view.dart';
 import 'features/digital_gold/models/digital_gold_preview.dart';
 import 'features/digital_gold/models/digital_metal.dart';
+import 'features/digital_gold/repo/digital_gold_repo.dart';
 import 'features/digital_gold/views/digital_gold_details_view.dart';
 import 'features/digital_gold/views/digital_gold_locker_view.dart';
 import 'features/digital_gold/views/digital_gold_success_view.dart';
@@ -34,16 +35,15 @@ import 'features/onboarding/views/verification_result_view.dart';
 import 'features/profile/models/transaction_history_entry.dart';
 import 'features/profile/views/about_us_screen.dart';
 import 'features/profile/views/faq_screen.dart';
-import 'features/profile/views/grievance_screen.dart';
 import 'features/profile/views/help_center_chat_screen.dart';
 import 'features/profile/views/help_support_screen.dart';
 import 'features/profile/views/my_qr_screen.dart';
 import 'features/profile/views/offers_view.dart';
 import 'features/profile/views/policies_screen.dart';
-import 'features/profile/views/privacy_policy_screen.dart';
-import 'features/profile/views/refund_policy_screen.dart';
+import 'features/profile/views/policy_page_screen.dart';
 import 'features/profile/views/settings_view.dart';
-import 'features/profile/views/terms_privacy_screen.dart';
+import 'features/profile/views/support_ticket_detail_screen.dart';
+import 'features/profile/views/support_tickets_screen.dart';
 import 'features/profile/views/transaction_detail_screen.dart';
 import 'features/profile/views/transaction_history_screen.dart';
 import 'features/refer_and_earn/views/refer_and_earn_view.dart';
@@ -61,6 +61,7 @@ import 'features/services/views/credit_card_transactions_screen.dart';
 import 'features/spinandear/views/spin_and_win_view.dart';
 import 'services/logger_service.dart';
 import 'widgets/k_dialog.dart';
+import 'features/profile/constants/policy_page_slugs.dart';
 
 final routerProvider = Provider<GoRouter>(
   (ref) {
@@ -245,11 +246,17 @@ final routerProvider = Provider<GoRouter>(
         ),
         GoRoute(
           path: RouteConstants.refundPolicy,
-          builder: (context, state) => const RefundPolicyScreen(),
+          builder: (context, state) => const PolicyPageScreen(
+            slug: PolicyPageSlugs.refundPolicy,
+            title: 'Refund Policy',
+          ),
         ),
         GoRoute(
           path: RouteConstants.grievance,
-          builder: (context, state) => const GrievanceScreen(),
+          builder: (context, state) => const PolicyPageScreen(
+            slug: PolicyPageSlugs.grievance,
+            title: 'Grievance',
+          ),
         ),
         GoRoute(
           path: RouteConstants.aboutUs,
@@ -257,11 +264,17 @@ final routerProvider = Provider<GoRouter>(
         ),
         GoRoute(
           path: RouteConstants.termsPrivacy,
-          builder: (context, state) => const TermsPrivacyScreen(),
+          builder: (context, state) => const PolicyPageScreen(
+            slug: PolicyPageSlugs.termsAndConditions,
+            title: 'Terms & Conditions',
+          ),
         ),
         GoRoute(
           path: RouteConstants.privacyPolicy,
-          builder: (context, state) => const PrivacyPolicyScreen(),
+          builder: (context, state) => const PolicyPageScreen(
+            slug: PolicyPageSlugs.privacyPolicy,
+            title: 'Privacy Policy',
+          ),
         ),
         GoRoute(
           path: RouteConstants.helpSupport,
@@ -274,6 +287,16 @@ final routerProvider = Provider<GoRouter>(
         GoRoute(
           path: RouteConstants.faq,
           builder: (context, state) => const FaqScreen(),
+        ),
+        GoRoute(
+          path: RouteConstants.supportTickets,
+          builder: (context, state) => const SupportTicketsScreen(),
+        ),
+        GoRoute(
+          path: RouteConstants.supportTicketDetail,
+          builder: (context, state) => SupportTicketDetailScreen(
+            ticketId: state.extra as String? ?? '',
+          ),
         ),
         GoRoute(
           path: RouteConstants.transactions,
@@ -311,6 +334,35 @@ final routerProvider = Provider<GoRouter>(
         ),
         GoRoute(
           path: RouteConstants.digitalGold,
+          redirect: (context, state) async {
+            final entry = state.uri.queryParameters['entry'] ?? '';
+            if (entry != 'home') return null;
+
+            final metal =
+                DigitalMetalTheme.fromQuery(state.uri.queryParameters['metal']);
+            final metalType = metal == DigitalMetal.silver ? 'S' : 'G';
+            try {
+              final repo = ref.read(digitalGoldRepoProvider);
+              final preview = await repo.fetchProceedPreview(
+                calculationType: 'A',
+                amount: '1',
+                quantity: '1',
+                metalType: metalType,
+              );
+              if (!preview.isUserRegistered) {
+                return '${RouteConstants.digitalGoldDetails}?metal=${metal == DigitalMetal.silver ? 'silver' : 'gold'}&postRegToGold=1';
+              }
+            } catch (_) {
+              // If we can't verify registration, do not block navigation.
+              return null;
+            }
+
+            // Prevent re-checking by dropping the `entry` param once validated.
+            final params = Map<String, String>.from(state.uri.queryParameters);
+            params.remove('entry');
+            final newUri = state.uri.replace(queryParameters: params);
+            return newUri.toString();
+          },
           builder: (context, state) {
             final mode = state.uri.queryParameters['mode'] == 'sell'
                 ? GoldTradeMode.sell
@@ -330,6 +382,8 @@ final routerProvider = Provider<GoRouter>(
               amount: extra?['amount'] as int? ?? 0,
               metal: metal,
               preview: extra?['preview'] as DigitalGoldPreview?,
+              redirectToGoldOnSuccess:
+                  state.uri.queryParameters['postRegToGold'] == '1',
             );
           },
         ),

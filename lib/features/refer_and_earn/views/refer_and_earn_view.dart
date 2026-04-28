@@ -79,7 +79,7 @@ class ReferAndEarnView extends HookConsumerWidget {
               ),
             ),
             Transform.translate(
-              offset: Offset(0, -26.h),
+              offset: Offset(0, -90.h),
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -88,7 +88,7 @@ class ReferAndEarnView extends HookConsumerWidget {
                   ),
                 ),
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 24.h),
+                  padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
                   child: Column(
                     children: [
                       _ReferSummarySection(),

@@ -14,6 +14,7 @@ class ProfileModel {
     this.dailyFreeSpin = 0,
     this.normalSpinRemaining = 0,
     this.isPushNotification = true,
+    this.isRazorpayDisabled = false,
     this.aadhaarMasked,
     this.panMasked,
     this.panNo,
@@ -73,6 +74,7 @@ class ProfileModel {
       normalSpinRemaining:
           int.tryParse(json['normal_spin_remaining']?.toString() ?? '') ?? 0,
       isPushNotification: _parseBool(json['is_push_notification']),
+      isRazorpayDisabled: _parseBool(json['is_razorpay_disable']),
       aadhaarMasked: json['aadhaar_masked'] as String?,
       panMasked: json['pan_masked'] as String?,
       panNo: json['pan_no'] as String?,
@@ -99,6 +101,7 @@ class ProfileModel {
   final int dailyFreeSpin;
   final int normalSpinRemaining;
   final bool isPushNotification;
+  final bool isRazorpayDisabled;
   final String? aadhaarMasked;
   final String? panMasked;
   final String? panNo;

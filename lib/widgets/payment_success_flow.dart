@@ -169,6 +169,9 @@ class PaymentResultScreen extends StatefulWidget {
     this.onContinue,
     this.continueText = 'Continue to Home',
     this.showFailureActions = false,
+    this.showBackButton = false,
+    this.onContactSupport,
+    this.onShareReceipt,
     this.statusIcon = Icons.check,
     this.statusIconColor = Colors.white,
     this.statusIconBorderColor = Colors.white,
@@ -194,6 +197,10 @@ class PaymentResultScreen extends StatefulWidget {
   final FutureOr<void> Function(BuildContext context)? onContinue;
   final String continueText;
   final bool showFailureActions;
+  final bool showBackButton;
+  final FutureOr<void> Function(BuildContext context)? onContactSupport;
+  final FutureOr<void> Function(BuildContext context, String transactionId)?
+      onShareReceipt;
   final IconData statusIcon;
   final Color statusIconColor;
   final Color statusIconBorderColor;
@@ -251,7 +258,7 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF4EF),
+      backgroundColor: const Color(0xFFFFF9F7),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final height = constraints.maxHeight;
@@ -281,7 +288,19 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
                           Container(
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
-                                colors: widget.headerGradientColors,
+                                colors: () {
+                                  final colors = widget.headerGradientColors;
+                                  if (colors.isEmpty) {
+                                    return const [
+                                      Color(0xFF0D5C32),
+                                      Color(0xFF0E7340),
+                                    ];
+                                  }
+                                  if (colors.length == 1) {
+                                    return [colors.first, colors.first];
+                                  }
+                                  return colors;
+                                }(),
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
                               ),
@@ -297,7 +316,7 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
                     ),
                   ),
                   const Expanded(
-                    child: ColoredBox(color: Color(0xFFFFF4EF)),
+                    child: ColoredBox(color: Color(0xFFFFF9F7)),
                   ),
                 ],
               ),
@@ -305,70 +324,87 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
                 left: 24,
                 right: 24,
                 top: cardTop,
-                child: _TransactionDetailsCard(
-                  title: widget.detailsTitle,
-                  details: widget.details,
-                ),
-              ),
-              if (widget.showFailureActions)
-                Positioned(
-                  left: 24,
-                  right: 24,
-                  top: cardTop + 170,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.support_agent),
-                          label: const Text('Contact Support'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.textPrimary,
-                            side: BorderSide(
-                              color: AppColors.lightBorder.withOpacity(0.8),
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.share_outlined),
-                          label: const Text('Share'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.textPrimary,
-                            side: BorderSide(
-                              color: AppColors.lightBorder.withOpacity(0.8),
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 12,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _TransactionDetailsCard(
+                      title: widget.detailsTitle,
+                      details: widget.details,
+                    ),
+                    if (widget.showFailureActions) ...[
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: widget.onContactSupport == null
+                                  ? null
+                                  : () =>
+                                      widget.onContactSupport?.call(context),
+                              icon: const Icon(Icons.headset_mic_outlined),
+                              label: const Text('Contact Support'),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: AppColors.textPrimary,
+                                side: BorderSide(
+                                  color: AppColors.lightBorder.withOpacity(0.8),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                textStyle: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: widget.onShareReceipt == null ||
+                                      widget.transactionId.trim().isEmpty
+                                  ? null
+                                  : () => widget.onShareReceipt?.call(
+                                        context,
+                                        widget.transactionId,
+                                      ),
+                              icon: const Icon(Icons.share_outlined),
+                              label: const Text('Share'),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: AppColors.textPrimary,
+                                side: BorderSide(
+                                  color: AppColors.lightBorder.withOpacity(0.8),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                textStyle: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                  ),
+                  ],
                 ),
+              ),
               Positioned(
                 left: 24,
                 right: 24,
-                top: MediaQuery.of(context).padding.top + 20,
+                top: MediaQuery.of(context).padding.top + 60,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
-                      width: 66,
-                      height: 66,
+                      width: 60,
+                      height: 60,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
@@ -382,17 +418,18 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
                         size: 32,
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
                     Text(
                       widget.title,
                       textAlign: TextAlign.center,
                       style:
                           Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontSize: 18,
                                 color: Colors.white,
                                 fontWeight: FontWeight.w700,
                               ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 16),
                     if (widget.emphasizeSubtitle)
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -400,7 +437,9 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
                           vertical: 10,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.white,
+                          color: widget.showBackButton
+                              ? const Color(0xFF470601)
+                              : const Color(0xFF09301A),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -408,7 +447,7 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
                           textAlign: TextAlign.center,
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppColors.textPrimary,
+                                    color: Colors.white,
                                     height: 1.4,
                                   ),
                         ),
@@ -425,6 +464,18 @@ class _PaymentResultScreenState extends State<PaymentResultScreen> {
                   ],
                 ),
               ),
+              if (widget.showBackButton)
+                Positioned(
+                  left: 12,
+                  top: MediaQuery.of(context).padding.top + 8,
+                  child: IconButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
               Positioned(
                 left: 0,
                 right: 0,
@@ -538,11 +589,11 @@ class _TransactionDetailsCard extends StatelessWidget {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            textAlign: TextAlign.center,
+            textAlign: TextAlign.left,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -559,16 +610,14 @@ class _TransactionDetailsCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 children: [
-                  Expanded(
-                    child: Text(
-                      item.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textPrimary.withOpacity(0.7),
-                            fontSize: 12,
-                          ),
-                    ),
+                  Text(
+                    item.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textPrimary.withOpacity(0.7),
+                          fontSize: 12,
+                        ),
                   ),
                   const SizedBox(width: 12),
                   Flexible(
@@ -600,10 +649,10 @@ class _TransactionDetailsCard extends StatelessWidget {
                                 ClipboardData(text: item.value),
                               );
                               if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Transaction ID copied.'),
-                                ),
+                              AppSnackbar.show(
+                                'Copied to clipboard',
+                                backgroundColor: AppColors.green,
+                                textColor: Colors.white,
                               );
                             },
                             borderRadius: BorderRadius.circular(8),

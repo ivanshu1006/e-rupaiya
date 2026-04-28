@@ -52,6 +52,44 @@ class MobilePrepaidShimmer extends StatelessWidget {
   }
 }
 
+class MobilePrepaidContentShimmer extends StatelessWidget {
+  const MobilePrepaidContentShimmer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return _Shimmer(
+      child: ListView(
+        padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 24.h),
+        children: [
+          _ShimmerBox(height: 46.h, radius: 14.r),
+          SizedBox(height: 18.h),
+          _ShimmerLine(width: 140.w, height: 16.h),
+          SizedBox(height: 14.h),
+          SizedBox(
+            height: 150.h,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: 3,
+              separatorBuilder: (_, __) => SizedBox(width: 12.w),
+              itemBuilder: (_, __) => const _SuggestedPlanCardShimmer(),
+            ),
+          ),
+          SizedBox(height: 12.h),
+          const _CategoryTabsShimmer(),
+          SizedBox(height: 10.h),
+          ...List.generate(
+            3,
+            (index) => Padding(
+              padding: EdgeInsets.only(bottom: 14.h),
+              child: const _PlanCardShimmer(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ShimmerAppBar extends StatelessWidget {
   const _ShimmerAppBar();
 

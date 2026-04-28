@@ -11,10 +11,12 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
+import '../../../constants/routes_constant.dart';
 import '../../../services/permission_service.dart';
 import '../../../widgets/k_dialog.dart';
 import '../../../widgets/my_app_bar.dart';
@@ -23,9 +25,12 @@ import '../../../widgets/search_textfield.dart';
 import '../components/mobile_prepaid_shimmer.dart';
 import '../components/payment_bottom_sheet.dart';
 import '../components/plan_card.dart';
+import '../components/plan_details_sheet.dart';
+import '../components/recent_recharge_payments.dart';
 import '../controllers/contacts_cache_controller.dart';
 import '../controllers/mobile_prepaid_controller.dart';
 import '../controllers/prepaid_meta_controller.dart';
+import '../models/latest_transaction.dart';
 import '../models/operator_option.dart';
 import '../models/plan_item.dart';
 import '../models/recharge_quick_action_payload.dart';
@@ -68,6 +73,7 @@ class MobilePrepaidView extends HookConsumerWidget {
     final state = ref.watch(mobilePrepaidControllerProvider);
     final controller = ref.read(mobilePrepaidControllerProvider.notifier);
     final quickActionPayload = quickAction;
+    final recentPayments = ref.watch(latestRechargeTransactionsProvider);
 
     final permissionService = useMemoized(() => const PermissionService());
     final hasPermission = useState(false);
@@ -187,14 +193,14 @@ class MobilePrepaidView extends HookConsumerWidget {
         if (message == 'unable to process recharge') {
           return null;
         }
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.errorMessage!),
-              backgroundColor: Colors.red.shade400,
-            ),
-          );
-        });
+        // WidgetsBinding.instance.addPostFrameCallback((_) {
+        //   ScaffoldMessenger.of(context).showSnackBar(
+        //     SnackBar(
+        //       content: Text(state.errorMessage!),
+        //       backgroundColor: Colors.red.shade400,
+        //     ),
+        //   );
+        // });
       }
       return null;
     }, [state.errorMessage]);
@@ -203,14 +209,14 @@ class MobilePrepaidView extends HookConsumerWidget {
       if (state.rechargeMessage != null &&
           state.rechargeMessage != lastMessage.value) {
         lastMessage.value = state.rechargeMessage;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.rechargeMessage!),
-              backgroundColor: AppColors.primary,
-            ),
-          );
-        });
+        // WidgetsBinding.instance.addPostFrameCallback((_) {
+        //   ScaffoldMessenger.of(context).showSnackBar(
+        //     SnackBar(
+        //       content: Text(state.rechargeMessage!),
+        //       backgroundColor: AppColors.primary,
+        //     ),
+        //   );
+        // });
       }
       return null;
     }, [state.rechargeMessage]);
@@ -218,13 +224,6 @@ class MobilePrepaidView extends HookConsumerWidget {
     final hasPlanSelected = showPlans && state.selectedPlan != null;
     final showOperatorCard = showPlans || hasPlanSelected;
     final isOpeningOperatorSheet = useState(false);
-
-    if (state.isFetching) {
-      return const Scaffold(
-        backgroundColor: Colors.white,
-        body: MobilePrepaidShimmer(),
-      );
-    }
 
     Future<void> handleChange() async {
       if (isOpeningOperatorSheet.value) return;
@@ -250,102 +249,100 @@ class MobilePrepaidView extends HookConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: MyAppBar(
+        title: hasPlanSelected ? 'Pay Now' : 'Select A Recharge Plan',
+        onBack: () {
+          if (hasPlanSelected) {
+            controller.deselectPlan();
+            return;
+          }
+          if (showPlans) {
+            controller.reset();
+            manualMobileController.clear();
+            planSearchController.clear();
+            contactQuery.value = '';
+            return;
+          }
+          Navigator.of(context).maybePop();
+        },
+      ),
       body: Column(
         children: [
-          // App bar + overlapping operator card
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              MyAppBar(
-                title: hasPlanSelected ? 'Pay Now' : 'Select A Recharge Plan',
-                onBack: () {
-                  if (hasPlanSelected) {
-                    controller.deselectPlan();
-                    return;
-                  }
-                  if (showPlans) {
-                    controller.reset();
-                    manualMobileController.clear();
-                    planSearchController.clear();
-                    contactQuery.value = '';
-                    return;
-                  }
-                  Navigator.of(context).maybePop();
-                },
+          if (showOperatorCard) ...[
+            SizedBox(height: 12.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14.w),
+              child: SimpleQuickActionCard(
+                title: '+91 ${state.mobile}',
+                subtitle:
+                    '${state.operatorInfo?.operatorName ?? 'Operator'} • ${state.operatorInfo?.circle ?? 'Circle'}',
+                leadingImageUrl: state.operatorInfo?.iconUrl,
+                actionLabel: 'Change',
+                onAction: handleChange,
               ),
-              if (showOperatorCard)
-                Positioned(
-                  left: 16,
-                  right: 16,
-                  bottom: -38.h,
-                  height: 72.h,
-                  // child: QuickActionHeaderCard(
-                  //   title: '+91 ${state.mobile}',
-                  //   subtitle:
-                  //       '${state.operatorInfo?.operatorName ?? 'Operator'} • ${state.operatorInfo?.circle ?? 'Circle'}',
-                  //   leadingImageUrl: state.operatorInfo?.iconUrl,
-                  //   actionLabel: 'Change',
-                  //   onAction: handleChange,
-                  // ),
-                  child: SimpleQuickActionCard(
-                    title: '+91 ${state.mobile}',
-                    subtitle:
-                        '${state.operatorInfo?.operatorName ?? 'Operator'} • ${state.operatorInfo?.circle ?? 'Circle'}',
-                    leadingImageUrl: state.operatorInfo?.iconUrl,
-                    actionLabel: 'Change',
-                    onAction: handleChange,
-                  ),
-                ),
-            ],
-          ),
-          SizedBox(height: showOperatorCard ? 20.h : 16.h),
-          // Space for the overlapping card
-          if (showOperatorCard) const SizedBox(height: 36),
+            ),
+            SizedBox(height: 12.h),
+          ] else
+            SizedBox(height: 12.h),
           // Main content
           Expanded(
-            child: !hasPermission.value
-                ? _PermissionEmptyState(onAllow: handleRequestPermission)
-                : hasPlanSelected
-                    ? _PayNowSection(
-                        state: state,
-                        controller: controller,
-                      )
-                    : showPlans
-                        ? _PlanSection(
+            child: state.isFetching
+                ? const MobilePrepaidContentShimmer()
+                : !hasPermission.value
+                    ? _PermissionEmptyState(onAllow: handleRequestPermission)
+                    : hasPlanSelected
+                        ? _PayNowSection(
                             state: state,
                             controller: controller,
-                            planSearchController: planSearchController,
                           )
-                        : _ContactsSection(
-                            isLoading: contactsState.isLoading,
-                            contacts: filteredContacts.value,
-                            visibleCount: visibleContactCount.value,
-                            contactSearchController: contactSearchController,
-                            onQueryChange: (value) =>
-                                contactQuery.value = value,
-                            onReload: loadContacts,
-                            onLoadMore: () {
-                              if (visibleContactCount.value >=
-                                  filteredContacts.value.length) {
-                                return;
-                              }
-                              visibleContactCount.value =
-                                  (visibleContactCount.value + 100).clamp(
-                                0,
-                                filteredContacts.value.length,
-                              );
-                            },
-                            onSelect: (mobile) {
-                              controller.fetchOperatorAndPlans(
-                                _normalizeMobile(mobile),
-                              );
-                            },
-                            manualMobileController: manualMobileController,
-                            onManualSubmit: () => controller
-                                .fetchOperatorAndPlans(_normalizeMobile(
-                              manualMobileController.text,
-                            )),
-                          ),
+                        : showPlans
+                            ? _PlanSection(
+                                state: state,
+                                controller: controller,
+                                planSearchController: planSearchController,
+                              )
+                            : _ContactsSection(
+                                recentPayments: recentPayments,
+                                isLoading: contactsState.isLoading,
+                                contacts: filteredContacts.value,
+                                visibleCount: visibleContactCount.value,
+                                contactSearchController:
+                                    contactSearchController,
+                                onQueryChange: (value) =>
+                                    contactQuery.value = value,
+                                onReload: loadContacts,
+                                onLoadMore: () {
+                                  if (visibleContactCount.value >=
+                                      filteredContacts.value.length) {
+                                    return;
+                                  }
+                                  visibleContactCount.value =
+                                      (visibleContactCount.value + 100).clamp(
+                                    0,
+                                    filteredContacts.value.length,
+                                  );
+                                },
+                                onSelect: (mobile) {
+                                  controller.fetchOperatorAndPlans(
+                                    _normalizeMobile(mobile),
+                                  );
+                                },
+                                onRepeatRecent: (payment) {
+                                  manualMobileController.text =
+                                      payment.serviceNo;
+                                  controller.fetchOperatorAndPlans(
+                                    _normalizeMobile(payment.serviceNo),
+                                  );
+                                },
+                                onViewAllRecent: () => context.push(
+                                  RouteConstants.mobileRecentRecharges,
+                                ),
+                                manualMobileController: manualMobileController,
+                                onManualSubmit: () => controller
+                                    .fetchOperatorAndPlans(_normalizeMobile(
+                                  manualMobileController.text,
+                                )),
+                              ),
           ),
         ],
       ),
@@ -355,6 +352,7 @@ class MobilePrepaidView extends HookConsumerWidget {
 
 class _ContactsSection extends StatelessWidget {
   const _ContactsSection({
+    required this.recentPayments,
     required this.isLoading,
     required this.contacts,
     required this.visibleCount,
@@ -363,10 +361,13 @@ class _ContactsSection extends StatelessWidget {
     required this.onReload,
     required this.onLoadMore,
     required this.onSelect,
+    required this.onRepeatRecent,
+    required this.onViewAllRecent,
     required this.manualMobileController,
     required this.onManualSubmit,
   });
 
+  final AsyncValue<List<LatestTransaction>> recentPayments;
   final bool isLoading;
   final List<Contact> contacts;
   final int visibleCount;
@@ -375,6 +376,8 @@ class _ContactsSection extends StatelessWidget {
   final VoidCallback onReload;
   final VoidCallback onLoadMore;
   final ValueChanged<String> onSelect;
+  final ValueChanged<LatestTransaction> onRepeatRecent;
+  final VoidCallback onViewAllRecent;
   final TextEditingController manualMobileController;
   final VoidCallback onManualSubmit;
 
@@ -389,8 +392,14 @@ class _ContactsSection extends StatelessWidget {
         return false;
       },
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         children: [
+          RecentRechargePayments(
+            recentPayments: recentPayments,
+            onRepeat: onRepeatRecent,
+            onViewAll: onViewAllRecent,
+          ),
+          SizedBox(height: 12.h),
           Text(
             'Enter Mobile Number',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -456,7 +465,7 @@ class _ContactsSection extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 4.h),
           Row(
             children: [
               Text(
@@ -543,7 +552,7 @@ class _PlanSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
       children: [
         SearchTextfield(
           hintText: 'Search a plan, eg 299, 5g, etc.',
@@ -572,6 +581,7 @@ class _PlanSection extends StatelessWidget {
           selected: state.selectedCategory,
           onSelected: controller.selectCategory,
         ),
+        SizedBox(height: 8.h),
         if (state.isFetching)
           const Center(
             child: SpinKitCircle(
@@ -586,6 +596,17 @@ class _PlanSection extends StatelessWidget {
             plans: state.filteredPlans,
             selectedPlan: state.selectedPlan,
             onSelect: controller.selectPlan,
+            onPayNow: (plan) => KDialog.instance.openSheet(
+              dialog: PrepaidPaymentBottomSheet(
+                amount: plan.amount,
+                billerName:
+                    state.operatorInfo?.operatorName ?? 'Mobile Prepaid',
+                onRecharge: ({referenceId}) => controller.rechargeWithPlan(
+                  plan: plan,
+                  referenceId: referenceId,
+                ),
+              ),
+            ),
           ),
       ],
     );
@@ -747,6 +768,10 @@ class _PayNowSection extends StatelessWidget {
                   : () => KDialog.instance.openSheet(
                         dialog: PrepaidPaymentBottomSheet(
                           amount: plan.amount,
+                          billerName: state.operatorInfo?.operatorName ??
+                              'Mobile Prepaid',
+                          onRecharge: ({referenceId}) =>
+                              controller.recharge(referenceId: referenceId),
                         ),
                       ),
               style: ElevatedButton.styleFrom(
@@ -783,7 +808,7 @@ class _PayNowSection extends StatelessWidget {
   Widget _buildInfoRow(BuildContext context, PlanItem plan) {
     final hasValidity = plan.validity.isNotEmpty;
     final hasData = plan.data.isNotEmpty;
-    final hasBenefitImages = plan.benefitImages.isNotEmpty;
+    final hasBenefitImages = plan.additionalBenefits.isNotEmpty;
 
     if (!hasValidity && !hasData && !hasBenefitImages) {
       return const SizedBox.shrink();
@@ -849,63 +874,87 @@ class _PayNowSection extends StatelessWidget {
   }
 
   Widget _buildBenefitImages(BuildContext context, PlanItem plan) {
-    const maxVisible = 3;
-    final images = plan.benefitImages;
-    final visibleImages = images.take(maxVisible).toList();
-    final remaining = images.length - maxVisible;
+    const maxVisible = 5;
+    final benefits = plan.additionalBenefits;
+    final visibleBenefits = benefits.take(maxVisible).toList();
+    final remaining = benefits.length - maxVisible;
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: (visibleImages.length * 26.0) + 10,
-          height: 36,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              for (int i = 0; i < visibleImages.length; i++)
-                Positioned(
-                  left: i * 26.0,
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: Image.network(
-                        visibleImages[i],
-                        width: 36,
-                        height: 36,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: Colors.grey.shade200,
-                          child: const Icon(Icons.image, size: 16),
-                        ),
+    return GestureDetector(
+      onTap: () => KDialog.instance.openSheet(
+        dialog: PlanDetailsSheet(
+          plan: plan,
+          onProceedToPay: () => KDialog.instance.openSheet(
+            dialog: PrepaidPaymentBottomSheet(
+              amount: plan.amount,
+              billerName: state.operatorInfo?.operatorName ?? 'Mobile Prepaid',
+              onRecharge: ({referenceId}) =>
+                  controller.recharge(referenceId: referenceId),
+            ),
+          ),
+        ),
+      ),
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: (visibleBenefits.length * 26.0) + 10,
+            height: 36,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                for (int i = 0; i < visibleBenefits.length; i++)
+                  Positioned(
+                    left: i * 26.0,
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: visibleBenefits[i].image == null
+                            ? Container(
+                                color: Colors.grey.shade200,
+                                child: const Icon(
+                                  Icons.card_giftcard,
+                                  size: 16,
+                                ),
+                              )
+                            : Image.network(
+                                visibleBenefits[i].image!,
+                                width: 36,
+                                height: 36,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  color: Colors.grey.shade200,
+                                  child: const Icon(Icons.image, size: 16),
+                                ),
+                              ),
                       ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
-        if (remaining > 0)
-          Text(
-            '+$remaining',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                  fontSize: 13,
-                ),
-          ),
-      ],
+          if (remaining > 0)
+            Text(
+              '+$remaining',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                  ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -1232,6 +1281,7 @@ class _PermissionEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewPadding.bottom;
     return Column(
       children: [
         const Spacer(),
@@ -1268,7 +1318,7 @@ class _PermissionEmptyState extends StatelessWidget {
         ),
         const Spacer(),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+          padding: EdgeInsets.fromLTRB(24, 18, 24, 18 + bottomInset),
           child: SizedBox(
             width: double.infinity,
             height: 48,
@@ -1316,6 +1366,7 @@ class _ContactsList extends StatelessWidget {
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
       itemCount: displayContacts.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
@@ -1348,15 +1399,21 @@ class _ContactsList extends StatelessWidget {
             ),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 22,
-                  backgroundColor: AppColors.gradientStart.withOpacity(0.35),
-                  child: Text(
-                    initials.toUpperCase(),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.gradientStart.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Text(
+                      initials.toUpperCase(),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1411,6 +1468,7 @@ class _SuggestedPlanCards extends StatelessWidget {
       height: 150,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.only(bottom: 2.h),
         itemCount: displayPlans.length,
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
@@ -1447,7 +1505,7 @@ class _SuggestedPlanCard extends StatelessWidget {
           border: Border.all(color: AppColors.lightBorder),
           boxShadow: const [
             BoxShadow(
-              color: AppColors.cardShadow,
+              color: Color.fromARGB(26, 130, 128, 128),
               blurRadius: 3,
               offset: Offset(0, 2),
             ),
@@ -1456,14 +1514,13 @@ class _SuggestedPlanCard extends StatelessWidget {
         child: Stack(
           children: [
             Positioned(
-              right: 0,
-              bottom: 0,
+              right: 10.w,
+              bottom: 65.h,
               child: IgnorePointer(
                 child: Image.asset(
-                  FileConstants.suggestedCardImage,
-                  width: 60,
-                  height: 60,
-                  fit: BoxFit.fill,
+                  FileConstants.orangeRight,
+                  width: 30.w,
+                  height: 30.h,
                 ),
               ),
             ),
@@ -1579,17 +1636,20 @@ class _PlanList extends StatelessWidget {
     required this.plans,
     required this.selectedPlan,
     required this.onSelect,
+    required this.onPayNow,
   });
 
   final List<PlanItem> plans;
   final PlanItem? selectedPlan;
   final ValueChanged<PlanItem> onSelect;
+  final ValueChanged<PlanItem> onPayNow;
 
   @override
   Widget build(BuildContext context) {
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
       itemCount: plans.length,
       separatorBuilder: (_, __) => SizedBox(height: 12.h),
       itemBuilder: (context, index) {
@@ -1598,6 +1658,7 @@ class _PlanList extends StatelessWidget {
           plan: plan,
           isSelected: selectedPlan == plan,
           onTap: () => onSelect(plan),
+          onPayNow: () => onPayNow(plan),
         );
       },
     );
