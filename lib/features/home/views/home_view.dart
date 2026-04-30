@@ -1982,22 +1982,26 @@ class _HomeContent extends HookConsumerWidget {
         ? null
         : findCategory(quickActions, ['insurance', 'rent', 'property']);
 
+    final activeTopBanner = topBanners.isEmpty
+        ? null
+        : topBanners[(topBannerPage.value.clamp(0, topBanners.length - 1))];
+    final topBannerGradient = LinearGradient(
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
+      colors: [
+        activeTopBanner?.colorStart ?? const Color(0xFFFF835C),
+        activeTopBanner?.colorEnd ?? const Color(0xFF994F37),
+      ],
+    );
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          const Positioned.fill(
+          Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0xFFFF835C),
-                    Color(0xFF994F37),
-                  ],
-                  stops: [0.0, 0.3807],
-                ),
+                gradient: topBannerGradient,
               ),
             ),
           ),
@@ -2035,17 +2039,7 @@ class _HomeContent extends HookConsumerWidget {
                       flexibleSpace: FlexibleSpaceBar(
                         collapseMode: CollapseMode.none,
                         background: Container(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Color(0xFFFF835C),
-                                Color(0xFF994F37),
-                              ],
-                              stops: [0.0, 0.3807],
-                            ),
-                          ),
+                          decoration: BoxDecoration(gradient: topBannerGradient),
                           child: Padding(
                             padding: EdgeInsets.only(
                               left: 16.w,
