@@ -91,6 +91,7 @@ class BillerRepository {
     required String maskedIdentifier,
     required String amount,
     required String refId,
+    String? referenceId,
     required List<String> paymentModes,
     required String billerName,
     String? paymentType,
@@ -103,6 +104,10 @@ class BillerRepository {
         'arr_bill_payment_modes': paymentModes.join(','),
         'biller_name': billerName,
       };
+      final trimmedReferenceId = referenceId?.trim() ?? '';
+      if (trimmedReferenceId.isNotEmpty) {
+        data['reference_id'] = trimmedReferenceId;
+      }
       final trimmedMasked = maskedIdentifier.trim();
       if (trimmedMasked.isNotEmpty) {
         data['masked_identifier'] = trimmedMasked;

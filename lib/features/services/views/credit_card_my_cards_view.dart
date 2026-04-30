@@ -102,7 +102,7 @@ class CreditCardMyCardsView extends HookConsumerWidget {
                                   child: CreditCardMyCardTile(
                                     item: entry.value,
                                     isHighlighted: entry.key == 0,
-                                    onPayNow: () {
+                                    onPayNow: () async {
                                       final item = entry.value;
                                       final billerName =
                                           item.billerName?.trim().isNotEmpty ==
@@ -118,7 +118,7 @@ class CreditCardMyCardsView extends HookConsumerWidget {
                                           .read(billerDetailControllerProvider
                                               .notifier)
                                           .selectBiller(biller);
-                                      context.push(
+                                      await context.push(
                                         RouteConstants.billerDetail,
                                         extra: BillerDetailArgs(
                                           biller: biller,
@@ -165,7 +165,7 @@ class CreditCardMyCardsView extends HookConsumerWidget {
   }
 }
 
-class CreditCardMyCardTile extends StatelessWidget {
+class CreditCardMyCardTile extends HookWidget {
   const CreditCardMyCardTile({
     super.key,
     required this.item,
@@ -175,12 +175,13 @@ class CreditCardMyCardTile extends StatelessWidget {
   });
 
   final CreditCardItem item;
-  final VoidCallback onPayNow;
+  final Future<void> Function() onPayNow;
   final VoidCallback onMenuTap;
   final bool isHighlighted;
 
   @override
   Widget build(BuildContext context) {
+    final isPayNowLoading = useState(false);
     final bankName = item.billerName?.trim().isNotEmpty == true
         ? item.billerName!.trim()
         : 'Card';
@@ -327,7 +328,18 @@ class CreditCardMyCardTile extends StatelessWidget {
                 ),
                 if (isDue)
                   InkWell(
-                    onTap: onPayNow,
+                    onTap: isPayNowLoading.value
+                        ? null
+                        : () async {
+                            isPayNowLoading.value = true;
+                            try {
+                              await onPayNow();
+                            } finally {
+                              if (context.mounted) {
+                                isPayNowLoading.value = false;
+                              }
+                            }
+                          },
                     borderRadius: BorderRadius.circular(22.r),
                     child: Container(
                       padding:
@@ -336,13 +348,26 @@ class CreditCardMyCardTile extends StatelessWidget {
                         color: AppColors.primary,
                         borderRadius: BorderRadius.circular(22.r),
                       ),
-                      child: Text(
-                        'Pay Now',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
+                      child: isPayNowLoading.value
+                          ? SizedBox(
+                              width: 16.sp,
+                              height: 16.sp,
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : Text(
+                              'Pay Now',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelLarge
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                             ),
-                      ),
                     ),
                   ),
               ],

@@ -62,8 +62,8 @@ class BillerDetailView extends HookConsumerWidget {
     final last4Prefill = args?.cardLast4?.trim();
     final loggedInMobile = profileState.profile?.mobile.trim();
     final isGasCylinder = useMemoized(
-      () => _isGasCylinderBiller(biller?.billerName ?? ''),
-      [biller?.billerName],
+      () => _isGasCylinderCategory(args?.paymentType),
+      [args?.paymentType],
     );
     final showBillSample = useState(false);
     final fieldErrors = useState<Map<String, String?>>({});
@@ -798,7 +798,7 @@ class BillerDetailView extends HookConsumerWidget {
                                               // we only allow Razorpay checkout for UI testing.
                                               await controller.payBill(
                                                 amount: amountToPay,
-                                                refIdOverride: paymentId,
+                                                referenceId: paymentId,
                                                 isCreditCardFlow:
                                                     isCreditCardFlow,
                                                 paymentTypeOverride:
@@ -1155,8 +1155,10 @@ class _SubscriptionSummaryCard extends StatelessWidget {
   }
 }
 
-bool _isGasCylinderBiller(String name) {
-  final value = name.toLowerCase();
+bool _isGasCylinderCategory(String? paymentType) {
+  final value = (paymentType ?? '').trim().toLowerCase();
+  if (value.isEmpty) return false;
+  // Only "Book Gas"/gas-cylinder category should auto-prefill logged-in mobile.
   return value.contains('gas') ||
       value.contains('lpg') ||
       value.contains('cylinder');

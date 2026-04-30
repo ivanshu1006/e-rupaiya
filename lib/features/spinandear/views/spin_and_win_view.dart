@@ -35,7 +35,6 @@ class SpinAndWinView extends HookConsumerWidget {
 
     final totalSpins = profile?.normalSpinRemaining ?? 0;
 
-    final spinCount = useState(totalSpins);
     final isSpinning = useState(false);
     final isExitDialogOpen = useState(false);
 
@@ -53,11 +52,6 @@ class SpinAndWinView extends HookConsumerWidget {
     final animValue = useAnimation(animation);
     final spinRepository = useMemoized(() => SpinRepository());
 
-    // Sync spin count when profile updates
-    useValueChanged<int, void>(totalSpins, (_, __) {
-      spinCount.value = totalSpins;
-    });
-
     // Fetch profile on mount
     useEffect(() {
       Future.microtask(() async {
@@ -70,11 +64,10 @@ class SpinAndWinView extends HookConsumerWidget {
 
     Future<void> handleSpin() async {
       final rewards = _buildRewards(spinOptionsState.options);
-      if (isSpinning.value || spinCount.value == 0 || rewards.isEmpty) {
+      if (isSpinning.value || totalSpins == 0 || rewards.isEmpty) {
         return;
       }
       isSpinning.value = true;
-      spinCount.value -= 1;
 
       final currentRewards = rewards;
       final targetIndex = rng.nextInt(currentRewards.length);
@@ -88,48 +81,51 @@ class SpinAndWinView extends HookConsumerWidget {
 
       final reward = currentRewards[targetIndex];
 
-      // Skip record-spin API call for "Better Luck Next Time"
-      if (reward.type != SpinRewardType.betterLuck) {
-        final spinType = reward.type == SpinRewardType.jackpot
-            ? 'jackpot'
-            : reward.type == SpinRewardType.extraSpin
-                ? 'extra'
-                : 'normal';
+      try {
+        // Skip record-spin API call for "Better Luck Next Time"
+        if (reward.type != SpinRewardType.betterLuck) {
+          final spinType = reward.type == SpinRewardType.jackpot
+              ? 'jackpot'
+              : reward.type == SpinRewardType.extraSpin
+                  ? 'extra'
+                  : 'normal';
 
-        // For jackpot, pick a random value from the jackpot options
-        int rewardValue = reward.coins ?? 0;
-        final jackpotValues =
-            spinOptionsState.options['Jackpot Spin'] ?? const <int>[];
-        if (reward.type == SpinRewardType.jackpot && jackpotValues.isNotEmpty) {
-          rewardValue = jackpotValues[rng.nextInt(jackpotValues.length)];
-        }
+          // For jackpot, pick a random value from the jackpot options
+          int rewardValue = reward.coins ?? 0;
+          final jackpotValues =
+              spinOptionsState.options['Jackpot Spin'] ?? const <int>[];
+          if (reward.type == SpinRewardType.jackpot &&
+              jackpotValues.isNotEmpty) {
+            rewardValue = jackpotValues[rng.nextInt(jackpotValues.length)];
+          }
 
-        try {
           await spinRepository.recordSpin(
             spinType: spinType,
             rewardValue: rewardValue,
           );
-          await profileController.fetchProfile();
-        } catch (error) {
-          String message = 'Something went wrong';
-          if (error is DioException) {
-            final data = error.response?.data;
-            if (data is Map<String, dynamic>) {
-              final messages = data['messages'];
-              if (messages is Map<String, dynamic>) {
-                final apiMessage = messages['error']?.toString();
-                if (apiMessage != null && apiMessage.isNotEmpty) {
-                  message = apiMessage;
-                }
+        }
+
+        // Always refresh spin count from API after spinning (including extra spin)
+        await profileController.fetchProfile();
+      } catch (error) {
+        String message = 'Something went wrong';
+        if (error is DioException) {
+          final data = error.response?.data;
+          if (data is Map<String, dynamic>) {
+            final messages = data['messages'];
+            if (messages is Map<String, dynamic>) {
+              final apiMessage = messages['error']?.toString();
+              if (apiMessage != null && apiMessage.isNotEmpty) {
+                message = apiMessage;
               }
             }
           }
-          AppSnackbar.show(
-            message,
-            backgroundColor: Colors.red,
-            textColor: Colors.white,
-          );
         }
+        AppSnackbar.show(
+          message,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+        );
       }
 
       if (isExitDialogOpen.value && context.mounted) {
@@ -141,27 +137,15 @@ class SpinAndWinView extends HookConsumerWidget {
         dialog: SpinResultDialog(
           reward: reward,
           onPrimaryTap: () async {
-            if (reward.type == SpinRewardType.betterLuck ||
-                reward.type == SpinRewardType.extraSpin) {
-              spinCount.value += 1;
-            } else {
-              await profileController.fetchProfile();
-              final updated = ref
-                  .read(profileControllerProvider)
-                  .profile
-                  ?.normalSpinRemaining;
-              if (updated != null) {
-                spinCount.value = updated;
-              }
-              final error =
-                  ref.read(profileControllerProvider).errorMessage?.trim();
-              if (error != null && error.isNotEmpty && context.mounted) {
-                AppSnackbar.show(
-                  error,
-                  backgroundColor: Colors.red,
-                  textColor: Colors.white,
-                );
-              }
+            await profileController.fetchProfile();
+            final error =
+                ref.read(profileControllerProvider).errorMessage?.trim();
+            if (error != null && error.isNotEmpty && context.mounted) {
+              AppSnackbar.show(
+                error,
+                backgroundColor: Colors.red,
+                textColor: Colors.white,
+              );
             }
           },
         ),
@@ -314,7 +298,7 @@ class SpinAndWinView extends HookConsumerWidget {
                             ),
                           ),
                           child: Text(
-                            'Daily Spin Remaining ${spinCount.value}',
+                            'Daily Spin Remaining $totalSpins',
                             style:
                                 Theme.of(context).textTheme.bodySmall?.copyWith(
                                       color: Colors.white,
@@ -419,7 +403,8 @@ class SpinAndWinView extends HookConsumerWidget {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'You have ${spinCount.value} free spin${spinCount.value == 1 ? '' : 's'} left today.',
+                          'You have $totalSpins free spin'
+                          '${totalSpins == 1 ? '' : 's'} left today.',
                           textAlign: TextAlign.center,
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(

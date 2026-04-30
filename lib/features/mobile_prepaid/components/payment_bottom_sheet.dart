@@ -372,7 +372,7 @@ class _PaymentBottomSheetState extends ConsumerState<PaymentBottomSheet> {
     final controller = ref.read(billerDetailControllerProvider.notifier);
     final ok = await controller.payBill(
       amount: amount,
-      refIdOverride: paymentId,
+      referenceId: paymentId,
       isCreditCardFlow: widget.isCreditCardFlow,
       paymentTypeOverride: widget.paymentTypeOverride,
     );

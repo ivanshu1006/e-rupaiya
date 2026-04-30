@@ -26,7 +26,9 @@ class BillerDetailController extends StateNotifier<BillerDetailState> {
   bool _isGasCylinderBillerName(String value) {
     final name = value.trim().toLowerCase();
     if (name.isEmpty) return false;
-    return name.contains('gas') || name.contains('lpg') || name.contains('cylinder');
+    return name.contains('gas') ||
+        name.contains('lpg') ||
+        name.contains('cylinder');
   }
 
   Map<String, String> _withBookGasServiceNameIfNeeded({
@@ -127,7 +129,7 @@ class BillerDetailController extends StateNotifier<BillerDetailState> {
 
   Future<bool> payBill({
     required double amount,
-    String? refIdOverride,
+    String? referenceId,
     bool isCreditCardFlow = false,
     String? paymentTypeOverride,
   }) async {
@@ -164,7 +166,8 @@ class BillerDetailController extends StateNotifier<BillerDetailState> {
           forceSecondIndex: isCreditCardFlow,
         ),
         amount: amount.toStringAsFixed(2),
-        refId: refIdOverride ?? bill.refId,
+        refId: bill.refId,
+        referenceId: referenceId,
         paymentModes: detail.paymentModes
             .map((mode) => mode.paymentMode)
             .where((mode) => mode.trim().isNotEmpty)
