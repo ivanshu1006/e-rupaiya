@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 
+import 'package:e_rupaiya/features/mobile_prepaid/models/plan_item.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -11,13 +12,16 @@ import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/custom_elevated_button.dart';
 import '../../../widgets/k_dialog.dart';
 import '../../../widgets/payment_success_flow.dart';
-import '../../profile/utils/receipt_actions.dart';
 import '../../paymentgateway/razorpay_guard.dart';
 import '../../paymentgateway/razorpay_service.dart';
 import '../../profile/controllers/profile_controller.dart';
+import '../../profile/utils/receipt_actions.dart';
 import '../../services/controllers/biller_detail_controller.dart';
 import '../../services/models/bill_pay_response_model.dart';
+import '../../services/models/biller_detail_state.dart';
+import '../../services/models/recharge_status_result.dart';
 import '../controllers/mobile_prepaid_controller.dart';
+import '../models/prepaid_transaction_status.dart';
 
 enum _PaymentOutcome {
   success,
@@ -130,6 +134,7 @@ void _openPaymentResultFlow(
   required String billerName,
   required String txId,
   String? transactionDateTime,
+  PrepaidTransactionStatus? prepaidStatus,
 }) {
   void goHome(BuildContext localContext) {
     // Refresh wallet balance when returning home after any payment
@@ -178,6 +183,32 @@ void _openPaymentResultFlow(
         value: transactionDateTime.trim().isEmpty
             ? formatNow()
             : transactionDateTime.trim(),
+      ),
+    if (prepaidStatus != null && prepaidStatus.operatorName.isNotEmpty)
+      PaymentDetailItem(
+        label: 'Operator',
+        value: prepaidStatus.operatorName,
+      ),
+    if (prepaidStatus != null && prepaidStatus.mobile.isNotEmpty)
+      PaymentDetailItem(
+        label: 'Mobile',
+        value: prepaidStatus.mobile,
+        copyable: true,
+      ),
+    if (prepaidStatus != null && prepaidStatus.paymentMode.isNotEmpty)
+      PaymentDetailItem(
+        label: 'Payment Mode',
+        value: prepaidStatus.paymentMode,
+      ),
+    if (prepaidStatus != null && prepaidStatus.walletAmount.isNotEmpty)
+      PaymentDetailItem(
+        label: 'Wallet Amount',
+        value: '\u20B9 ${prepaidStatus.walletAmount}',
+      ),
+    if (prepaidStatus != null && prepaidStatus.razorpayAmount.isNotEmpty)
+      PaymentDetailItem(
+        label: 'Razorpay Amount',
+        value: '\u20B9 ${prepaidStatus.razorpayAmount}',
       ),
   ];
   final isFailure = outcome == _PaymentOutcome.failure ||
@@ -298,6 +329,12 @@ class PaymentBottomSheet extends ConsumerStatefulWidget {
 class _PaymentBottomSheetState extends ConsumerState<PaymentBottomSheet> {
   bool _useECoins = false;
 
+  double _maxECoinsAllowed() {
+    final max = widget.amount * 0.05;
+    if (max.isNaN || max.isInfinite) return 0;
+    return max.floorToDouble();
+  }
+
   double _availableECoins() {
     final balance =
         ref.watch(profileControllerProvider).profile?.walletBalance ?? 0;
@@ -306,7 +343,10 @@ class _PaymentBottomSheetState extends ConsumerState<PaymentBottomSheet> {
 
   double _eCoinsApplied(double available) {
     if (!_useECoins) return 0.0;
-    return available >= widget.amount ? widget.amount : available;
+    final maxAllowed = _maxECoinsAllowed();
+    if (maxAllowed <= 0) return 0.0;
+    final allowed = available < maxAllowed ? available : maxAllowed;
+    return allowed;
   }
 
   double _remainingAmount(double applied) {
@@ -314,90 +354,156 @@ class _PaymentBottomSheetState extends ConsumerState<PaymentBottomSheet> {
     return remaining < 0 ? 0 : remaining;
   }
 
+  Future<void> _runWithVerificationLoader(Future<void> Function() task) async {
+    if (!mounted) return;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return PopScope(
+          canPop: false,
+          child: Dialog(
+            insetPadding: const EdgeInsets.symmetric(horizontal: 36),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      'Verifying payment…',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    try {
+      await task();
+    } finally {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
+  }
+
+  String _resolvePaymentType(BillerDetailState detailState) {
+    final override = widget.paymentTypeOverride?.trim() ?? '';
+    if (override.isNotEmpty) return override;
+    final category = detailState.billerDetail?.billerCategoryName.trim() ?? '';
+    if (category.isNotEmpty) return category;
+    return 'BILLPAY';
+  }
+
+  Future<void> _verifyAndShow({
+    required String transactionRef,
+    required double amount,
+    required String billerName,
+    required String fallbackMessage,
+  }) async {
+    final controller = ref.read(billerDetailControllerProvider.notifier);
+    RechargeStatusResult? status;
+    await _runWithVerificationLoader(() async {
+      status = await controller.verifyPayAllServicesStatus(
+        transactionRef: transactionRef,
+      );
+    });
+    if (!mounted) return;
+
+    // Close the sheet before showing result screen.
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
+
+    final latestState = ref.read(billerDetailControllerProvider);
+    final normalized = (status?.status ?? '').trim().toUpperCase();
+    final outcome = normalized == 'SUCCESS'
+        ? _PaymentOutcome.success
+        : (normalized == 'PENDING' ? _PaymentOutcome.pending : _PaymentOutcome.failure);
+    final txId = (status?.transactionId.trim().isNotEmpty == true)
+        ? status!.transactionId.trim()
+        : transactionRef;
+
+    _openPaymentResultFlow(
+      navigatorKey.currentContext ?? context,
+      outcome: outcome,
+      amount: amount,
+      billerName: billerName,
+      txId: txId,
+      transactionDateTime: status?.updatedAt,
+    );
+
+    if (outcome == _PaymentOutcome.failure &&
+        latestState.payErrorMessage?.trim().isNotEmpty == true) {
+      AppSnackbar.show(
+        latestState.payErrorMessage!,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    } else if (outcome == _PaymentOutcome.failure && fallbackMessage.isNotEmpty) {
+      AppSnackbar.show(
+        fallbackMessage,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    }
+  }
+
   Future<void> _startRazorpay({
     required double amount,
     required String billerName,
+    required String orderId,
+    required String keyOverride,
+    required String transactionRef,
   }) async {
     if (!RazorpayGuard.ensureNotPaused(ref)) return;
     await RazorpayService.instance.openCheckout(
       amount: amount,
       name: billerName,
       description: 'Bill payment',
-      onSuccess: (paymentId) {
-        _completeBillPaymentWithRazorpay(
-          paymentId: paymentId,
-          amount: amount,
+      orderId: orderId,
+      keyOverride: keyOverride,
+      onSuccess: (_) async {
+        await _verifyAndShow(
+          transactionRef: transactionRef,
+          amount: widget.amount,
           billerName: billerName,
+          fallbackMessage: 'Your payment was completed successfully.',
         );
       },
-      onFailure: (message) {
-        if (!mounted) return;
-        AppSnackbar.show(
-          message,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-        );
-        _openPaymentResultFlow(
-          context,
-          outcome: _PaymentOutcome.failure,
-          amount: amount,
+      onFailure: (message) async {
+        await _verifyAndShow(
+          transactionRef: transactionRef,
+          amount: widget.amount,
           billerName: billerName,
-          txId: '',
+          fallbackMessage:
+              message.isEmpty ? 'Payment failed. Please try again.' : message,
+        );
+      },
+      onExternalWallet: (_) async {
+        await _verifyAndShow(
+          transactionRef: transactionRef,
+          amount: widget.amount,
+          billerName: billerName,
+          fallbackMessage: 'We are verifying your payment. Please wait a moment.',
         );
       },
     );
-  }
-
-  Future<void> _completeBillPaymentWithRazorpay({
-    required String paymentId,
-    required double amount,
-    required String billerName,
-  }) async {
-    if (paymentId.isEmpty) {
-      AppSnackbar.show(
-        'Somehing went wrong with the payment. Please try again.',
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
-      _openPaymentResultFlow(
-        context,
-        outcome: _PaymentOutcome.failure,
-        amount: amount,
-        billerName: billerName,
-        txId: '',
-      );
-      return;
-    }
-
-    final controller = ref.read(billerDetailControllerProvider.notifier);
-    final ok = await controller.payBill(
-      amount: amount,
-      referenceId: paymentId,
-      isCreditCardFlow: widget.isCreditCardFlow,
-      paymentTypeOverride: widget.paymentTypeOverride,
-    );
-    if (!mounted) return;
-    final latestState = ref.read(billerDetailControllerProvider);
-    final outcome = _resolvePaymentOutcome(
-      latestState.payResponse,
-      latestState.payErrorMessage,
-    );
-    final responseTransactionId = latestState.payResponse?.transactionId ?? '';
-    _openPaymentResultFlow(
-      context,
-      outcome: outcome,
-      amount: amount,
-      billerName: billerName,
-      txId:
-          responseTransactionId.isNotEmpty ? responseTransactionId : paymentId,
-    );
-    if (!ok && latestState.payResponse == null) {
-      AppSnackbar.show(
-        latestState.payErrorMessage ?? 'Payment failed. Please try again.',
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
-    }
   }
 
   @override
@@ -406,150 +512,165 @@ class _PaymentBottomSheetState extends ConsumerState<PaymentBottomSheet> {
     final controller = ref.read(billerDetailControllerProvider.notifier);
     final isPaying = detailState.isPayingBill;
     final availableECoins = _availableECoins();
+    final maxAllowedECoins = _maxECoinsAllowed();
     final canUseECoins = availableECoins > 0;
     final eCoinsApplied = _eCoinsApplied(availableECoins);
     final remainingAmount = _remainingAmount(eCoinsApplied);
     final buttonLabel = remainingAmount == 0 ? 'Pay Now' : 'Proceed';
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Select Payment Options',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-              ),
-              Text(
-                '\u20B9 ${widget.amount.toStringAsFixed(0)}',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // Orange progress bar
-          Container(
-            height: 3,
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(2),
+    return AbsorbPointer(
+      absorbing: isPaying,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Select Payment Options',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                ),
+                Text(
+                  '\u20B9 ${widget.amount.toStringAsFixed(0)}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 20),
-
-          // E-Coins option
-          _PaymentOptionTile(
-            icon: Icons.monetization_on_outlined,
-            iconColor: AppColors.primary,
-            title: 'E-Coins (${availableECoins.toStringAsFixed(0)})',
-            subtitle: _useECoins
-                ? 'Using \u20B9${eCoinsApplied.toStringAsFixed(0)}'
-                : 'Use E-Coins for payment',
-            enabled: canUseECoins,
-            trailing: Checkbox(
-              value: _useECoins,
-              activeColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4),
+            const SizedBox(height: 12),
+            // Orange progress bar
+            Container(
+              height: 3,
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(2),
               ),
-              onChanged: canUseECoins
-                  ? (v) => setState(() => _useECoins = v ?? false)
+            ),
+            const SizedBox(height: 20),
+
+            // E-Coins option
+            _PaymentOptionTile(
+              icon: Icons.monetization_on_outlined,
+              iconColor: AppColors.primary,
+              title: 'E-Coins (${availableECoins.toStringAsFixed(0)}) (Max 5%)',
+              subtitle: _useECoins
+                  ? 'Using \u20B9${eCoinsApplied.toStringAsFixed(0)} (Max \u20B9${maxAllowedECoins.toStringAsFixed(0)})'
+                  : 'Use E-Coins for payment',
+              enabled: canUseECoins && maxAllowedECoins > 0,
+              trailing: Checkbox(
+                value: _useECoins,
+                activeColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                onChanged: (canUseECoins && maxAllowedECoins > 0)
+                    ? (v) => setState(() => _useECoins = v ?? false)
+                    : null,
+              ),
+              onTap: (canUseECoins && maxAllowedECoins > 0)
+                  ? () => setState(() => _useECoins = !_useECoins)
                   : null,
             ),
-            onTap: canUseECoins
-                ? () => setState(() => _useECoins = !_useECoins)
-                : null,
-          ),
 
-          const SizedBox(height: 20),
-          const SizedBox(height: 16),
+            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
-          // Bottom bar: amount + PAY NOW
-          SafeArea(
-            top: false,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Row(
-                children: [
-                  Text(
-                    '\u20B9 ${remainingAmount.toStringAsFixed(0)}',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
-                        ),
-                  ),
-                  const Spacer(),
-                  CustomElevatedButton(
-                    onPressed: isPaying
-                        ? null
-                        : () async {
-                            if (_useECoins && remainingAmount == 0) {
-                              final ok = await controller.payBill(
-                                amount: widget.amount,
-                                isCreditCardFlow: widget.isCreditCardFlow,
-                                paymentTypeOverride: widget.paymentTypeOverride,
-                              );
-                              if (!context.mounted) return;
-                              final latestState =
-                                  ref.read(billerDetailControllerProvider);
-                              context.pop();
-                              final outcome = _resolvePaymentOutcome(
-                                latestState.payResponse,
-                                latestState.payErrorMessage,
-                              );
+            // Bottom bar: amount + PAY NOW
+            SafeArea(
+              top: false,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Row(
+                  children: [
+                    Text(
+                      '\u20B9 ${remainingAmount.toStringAsFixed(0)}',
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textPrimary,
+                              ),
+                    ),
+                    const Spacer(),
+                    CustomElevatedButton(
+                      onPressed: isPaying
+                          ? null
+                          : () async {
                               final billerName =
-                                  latestState.selectedBiller?.billerName ??
+                                  detailState.selectedBiller?.billerName ??
                                       'Biller';
-                              final txId =
-                                  latestState.payResponse?.transactionId ?? '';
-                              _openPaymentResultFlow(
-                                context,
-                                outcome: outcome,
+                              final paymentType =
+                                  _resolvePaymentType(detailState);
+
+                              final walletAmount =
+                                  _useECoins ? eCoinsApplied : 0.0;
+                              final razorpayAmount = remainingAmount > 0
+                                  ? remainingAmount
+                                  : 0.0;
+
+                              final order =
+                                  await controller.createPayAllServicesOrder(
                                 amount: widget.amount,
-                                billerName: billerName,
-                                txId: txId,
+                                paymentType: paymentType,
+                                walletAmount: walletAmount,
+                                razorpayAmount: razorpayAmount,
+                                isCreditCardFlow: widget.isCreditCardFlow,
                               );
-                              if (!ok && latestState.payResponse == null) {
+
+                              if (!context.mounted) return;
+                              if (order == null ||
+                                  order.orderId.trim().isEmpty ||
+                                  order.key.trim().isEmpty ||
+                                  order.transactionRef.trim().isEmpty) {
                                 AppSnackbar.show(
-                                  latestState.payErrorMessage ??
-                                      'Payment failed. Please try again.',
+                                  ref
+                                          .read(billerDetailControllerProvider)
+                                          .payErrorMessage ??
+                                      'Unable to start payment. Please try again.',
                                   backgroundColor: Colors.red,
                                   textColor: Colors.white,
                                 );
+                                return;
                               }
-                              return;
-                            }
 
-                            final amountToPay =
-                                _useECoins ? remainingAmount : widget.amount;
-                            final billerName =
-                                detailState.selectedBiller?.billerName ??
-                                    'Biller';
-                            await _startRazorpay(
-                              amount: amountToPay,
-                              billerName: billerName,
-                            );
-                          },
-                    label: isPaying ? 'Processing' : buttonLabel,
-                    showArrow: false,
-                    uppercaseLabel: true,
-                    width: null,
-                  ),
-                ],
+                              if (remainingAmount <= 0) {
+                                await _verifyAndShow(
+                                  transactionRef: order.transactionRef,
+                                  amount: widget.amount,
+                                  billerName: billerName,
+                                  fallbackMessage:
+                                      'We are verifying your payment. Please wait a moment.',
+                                );
+                                return;
+                              }
+
+                              await _startRazorpay(
+                                amount: remainingAmount,
+                                billerName: billerName,
+                                orderId: order.orderId,
+                                keyOverride: order.key,
+                                transactionRef: order.transactionRef,
+                              );
+                            },
+                      label: buttonLabel,
+                      isLoading: isPaying,
+                      showArrow: false,
+                      uppercaseLabel: true,
+                      width: null,
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -558,14 +679,12 @@ class _PaymentBottomSheetState extends ConsumerState<PaymentBottomSheet> {
 class PrepaidPaymentBottomSheet extends ConsumerStatefulWidget {
   const PrepaidPaymentBottomSheet({
     super.key,
-    required this.amount,
-    required this.onRecharge,
+    required this.plan,
     this.billerName = 'Mobile Prepaid',
   });
 
-  final int amount;
+  final PlanItem plan;
   final String billerName;
-  final Future<void> Function({String? referenceId}) onRecharge;
 
   @override
   ConsumerState<PrepaidPaymentBottomSheet> createState() =>
@@ -576,6 +695,61 @@ class _PrepaidPaymentBottomSheetState
     extends ConsumerState<PrepaidPaymentBottomSheet> {
   bool _useECoins = false;
 
+  double _maxECoinsAllowed() {
+    final max = widget.plan.amount * 0.05;
+    if (max.isNaN || max.isInfinite) return 0;
+    // Keep max as whole rupees.
+    return max.floorToDouble();
+  }
+
+  Future<void> _runWithVerificationLoader(Future<void> Function() task) async {
+    if (!mounted) return;
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return PopScope(
+          canPop: false,
+          child: Dialog(
+            insetPadding: const EdgeInsets.symmetric(horizontal: 36),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+              child: Row(
+                children: [
+                  const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      'Verifying payment…',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+    try {
+      await task();
+    } finally {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
+  }
+
   double _availableECoins() {
     final balance =
         ref.watch(profileControllerProvider).profile?.walletBalance ?? 0;
@@ -584,31 +758,54 @@ class _PrepaidPaymentBottomSheetState
 
   double _eCoinsApplied(double available) {
     if (!_useECoins) return 0.0;
-    return available >= widget.amount ? widget.amount.toDouble() : available;
+    final maxAllowed = _maxECoinsAllowed();
+    if (maxAllowed <= 0) return 0.0;
+    final allowed = available < maxAllowed ? available : maxAllowed;
+    return allowed;
   }
 
   double _remainingAmount(double applied) {
-    final remaining = widget.amount - applied;
+    final remaining = widget.plan.amount - applied;
     return remaining < 0 ? 0 : remaining.toDouble();
   }
 
   Future<void> _startRazorpay({
     required double amount,
     required String billerName,
+    required double walletAmount,
+    required double razorpayAmount,
+    required String orderId,
+    required String keyOverride,
+    required String transactionRef,
+    Map<String, String>? prefill,
   }) async {
     if (!RazorpayGuard.ensureNotPaused(ref)) return;
     await RazorpayService.instance.openCheckout(
       amount: amount,
       name: billerName,
       description: 'Recharge',
+      orderId: orderId,
+      keyOverride: keyOverride,
+      prefill: prefill,
       onSuccess: (paymentId) async {
         if (!mounted) return;
-        await widget.onRecharge(referenceId: paymentId);
+        await _runWithVerificationLoader(() async {
+          await ref
+              .read(mobilePrepaidControllerProvider.notifier)
+              .verifyRechargeStatus(transactionRef: transactionRef);
+        });
         if (!mounted) return;
         final latestState = ref.read(mobilePrepaidControllerProvider);
-        final outcome = latestState.errorMessage != null
-            ? _resolvePaymentOutcome(null, latestState.errorMessage)
-            : _PaymentOutcome.success;
+        final verified = latestState.verifiedTransaction;
+        final outcome = verified == null
+            ? (latestState.errorMessage != null
+                ? _resolvePaymentOutcome(null, latestState.errorMessage)
+                : _PaymentOutcome.success)
+            : (verified.isSuccess
+                ? _PaymentOutcome.success
+                : (verified.isPending
+                    ? _PaymentOutcome.pending
+                    : _PaymentOutcome.failure));
         final resolvedTxId =
             (latestState.rechargeTransactionId ?? '').isNotEmpty
                 ? latestState.rechargeTransactionId!
@@ -616,10 +813,11 @@ class _PrepaidPaymentBottomSheetState
         _openPaymentResultFlow(
           context,
           outcome: outcome,
-          amount: amount,
+          amount: widget.plan.amount.toDouble(),
           billerName: billerName,
           txId: resolvedTxId,
           transactionDateTime: latestState.rechargeDateTime,
+          prepaidStatus: verified,
         );
         final message = latestState.errorMessage?.trim().toLowerCase();
         if (latestState.errorMessage != null &&
@@ -631,19 +829,76 @@ class _PrepaidPaymentBottomSheetState
           );
         }
       },
-      onFailure: (message) {
+      onFailure: (message) async {
         if (!mounted) return;
-        AppSnackbar.show(
-          message,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-        );
+        await _runWithVerificationLoader(() async {
+          await ref
+              .read(mobilePrepaidControllerProvider.notifier)
+              .verifyRechargeStatus(transactionRef: transactionRef);
+        });
+        if (!mounted) return;
+        final latestState = ref.read(mobilePrepaidControllerProvider);
+        final verified = latestState.verifiedTransaction;
+        final outcome = verified == null
+            ? _PaymentOutcome.failure
+            : (verified.isSuccess
+                ? _PaymentOutcome.success
+                : (verified.isPending
+                    ? _PaymentOutcome.pending
+                    : _PaymentOutcome.failure));
+        final resolvedTxId =
+            (latestState.rechargeTransactionId ?? '').isNotEmpty
+                ? latestState.rechargeTransactionId!
+                : transactionRef;
         _openPaymentResultFlow(
           context,
-          outcome: _PaymentOutcome.failure,
-          amount: amount,
+          outcome: outcome,
+          amount: widget.plan.amount.toDouble(),
           billerName: billerName,
-          txId: '',
+          txId: resolvedTxId,
+          transactionDateTime: latestState.rechargeDateTime,
+          prepaidStatus: verified,
+        );
+        final fallbackMessage = message.trim().isEmpty
+            ? 'Payment failed. Please try again.'
+            : message;
+        if (verified == null || outcome == _PaymentOutcome.failure) {
+          AppSnackbar.show(
+            latestState.errorMessage ?? fallbackMessage,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+          );
+        }
+      },
+      onExternalWallet: (_) async {
+        if (!mounted) return;
+        await _runWithVerificationLoader(() async {
+          await ref
+              .read(mobilePrepaidControllerProvider.notifier)
+              .verifyRechargeStatus(transactionRef: transactionRef);
+        });
+        if (!mounted) return;
+        final latestState = ref.read(mobilePrepaidControllerProvider);
+        final verified = latestState.verifiedTransaction;
+        final outcome = verified == null
+            ? _PaymentOutcome.pending
+            : (verified.isSuccess
+                ? _PaymentOutcome.success
+                : (verified.isPending
+                    ? _PaymentOutcome.pending
+                    : _PaymentOutcome.failure));
+        final resolvedTxId =
+            (latestState.rechargeTransactionId ?? '').isNotEmpty
+                ? latestState.rechargeTransactionId!
+                : transactionRef;
+        _openPaymentResultFlow(
+          context,
+          outcome: outcome,
+          amount: widget.plan.amount.toDouble(),
+          billerName: billerName,
+          txId: resolvedTxId,
+          transactionDateTime: latestState.rechargeDateTime,
+          prepaidStatus: verified,
         );
       },
     );
@@ -651,152 +906,234 @@ class _PrepaidPaymentBottomSheetState
 
   @override
   Widget build(BuildContext context) {
+    final controller = ref.read(mobilePrepaidControllerProvider.notifier);
     final state = ref.watch(mobilePrepaidControllerProvider);
     final isPaying = state.isRecharging;
     final availableECoins = _availableECoins();
+    final maxAllowedECoins = _maxECoinsAllowed();
     final canUseECoins = availableECoins > 0;
     final eCoinsApplied = _eCoinsApplied(availableECoins);
     final remainingAmount = _remainingAmount(eCoinsApplied);
     final buttonLabel = remainingAmount == 0 ? 'Pay Now' : 'Proceed';
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Select Payment Options',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-              ),
-              Text(
-                '\u20B9 ${widget.amount}',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Orange progress bar
-          Container(
-            height: 3,
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(2),
+    return AbsorbPointer(
+      absorbing: isPaying,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Select Payment Options',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                ),
+                Text(
+                  '\u20B9 ${widget.plan.amount}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 20),
+            const SizedBox(height: 12),
 
-          // E-Coins option
-          _PaymentOptionTile(
-            icon: Icons.monetization_on_outlined,
-            iconColor: AppColors.primary,
-            title: 'E-Coins (${availableECoins.toStringAsFixed(0)})',
-            subtitle: _useECoins
-                ? 'Using \u20B9${eCoinsApplied.toStringAsFixed(0)}'
-                : 'Use E-Coins for payment',
-            enabled: canUseECoins,
-            trailing: Checkbox(
-              value: _useECoins,
-              activeColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4),
+            // Orange progress bar
+            Container(
+              height: 3,
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(2),
               ),
-              onChanged: canUseECoins
-                  ? (v) => setState(() => _useECoins = v ?? false)
+            ),
+            const SizedBox(height: 20),
+
+            // E-Coins option
+            _PaymentOptionTile(
+              icon: Icons.monetization_on_outlined,
+              iconColor: AppColors.primary,
+              title:
+                  'E-Coins (${availableECoins.toStringAsFixed(0)}) (Max 5%)',
+              subtitle: _useECoins
+                  ? 'Using \u20B9${eCoinsApplied.toStringAsFixed(0)} (Max \u20B9${maxAllowedECoins.toStringAsFixed(0)})'
+                  : 'Use E-Coins for payment',
+              enabled: canUseECoins && maxAllowedECoins > 0,
+              trailing: Checkbox(
+                value: _useECoins,
+                activeColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                onChanged: (canUseECoins && maxAllowedECoins > 0)
+                    ? (v) => setState(() => _useECoins = v ?? false)
+                    : null,
+              ),
+              onTap: (canUseECoins && maxAllowedECoins > 0)
+                  ? () => setState(() => _useECoins = !_useECoins)
                   : null,
             ),
-            onTap: canUseECoins
-                ? () => setState(() => _useECoins = !_useECoins)
-                : null,
-          ),
 
-          const SizedBox(height: 20),
-          const SizedBox(height: 16),
+            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
-          // Bottom bar: amount + PAY NOW
-          SafeArea(
-            top: false,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Row(
-                children: [
-                  Text(
-                    '\u20B9 ${remainingAmount.toStringAsFixed(0)}',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
-                        ),
-                  ),
-                  const Spacer(),
-                  CustomElevatedButton(
-                    onPressed: isPaying
-                        ? null
-                        : () async {
-                            if (_useECoins && remainingAmount == 0) {
-                              await widget.onRecharge();
-                              if (!context.mounted) return;
-                              final latestState =
-                                  ref.read(mobilePrepaidControllerProvider);
-                              Navigator.of(context).pop();
-                              final outcome = latestState.errorMessage != null
-                                  ? _resolvePaymentOutcome(
-                                      null,
-                                      latestState.errorMessage,
-                                    )
-                                  : _PaymentOutcome.success;
-                              final resolvedTxId =
-                                  (latestState.rechargeTransactionId ?? '')
-                                          .isNotEmpty
-                                      ? latestState.rechargeTransactionId!
-                                      : '';
-                              _openPaymentResultFlow(
-                                context,
-                                outcome: outcome,
-                                amount: widget.amount.toDouble(),
-                                billerName: widget.billerName,
-                                txId: resolvedTxId,
-                                transactionDateTime:
-                                    latestState.rechargeDateTime,
+            // Bottom bar: amount + PAY NOW
+            SafeArea(
+              top: false,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Row(
+                  children: [
+                    Text(
+                      '\u20B9 ${remainingAmount.toStringAsFixed(0)}',
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textPrimary,
+                              ),
+                    ),
+                    const Spacer(),
+                    CustomElevatedButton(
+                      onPressed: isPaying
+                          ? null
+                          : () async {
+                              if (_useECoins && remainingAmount == 0) {
+                                final order = await controller
+                                    .createRechargeOrderWithPlan(
+                                  plan: widget.plan,
+                                  useWallet: _useECoins,
+                                  walletAmount: eCoinsApplied,
+                                  razorpayAmount: 0,
+                                );
+                                if (!context.mounted) return;
+                                if (order == null) {
+                                  final latest = ref.read(
+                                    mobilePrepaidControllerProvider,
+                                  );
+                                  AppSnackbar.show(
+                                    latest.errorMessage ??
+                                        'Failed to create order. Please try again.',
+                                    backgroundColor: Colors.red,
+                                    textColor: Colors.white,
+                                  );
+                                  return;
+                                }
+                                await _runWithVerificationLoader(() async {
+                                  await controller.verifyRechargeStatus(
+                                    transactionRef: order.transactionRef,
+                                  );
+                                });
+                                final latestState =
+                                    ref.read(mobilePrepaidControllerProvider);
+                                Navigator.of(context).pop();
+                                final verified =
+                                    latestState.verifiedTransaction;
+                                final outcome = verified == null
+                                    ? (latestState.errorMessage != null
+                                        ? _resolvePaymentOutcome(
+                                            null,
+                                            latestState.errorMessage,
+                                          )
+                                        : _PaymentOutcome.success)
+                                    : (verified.isSuccess
+                                        ? _PaymentOutcome.success
+                                        : (verified.isPending
+                                            ? _PaymentOutcome.pending
+                                            : _PaymentOutcome.failure));
+                                final resolvedTxId =
+                                    (latestState.rechargeTransactionId ?? '')
+                                            .isNotEmpty
+                                        ? latestState.rechargeTransactionId!
+                                        : '';
+                                _openPaymentResultFlow(
+                                  context,
+                                  outcome: outcome,
+                                  amount: widget.plan.amount.toDouble(),
+                                  billerName: widget.billerName,
+                                  txId: resolvedTxId,
+                                  transactionDateTime:
+                                      latestState.rechargeDateTime,
+                                  prepaidStatus: verified,
+                                );
+                                if (latestState.errorMessage != null) {
+                                  AppSnackbar.show(
+                                    latestState.errorMessage!,
+                                    backgroundColor: Colors.red,
+                                    textColor: Colors.white,
+                                  );
+                                }
+                                return;
+                              }
+
+                              final order =
+                                  await controller.createRechargeOrderWithPlan(
+                                plan: widget.plan,
+                                useWallet: _useECoins,
+                                walletAmount: _useECoins ? eCoinsApplied : 0,
+                                razorpayAmount: _useECoins
+                                    ? remainingAmount
+                                    : widget.plan.amount.toDouble(),
                               );
-                              if (latestState.errorMessage != null) {
+                              if (!context.mounted) return;
+                              if (order == null) {
+                                final latest = ref.read(
+                                  mobilePrepaidControllerProvider,
+                                );
                                 AppSnackbar.show(
-                                  latestState.errorMessage!,
+                                  latest.errorMessage ??
+                                      'Failed to create order. Please try again.',
                                   backgroundColor: Colors.red,
                                   textColor: Colors.white,
                                 );
+                                return;
                               }
-                              return;
-                            }
-
-                            final amountToPay = _useECoins
-                                ? remainingAmount
-                                : widget.amount.toDouble();
-                            await _startRazorpay(
-                              amount: amountToPay,
-                              billerName: widget.billerName,
-                            );
-                          },
-                    label: isPaying ? 'Processing' : buttonLabel,
-                    showArrow: false,
-                    uppercaseLabel: true,
-                    width: null,
-                  ),
-                ],
+                              if (order.orderId.trim().isEmpty ||
+                                  order.key.trim().isEmpty) {
+                                AppSnackbar.show(
+                                  order.message.isNotEmpty
+                                      ? order.message
+                                      : 'Unable to start payment right now. Please try again.',
+                                  backgroundColor: Colors.red,
+                                  textColor: Colors.white,
+                                );
+                                return;
+                              }
+                              await _startRazorpay(
+                                amount: remainingAmount,
+                                billerName: widget.billerName,
+                                walletAmount: _useECoins ? eCoinsApplied : 0,
+                                razorpayAmount: remainingAmount,
+                                orderId: order.orderId,
+                                keyOverride: order.key,
+                                transactionRef: order.transactionRef,
+                                prefill: () {
+                                  final contact = state.mobile
+                                      .replaceAll(RegExp(r'\D'), '')
+                                      .trim();
+                                  if (contact.isEmpty) return null;
+                                  return {'contact': contact};
+                                }(),
+                              );
+                            },
+                      label: buttonLabel,
+                      isLoading: isPaying,
+                      showArrow: false,
+                      uppercaseLabel: true,
+                      width: null,
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

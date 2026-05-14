@@ -48,8 +48,9 @@ class GoldPaymentSummarySheet extends HookConsumerWidget {
 
     void onWalletUsedChanged(String value) {
       final parsed = int.tryParse(value.replaceAll(RegExp(r'\D'), '')) ?? 0;
+      final maxAllowed = (preview.totalAmount * 0.05).floor();
       final clamped =
-          parsed.clamp(0, walletBalance.toInt()).clamp(0, amount.toInt());
+          parsed.clamp(0, walletBalance.toInt()).clamp(0, maxAllowed);
       if (walletController.text != clamped.toString()) {
         walletController.text = clamped.toString();
         walletController.selection = TextSelection.fromPosition(
@@ -70,6 +71,7 @@ class GoldPaymentSummarySheet extends HookConsumerWidget {
     final walletUsed = walletUsedInput.value.toDouble();
     final payable =
         (preview.totalAmount - walletUsed).clamp(0, double.infinity).toDouble();
+    final maxAllowedWallet = (preview.totalAmount * 0.05).floorToDouble();
 
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
@@ -154,7 +156,7 @@ class GoldPaymentSummarySheet extends HookConsumerWidget {
               SizedBox(width: 8.w),
               Expanded(
                 child: Text(
-                  'Balance ${walletBalance.toStringAsFixed(0)} Coins',
+                  'Balance ${walletBalance.toStringAsFixed(0)} Coins (Max 5%)',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.textPrimary.withOpacity(0.6),
                       ),
@@ -195,7 +197,8 @@ class GoldPaymentSummarySheet extends HookConsumerWidget {
           ),
           SizedBox(height: 6.h),
           _SummaryRow(
-            label: 'You Used ${walletUsed.toStringAsFixed(0)} E-Coins',
+            label:
+                'You Used ${walletUsed.toStringAsFixed(0)} E-Coins (Max ${maxAllowedWallet.toStringAsFixed(0)})',
             value: '-₹${walletUsed.toStringAsFixed(2)}',
             valueColor: Colors.red,
           ),

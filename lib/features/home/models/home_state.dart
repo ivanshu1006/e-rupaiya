@@ -14,6 +14,7 @@ class HomeState {
     this.creditCardActions,
     this.rechargeActions,
     this.banners,
+    this.isNameEmailExist,
   });
 
   final bool isFetching;
@@ -26,6 +27,7 @@ class HomeState {
   final List<CreditCardItem>? creditCardActions;
   final List<Data>? rechargeActions;
   final Map<String, List<BannerModel>>? banners;
+  final bool? isNameEmailExist;
 
   static const _sentinel = Object();
 
@@ -39,6 +41,7 @@ class HomeState {
     Object? creditCardActions = _sentinel,
     Object? rechargeActions = _sentinel,
     Object? banners = _sentinel,
+    Object? isNameEmailExist = _sentinel,
   }) {
     return HomeState(
       isFetching: isFetching ?? this.isFetching,
@@ -61,6 +64,9 @@ class HomeState {
       banners: banners == _sentinel
           ? this.banners
           : banners as Map<String, List<BannerModel>>?,
+      isNameEmailExist: isNameEmailExist == _sentinel
+          ? this.isNameEmailExist
+          : isNameEmailExist as bool?,
     );
   }
 }

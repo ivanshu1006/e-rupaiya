@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'dart:async';
+import 'dart:developer';
 import 'dart:ui';
 
 import 'package:app_links/app_links.dart';
@@ -12,19 +13,21 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:pinput/pinput.dart';
+import 'package:sms_autofill/sms_autofill.dart';
 
 import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
 import '../../../constants/storage_keys.dart';
+import '../../../services/phone_hint_service.dart';
 import '../../../widgets/app_snackbar.dart';
-import '../../../widgets/custom_elevated_button.dart';
 import '../../../widgets/grey_text_form_field.dart';
 import '../components/auth_brand_header.dart';
 import '../components/otp_verification_card.dart';
 import '../components/phone_number_input_card.dart';
 import '../controllers/auth_controller.dart';
 import '../models/auth_flow.dart';
+import 'reset_mpin_view.dart';
 
 enum _LoginStep {
   mobile,
@@ -46,10 +49,6 @@ class LoginView extends HookConsumerWidget {
 
     final pinController = useTextEditingController();
     final pinFocusNode = useFocusNode();
-    final forgotOtpController = useTextEditingController();
-    final forgotPinController = useTextEditingController();
-    final forgotConfirmController = useTextEditingController();
-    final showForgotPin = useState(false);
 
     final otpControllers = useMemoized(
       () => List.generate(6, (_) => TextEditingController()),
@@ -60,9 +59,6 @@ class LoginView extends HookConsumerWidget {
     final otpErrorText = useState<String?>(null);
     final remainingSeconds = useState(0);
     final timerRef = useRef<Timer?>(null);
-    final forgotRemainingSeconds = useState(0);
-    final forgotTimerRef = useRef<Timer?>(null);
-    final isRequestingOtp = useState(false);
 
     useEffect(() {
       Future<void> applyReferralCode(String code) async {
@@ -103,9 +99,6 @@ class LoginView extends HookConsumerWidget {
         sub.cancel();
         pinController.dispose();
         pinFocusNode.dispose();
-        forgotOtpController.dispose();
-        forgotPinController.dispose();
-        forgotConfirmController.dispose();
         for (final controller in otpControllers) {
           controller.dispose();
         }
@@ -113,8 +106,23 @@ class LoginView extends HookConsumerWidget {
           node.dispose();
         }
         timerRef.value?.cancel();
-        forgotTimerRef.value?.cancel();
       };
+    }, const []);
+
+    useEffect(() {
+      Future.microtask(() async {
+        if (phoneController.text.trim().isNotEmpty) return;
+        final hint = await PhoneHintService.getPhoneNumberHint();
+        if (hint == null) return;
+        final digits = hint.replaceAll(RegExp(r'\D'), '');
+        if (digits.isEmpty) return;
+        final normalized =
+            digits.length > 10 ? digits.substring(digits.length - 10) : digits;
+        if (normalized.length != 10) return;
+        if (phoneController.text.trim().isNotEmpty) return;
+        phoneController.text = normalized;
+      });
+      return null;
     }, const []);
 
     void startOtpTimer() {
@@ -135,82 +143,8 @@ class LoginView extends HookConsumerWidget {
       remainingSeconds.value = 0;
       timerRef.value?.cancel();
       timerRef.value = null;
-      isRequestingOtp.value = false;
-      showForgotPin.value = false;
       for (final controller in otpControllers) {
         controller.clear();
-      }
-    }
-
-    Future<void> requestForgotOtp() async {
-      if (isRequestingOtp.value) return;
-      isRequestingOtp.value = true;
-      final message =
-          await ref.read(authControllerProvider.notifier).requestForgotPinOtp();
-      isRequestingOtp.value = false;
-      if (!context.mounted) return;
-      if (message != null) {
-        AppSnackbar.show(message);
-        forgotRemainingSeconds.value = 60;
-        forgotTimerRef.value?.cancel();
-        forgotTimerRef.value =
-            Timer.periodic(const Duration(seconds: 1), (timer) {
-          if (forgotRemainingSeconds.value <= 1) {
-            forgotRemainingSeconds.value = 0;
-            timer.cancel();
-          } else {
-            forgotRemainingSeconds.value -= 1;
-          }
-        });
-      } else {
-        AppSnackbar.show(
-          ref.read(authControllerProvider).errorMessage ??
-              'Failed to request OTP.',
-        );
-      }
-    }
-
-    Future<void> handleForgotResend() async {
-      if (forgotRemainingSeconds.value > 0) return;
-      await requestForgotOtp();
-    }
-
-    Future<void> handleForgotVerify() async {
-      final otp = forgotOtpController.text.trim();
-      final pin = forgotPinController.text.trim();
-      final confirmPin = forgotConfirmController.text.trim();
-      if (otp.length != 4) {
-        AppSnackbar.show('Please enter the 4-digit OTP.');
-        return;
-      }
-      if (pin.length != 4) {
-        AppSnackbar.show('Please enter a 4-digit PIN.');
-        return;
-      }
-      if (confirmPin.length != 4) {
-        AppSnackbar.show('Please confirm your 4-digit PIN.');
-        return;
-      }
-      if (pin != confirmPin) {
-        AppSnackbar.show('PIN and confirm PIN do not match.');
-        return;
-      }
-
-      final message = await ref
-          .read(authControllerProvider.notifier)
-          .forgotPin(otp: otp, pin: pin);
-      if (!context.mounted) return;
-      if (message != null) {
-        AppSnackbar.show(message);
-        showForgotPin.value = false;
-        forgotOtpController.clear();
-        forgotPinController.clear();
-        forgotConfirmController.clear();
-      } else {
-        AppSnackbar.show(
-          ref.read(authControllerProvider).errorMessage ??
-              'Failed to reset PIN.',
-        );
       }
     }
 
@@ -226,22 +160,10 @@ class LoginView extends HookConsumerWidget {
       return null;
     }, [step.value]);
 
-    useEffect(() {
-      if (!showForgotPin.value) return null;
-      Future.microtask(requestForgotOtp);
-      return () {
-        forgotTimerRef.value?.cancel();
-      };
-    }, [showForgotPin.value]);
-
     void resetToMobile() {
       step.value = _LoginStep.mobile;
       otpErrorText.value = null;
-      showForgotPin.value = false;
       pinController.clear();
-      forgotOtpController.clear();
-      forgotPinController.clear();
-      forgotConfirmController.clear();
       for (final controller in otpControllers) {
         controller.clear();
       }
@@ -324,6 +246,44 @@ class LoginView extends HookConsumerWidget {
       }
     }
 
+    useEffect(() {
+      if (step.value != _LoginStep.otp) return null;
+      var isDisposed = false;
+      final autoFill = SmsAutoFill();
+      final sub = autoFill.code.listen((code) {
+        if (isDisposed) return;
+        final digits = code.replaceAll(RegExp(r'\D'), '');
+        if (digits.isEmpty) return;
+        final trimmed = digits.length > 6 ? digits.substring(0, 6) : digits;
+        for (var i = 0; i < otpControllers.length; i++) {
+          otpControllers[i].text = i < trimmed.length ? trimmed[i] : '';
+        }
+        if (trimmed.length == otpControllers.length) {
+          otpFocusNodes.last.unfocus();
+          otpErrorText.value = null;
+          Future.microtask(handleOtpVerify);
+        }
+      });
+
+      () async {
+        try {
+          final signature = await autoFill.getAppSignature;
+          log(
+            'SMS Retriever app signature: ${signature.isEmpty ? "<empty>" : signature}',
+            name: 'LoginView',
+          );
+          await autoFill.listenForCode(smsCodeRegexPattern: r'\d{6}');
+          log('listenForCode started', name: 'LoginView');
+        } catch (_) {}
+      }();
+
+      return () {
+        isDisposed = true;
+        sub.cancel();
+        autoFill.unregisterListener();
+      };
+    }, [step.value]);
+
     Future<void> handleResendOtp() async {
       final mobile = phoneController.text.trim();
       if (mobile.isEmpty || mobile.length != 10) {
@@ -388,61 +348,57 @@ class LoginView extends HookConsumerWidget {
           borderRadius: BorderRadius.circular(2.r),
         ),
       );
+
       return buildCard(
         child: Column(
-          // mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (!showForgotPin.value) ...[
-              Text(
-                'Welcome Back',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 20.sp,
-                      color: AppColors.textPrimary,
-                    ),
-              ),
-              SizedBox(height: 4.h),
-              Text(
-                'Log in to continue earning rewards.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textPrimary.withOpacity(0.6),
-                    ),
-              ),
-              SizedBox(height: 14.h),
-            ],
-            if (!showForgotPin.value) ...[
-              Text(
-                'Enter Mobile Number',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-              ),
-              SizedBox(height: 6.h),
-              Stack(
-                alignment: Alignment.centerRight,
-                children: [
-                  GreyTextFormField(
-                    controller: phoneController,
-                    enabled: false,
-                    isNumber: true,
+            Text(
+              'Welcome Back',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20.sp,
+                    color: AppColors.textPrimary,
                   ),
-                  Positioned(
-                    right: 8.w,
-                    child: IconButton(
-                      onPressed: authState.isSubmitting ? null : resetToMobile,
-                      icon: Icon(
-                        Icons.edit,
-                        size: 18.sp,
-                        color: AppColors.textPrimary.withOpacity(0.7),
-                      ),
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              'Log in to continue earning rewards.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textPrimary.withOpacity(0.6),
+                  ),
+            ),
+            SizedBox(height: 14.h),
+            Text(
+              'Enter Mobile Number',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+            ),
+            SizedBox(height: 6.h),
+            Stack(
+              alignment: Alignment.centerRight,
+              children: [
+                GreyTextFormField(
+                  controller: phoneController,
+                  enabled: false,
+                  isNumber: true,
+                ),
+                Positioned(
+                  right: 8.w,
+                  child: IconButton(
+                    onPressed: authState.isSubmitting ? null : resetToMobile,
+                    icon: Icon(
+                      Icons.edit,
+                      size: 18.sp,
+                      color: AppColors.textPrimary.withOpacity(0.7),
                     ),
                   ),
-                ],
-              ),
-              SizedBox(height: 14.h),
-            ],
+                ),
+              ],
+            ),
+            SizedBox(height: 14.h),
             Text(
               'Enter PIN',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -451,225 +407,55 @@ class LoginView extends HookConsumerWidget {
                   ),
             ),
             SizedBox(height: 6.h),
-            if (!showForgotPin.value) ...[
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final totalWidth = constraints.maxWidth;
-                  const gap = 10.0;
-                  final fieldWidth = (totalWidth - (gap * 3)) / 4;
-                  final stretchedTheme = pinTheme.copyWith(
-                    width: fieldWidth,
-                  );
-                  return Pinput(
-                    controller: pinController,
-                    focusNode: pinFocusNode,
-                    length: 4,
-                    enabled: !authState.isSubmitting,
-                    obscureText: true,
-                    obscuringCharacter: '●',
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    defaultPinTheme: stretchedTheme,
-                    focusedPinTheme: stretchedTheme.copyWith(
-                      decoration: stretchedTheme.decoration?.copyWith(
-                        border:
-                            Border.all(color: AppColors.primary, width: 1.5),
-                      ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final totalWidth = constraints.maxWidth;
+                const gap = 10.0;
+                final fieldWidth = (totalWidth - (gap * 3)) / 4;
+                final stretchedTheme = pinTheme.copyWith(width: fieldWidth);
+                return Pinput(
+                  controller: pinController,
+                  focusNode: pinFocusNode,
+                  length: 4,
+                  enabled: !authState.isSubmitting,
+                  obscureText: true,
+                  obscuringCharacter: '●',
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  defaultPinTheme: stretchedTheme,
+                  focusedPinTheme: stretchedTheme.copyWith(
+                    decoration: stretchedTheme.decoration?.copyWith(
+                      border: Border.all(color: AppColors.primary, width: 1.5),
                     ),
-                    cursor: pinCursor,
-                    separatorBuilder: (_) => const SizedBox(width: gap),
-                    onCompleted: (_) => handlePinLogin(),
-                  );
-                },
-              ),
-              SizedBox(height: 8.h),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: authState.isSubmitting
-                      ? null
-                      : () => showForgotPin.value = true,
-                  child: Text(
-                    'Forgot PIN ?',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                        ),
                   ),
+                  cursor: pinCursor,
+                  separatorBuilder: (_) => const SizedBox(width: gap),
+                  onCompleted: (_) => handlePinLogin(),
+                );
+              },
+            ),
+            SizedBox(height: 8.h),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: authState.isSubmitting
+                    ? null
+                    : () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const ResetMpinView(),
+                          ),
+                        );
+                      },
+                child: Text(
+                  'Forgot PIN ?',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
                 ),
               ),
-            ] else ...[
-              Text(
-                'Reset Your PIN',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-              ),
-              SizedBox(height: 6.h),
-              Text(
-                'Enter the 4-digit OTP sent to your mobile number.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textPrimary.withOpacity(0.6),
-                    ),
-              ),
-              SizedBox(height: 12.h),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final totalWidth = constraints.maxWidth;
-                  const gap = 10.0;
-                  final fieldWidth = (totalWidth - (gap * 3)) / 4;
-                  final stretchedTheme = pinTheme.copyWith(
-                    width: fieldWidth,
-                  );
-                  return Pinput(
-                    controller: forgotOtpController,
-                    length: 4,
-                    enabled: !authState.isSubmitting,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    defaultPinTheme: stretchedTheme,
-                    focusedPinTheme: stretchedTheme.copyWith(
-                      decoration: stretchedTheme.decoration?.copyWith(
-                        border:
-                            Border.all(color: AppColors.primary, width: 1.5),
-                      ),
-                    ),
-                    cursor: pinCursor,
-                    separatorBuilder: (_) => const SizedBox(width: gap),
-                  );
-                },
-              ),
-              SizedBox(height: 10.h),
-              Row(
-                children: [
-                  const Icon(Icons.access_time,
-                      size: 18, color: AppColors.textPrimary),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${(forgotRemainingSeconds.value ~/ 60).toString().padLeft(2, '0')}:${(forgotRemainingSeconds.value % 60).toString().padLeft(2, '0')}',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                        ),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: forgotRemainingSeconds.value == 0 &&
-                            !isRequestingOtp.value
-                        ? handleForgotResend
-                        : null,
-                    style: TextButton.styleFrom(
-                      foregroundColor: forgotRemainingSeconds.value == 0
-                          ? AppColors.primary
-                          : AppColors.textPrimary.withOpacity(0.35),
-                    ),
-                    child: Text(
-                      isRequestingOtp.value ? 'Sending...' : 'Resend OTP',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 8.h),
-              Divider(color: AppColors.textPrimary.withOpacity(0.1)),
-              SizedBox(height: 8.h),
-              Text(
-                'Create New PIN',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-              ),
-              SizedBox(height: 8.h),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final totalWidth = constraints.maxWidth;
-                  const gap = 10.0;
-                  final fieldWidth = (totalWidth - (gap * 3)) / 4;
-                  final stretchedTheme = pinTheme.copyWith(
-                    width: fieldWidth,
-                  );
-                  return Pinput(
-                    controller: forgotPinController,
-                    length: 4,
-                    enabled: !authState.isSubmitting,
-                    obscureText: true,
-                    obscuringCharacter: '●',
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    defaultPinTheme: stretchedTheme,
-                    focusedPinTheme: stretchedTheme.copyWith(
-                      decoration: stretchedTheme.decoration?.copyWith(
-                        border:
-                            Border.all(color: AppColors.primary, width: 1.5),
-                      ),
-                    ),
-                    cursor: pinCursor,
-                    separatorBuilder: (_) => const SizedBox(width: gap),
-                  );
-                },
-              ),
-              SizedBox(height: 14.h),
-              Text(
-                'Confirm PIN',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-              ),
-              SizedBox(height: 8.h),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final totalWidth = constraints.maxWidth;
-                  const gap = 10.0;
-                  final fieldWidth = (totalWidth - (gap * 3)) / 4;
-                  final stretchedTheme = pinTheme.copyWith(
-                    width: fieldWidth,
-                  );
-                  return Pinput(
-                    controller: forgotConfirmController,
-                    length: 4,
-                    enabled: !authState.isSubmitting,
-                    obscureText: true,
-                    obscuringCharacter: '●',
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    defaultPinTheme: stretchedTheme,
-                    focusedPinTheme: stretchedTheme.copyWith(
-                      decoration: stretchedTheme.decoration?.copyWith(
-                        border:
-                            Border.all(color: AppColors.primary, width: 1.5),
-                      ),
-                    ),
-                    cursor: pinCursor,
-                    separatorBuilder: (_) => const SizedBox(width: gap),
-                  );
-                },
-              ),
-              SizedBox(height: 18.h),
-              CustomElevatedButton(
-                onPressed: authState.isSubmitting ? null : handleForgotVerify,
-                label: authState.isSubmitting
-                    ? 'Verifying...'
-                    : 'Verify & Continue',
-                uppercaseLabel: false,
-                showArrow: false,
-              ),
-              SizedBox(height: 8.h),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {
-                    showForgotPin.value = false;
-                    forgotOtpController.clear();
-                    forgotPinController.clear();
-                    forgotConfirmController.clear();
-                  },
-                  child: const Text('Back'),
-                ),
-              ),
-            ],
+            ),
           ],
         ),
       );
@@ -748,6 +534,7 @@ class LoginView extends HookConsumerWidget {
             onContinue: authState.isSubmitting ? null : handleMobileContinue,
             isConsentAllowed: allowConsent.value,
             onConsentChanged: (value) => allowConsent.value = value,
+            isLoading: authState.isSubmitting,
             helperText: null,
             showHelper: false,
             enabled: !authState.isSubmitting,
@@ -781,8 +568,7 @@ class LoginView extends HookConsumerWidget {
       },
       child: Scaffold(
         backgroundColor: Colors.white,
-        resizeToAvoidBottomInset:
-            !(step.value == _LoginStep.pin && showForgotPin.value),
+        resizeToAvoidBottomInset: true,
         body: LayoutBuilder(
           builder: (context, constraints) {
             final headerHeight = constraints.maxHeight * 0.62;

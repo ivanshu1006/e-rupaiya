@@ -8,6 +8,8 @@ class NotificationItem {
     required this.actionLabel,
     required this.iconAsset,
     required this.section,
+    this.iconUrl,
+    this.showRemindButton = false,
     this.type,
     this.redirectScreen,
     this.referenceId,
@@ -34,6 +36,13 @@ class NotificationItem {
       actionLabel: _actionLabelFor(json),
       iconAsset: _iconFor(json),
       section: _sectionFor(json),
+      iconUrl: (json['icon'] ?? '').toString(),
+      showRemindButton: () {
+        final raw = json['show_remind_button'];
+        if (raw == true) return true;
+        final normalized = (raw ?? '').toString().toLowerCase().trim();
+        return normalized == 'true' || normalized == '1' || normalized == 'yes';
+      }(),
       type: (json['type'] ?? '').toString(),
       redirectScreen: (json['redirect_screen'] ?? '').toString(),
       referenceId: (json['reference_id'] ?? '').toString(),
@@ -55,6 +64,8 @@ class NotificationItem {
   final String actionLabel;
   final String iconAsset;
   final String section;
+  final String? iconUrl;
+  final bool showRemindButton;
   final String? type;
   final String? redirectScreen;
   final String? referenceId;
@@ -86,7 +97,7 @@ class NotificationItem {
     if (combined.contains('spin')) {
       return FileConstants.spincoin;
     }
-    return FileConstants.notification;
+    return FileConstants.erupaiyaLogo;
   }
 
   static String _actionLabelFor(Map<String, dynamic> json) {

@@ -8,18 +8,21 @@ class GoldProceedButton extends StatelessWidget {
     super.key,
     required this.onPressed,
     this.label = 'Proceed',
+    this.isLoading = false,
   });
 
   final VoidCallback onPressed;
   final String label;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
     return CustomElevatedButton(
-      onPressed: onPressed,
+      onPressed: isLoading ? null : onPressed,
       label: label,
       height: 42.h,
       uppercaseLabel: false,
+      isLoading: isLoading,
     );
   }
 }

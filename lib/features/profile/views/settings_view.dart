@@ -8,9 +8,10 @@ import 'package:pinput/pinput.dart';
 import '../../../constants/app_colors.dart';
 import '../../../constants/routes_constant.dart';
 import '../../../features/auth/controllers/auth_controller.dart';
-import '../controllers/profile_controller.dart';
+import '../../../services/location_access_service.dart';
 import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/k_dialog.dart';
+import '../controllers/profile_controller.dart';
 import '../repositories/settings_repository.dart';
 
 class SettingsView extends HookConsumerWidget {
@@ -24,6 +25,7 @@ class SettingsView extends HookConsumerWidget {
     final isPushEnabled = useState(true);
     final isPushLoading = useState(false);
     final isLocationEnabled = useState(false);
+    final isLocationLoading = useState(false);
 
     useEffect(() {
       if (profile == null && !profileState.isFetching) {
@@ -41,6 +43,16 @@ class SettingsView extends HookConsumerWidget {
       return null;
     }, [profile?.isPushNotification, isPushLoading.value]);
 
+    useEffect(() {
+      Future.microtask(() async {
+        final enabledPref = await LocationAccessService.isEnabledPreference();
+        final granted = await LocationAccessService.isPermissionGranted();
+        if (!context.mounted) return;
+        isLocationEnabled.value = enabledPref && granted;
+      });
+      return null;
+    }, const []);
+
     Future<void> togglePush(bool enabled) async {
       if (isPushLoading.value) return;
       final previous = isPushEnabled.value;
@@ -55,7 +67,10 @@ class SettingsView extends HookConsumerWidget {
         await ref.read(profileControllerProvider.notifier).fetchProfile();
       }
       if (result.message.isNotEmpty) {
-        AppSnackbar.show(result.message);
+        AppSnackbar.show(result.message,
+            type: result.success
+                ? AppSnackbarType.success
+                : AppSnackbarType.error);
       }
     }
 
@@ -63,6 +78,38 @@ class SettingsView extends HookConsumerWidget {
       await ref.read(authControllerProvider.notifier).logout();
       if (context.mounted) {
         context.go(RouteConstants.login);
+      }
+    }
+
+    Future<void> toggleLocation(bool enabled) async {
+      if (isLocationLoading.value) return;
+      isLocationLoading.value = true;
+      try {
+        if (enabled) {
+          final granted =
+              await LocationAccessService.enableWithPermissionRequest();
+          if (!granted) {
+            await LocationAccessService.setEnabledPreference(false);
+            if (context.mounted) {
+              AppSnackbar.show(
+                'Location permission is not enabled. You can allow it from Settings.',
+                type: AppSnackbarType.error,
+              );
+            }
+          }
+          isLocationEnabled.value = granted;
+        } else {
+          await LocationAccessService.disable();
+          isLocationEnabled.value = false;
+          if (context.mounted) {
+            AppSnackbar.show(
+              'Location access turned off.',
+              type: AppSnackbarType.success,
+            );
+          }
+        }
+      } finally {
+        isLocationLoading.value = false;
       }
     }
 
@@ -118,7 +165,7 @@ class SettingsView extends HookConsumerWidget {
                           trailing: Switch(
                             value: isPushEnabled.value,
                             onChanged: isPushLoading.value ? null : togglePush,
-                            activeColor: AppColors.primary,
+                            activeThumbColor: AppColors.primary,
                           ),
                         ),
                         SizedBox(height: 14.h),
@@ -127,10 +174,9 @@ class SettingsView extends HookConsumerWidget {
                           title: 'Location Access',
                           trailing: Switch(
                             value: isLocationEnabled.value,
-                            onChanged: (value) {
-                              isLocationEnabled.value = value;
-                            },
-                            activeColor: AppColors.primary,
+                            onChanged:
+                                isLocationLoading.value ? null : toggleLocation,
+                            activeThumbColor: AppColors.primary,
                           ),
                         ),
                         SizedBox(height: 16.h),
@@ -392,45 +438,100 @@ class _DeleteAccountConfirmDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-      title: Text(
-        'Delete Account',
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w700,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(22.w, 22.h, 22.w, 16.h),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 64.r,
+              height: 64.r,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF1EB),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFF2B9A6)),
+              ),
+              child: Icon(
+                Icons.delete_outline,
+                color: AppColors.primary,
+                size: 34.sp,
+              ),
             ),
-      ),
-      content: Text(
-        'Are you sure you want to delete your account? '
-        'We will send an OTP to confirm this action.',
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.textPrimary.withOpacity(0.8),
-              height: 1.4,
+            SizedBox(height: 14.h),
+            Text(
+              'Delete Account',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
             ),
+            SizedBox(height: 8.h),
+            Text(
+              'Are you sure you want to delete your account?\nWe will send an OTP to confirm this action.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textPrimary.withOpacity(0.75),
+                    height: 1.35,
+                  ),
+            ),
+            SizedBox(height: 18.h),
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 44.h,
+                    child: OutlinedButton(
+                      onPressed: () => navigatorKey.currentState?.pop(),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: AppColors.textPrimary.withOpacity(0.18),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.textPrimary.withOpacity(0.8),
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: SizedBox(
+                    height: 44.h,
+                    child: ElevatedButton(
+                      onPressed: onConfirm,
+                      style: ElevatedButton.styleFrom(
+                        elevation: 0,
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                      ),
+                      child: Text(
+                        'Yes, delete',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => navigatorKey.currentState?.pop(),
-          child: Text(
-            'Cancel',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textPrimary.withOpacity(0.7),
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-        ),
-        TextButton(
-          onPressed: onConfirm,
-          child: Text(
-            'Yes',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-        ),
-      ],
     );
   }
 }

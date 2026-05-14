@@ -29,10 +29,25 @@ class FileConstants {
   static String homeBannerGif = 'assets/gif/homeBanner.gif';
   static String creditCardGif = 'assets/gif/creditcard.gif';
   static String splashGif = 'assets/gif/splash_gif.gif';
+  static String splashLottie = 'assets/lottie/logo-verticle.json';
   static String giftGif = 'assets/gif/gift.gif';
 
   //home icons
   static String mobile = 'assets/images/png/home_icon/mobile_new.png';
+  static String paybillInactive =
+      'assets/images/png/home_icon/paybill_inactive.png';
+  static String paybillActive =
+      'assets/images/png/home_icon/paybill_active.png';
+  static String offersActive = 'assets/images/png/home_icon/offer_active.png';
+  static String offersInactive =
+      'assets/images/png/home_icon/offer_inactive.png';
+  static String historyInactive =
+      'assets/images/png/home_icon/history_inactive.png';
+  static String historyActive =
+      'assets/images/png/home_icon/history_active.png';
+  static String alertsActive = 'assets/images/png/home_icon/alerts_active.png';
+  static String alertsInactive =
+      'assets/images/png/home_icon/alerts_inactive.png';
   static String referandearn = 'assets/images/png/home_icon/referandearn.png';
   static String postpaid = 'assets/images/png/home_icon/postpaid_icon.png';
   static String landline = 'assets/images/png/home_icon/land_line.png';
@@ -106,6 +121,7 @@ class FileConstants {
   static String homeAlerts = 'assets/images/png/home_icon/homeAlerts.png';
   static String metro = 'assets/images/png/home_icon/metro.png';
   static String preCard = 'assets/images/png/home_icon/pre_card.png';
+  static String resetPinIcon = 'assets/images/png/resetpinIcon.png';
   static String homeBanner1 = 'assets/images/png/home_icon/home_banner1.png';
   static String homeBanner3 = 'assets/images/png/home_icon/home_banner3.png';
   static String homeBanner5 = 'assets/images/png/home_icon/homebanner5.png';

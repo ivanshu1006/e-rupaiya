@@ -7,10 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:lottie/lottie.dart';
 
 import '../../../constants/file_constants.dart';
 import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/k_dialog.dart';
+import '../../home/controllers/home_tab_controller.dart';
 import '../../profile/controllers/profile_controller.dart';
 import '../components/spin_result_dialog.dart';
 import '../components/spin_wheel.dart';
@@ -64,9 +66,39 @@ class SpinAndWinView extends HookConsumerWidget {
 
     Future<void> handleSpin() async {
       final rewards = _buildRewards(spinOptionsState.options);
-      if (isSpinning.value || totalSpins == 0 || rewards.isEmpty) {
+      if (isSpinning.value) return;
+      if (totalSpins == 0) {
+        await showGeneralDialog<void>(
+          context: context,
+          barrierDismissible: true,
+          barrierLabel: 'No spins left',
+          barrierColor: Colors.black.withOpacity(0.55),
+          transitionDuration: const Duration(milliseconds: 220),
+          pageBuilder: (dialogContext, animation, secondaryAnimation) {
+            return Center(
+              child: _NoSpinsLeftDialog(
+                onClose: () => Navigator.of(dialogContext).pop(),
+              ),
+            );
+          },
+          transitionBuilder: (context, animation, secondaryAnimation, child) {
+            final curved = CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutBack,
+              reverseCurve: Curves.easeInCubic,
+            );
+            return FadeTransition(
+              opacity: animation,
+              child: ScaleTransition(
+                scale: Tween<double>(begin: 0.92, end: 1).animate(curved),
+                child: child,
+              ),
+            );
+          },
+        );
         return;
       }
+      if (rewards.isEmpty) return;
       isSpinning.value = true;
 
       final currentRewards = rewards;
@@ -190,8 +222,21 @@ class SpinAndWinView extends HookConsumerWidget {
     }
 
     Future<bool> handleBackNavigation() async {
-      if (!isSpinning.value) return true;
-      return showExitDuringSpinDialog();
+      final navigator = Navigator.of(context);
+
+      // If spinning, confirm first.
+      if (isSpinning.value) {
+        final shouldExit = await showExitDuringSpinDialog();
+        if (!shouldExit) return false;
+      }
+
+      // If this screen was pushed on top of another route, pop back.
+      if (navigator.canPop()) return true;
+
+      // If this screen is hosted inside the persistent bottom tab view,
+      // switch back to Home tab instead of exiting the app.
+      ref.read(homeTabControllerProvider).jumpToTab(0);
+      return false;
     }
 
     return WillPopScope(
@@ -510,6 +555,99 @@ class _SpinShimmerTransform extends GradientTransform {
   @override
   Matrix4 transform(Rect bounds, {TextDirection? textDirection}) {
     return Matrix4.translationValues(bounds.width * slidePercent, 0, 0);
+  }
+}
+
+class _NoSpinsLeftDialog extends StatelessWidget {
+  const _NoSpinsLeftDialog({required this.onClose});
+
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: 120,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Opacity(
+                    opacity: 0.75,
+                    child: Lottie.asset(
+                      'assets/lottie/spin_rays.json',
+                      repeat: true,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                  Container(
+                    height: 62,
+                    width: 62,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFFF3FAF9),
+                      border: Border.all(color: const Color(0xFFBFE7E2)),
+                    ),
+                    child: const Icon(
+                      Icons.hourglass_bottom_rounded,
+                      color: Color(0xFF0B5E5A),
+                      size: 32,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'All spins used!',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF0B5E5A),
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'You\u2019ve finished today\u2019s free spins.\nCome back tomorrow for more chances to win.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.black.withOpacity(0.7),
+                    height: 1.35,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton(
+                onPressed: onClose,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0B5E5A),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'Got it',
+                  style: TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

@@ -33,7 +33,10 @@ class ReferralMilestonesView extends HookWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            const ReferAndEarnAppBar(title: 'Referral Milestones'),
+            const ReferAndEarnAppBar(
+              title: 'Referral Milestones',
+              height: 200,
+            ),
             Transform.translate(
               offset: Offset(0, -26.h),
               child: Container(

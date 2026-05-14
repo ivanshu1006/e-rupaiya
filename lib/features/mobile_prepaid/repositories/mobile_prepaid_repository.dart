@@ -9,6 +9,9 @@ import '../models/operator_info.dart';
 import '../models/operator_option.dart';
 import '../models/latest_transaction.dart';
 import '../models/plan_item.dart';
+import '../models/prepaid_transaction_status.dart';
+import '../models/prepaid_plans_response.dart';
+import '../models/recharge_order_result.dart';
 import '../models/recharge_result.dart';
 import '../models/region_option.dart';
 
@@ -40,18 +43,27 @@ class MobilePrepaidRepository {
     }
   }
 
-  Future<Map<String, List<PlanItem>>> fetchPlans({
+  Future<PrepaidPlansResponse> fetchPlans({
     required String mobile,
     required String operatorName,
     required String circleCode,
+    List<String> filters = const [],
   }) async {
     try {
+      final normalizedFilters = filters
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
       final response = await _dio.post(
         ApiConstants.prepaidFetchPlansEndpoint,
         data: {
           'mobile': mobile,
           'operator': operatorName,
           'circlecode': circleCode,
+          if (normalizedFilters.isNotEmpty)
+            'filter': normalizedFilters.length == 1
+                ? normalizedFilters.first
+                : jsonEncode(normalizedFilters),
         },
         options: Options(
           contentType: Headers.formUrlEncodedContentType,
@@ -59,6 +71,20 @@ class MobilePrepaidRepository {
       );
       final payload = _normalizePayload(response.data);
       final data = payload['data'] as Map<String, dynamic>? ?? {};
+
+      final filtersMap = payload['filters'] as Map<String, dynamic>? ?? {};
+      final validityFilters = (filtersMap['validity'] is List)
+          ? (filtersMap['validity'] as List)
+              .map((e) => e.toString())
+              .toList()
+          : const <String>[];
+      final dataFilters = (filtersMap['data'] is List)
+          ? (filtersMap['data'] as List).map((e) => e.toString()).toList()
+          : const <String>[];
+      final filterTags = (payload['filterTags'] is List)
+          ? (payload['filterTags'] as List).map((e) => e.toString()).toList()
+          : normalizedFilters;
+
       final result = <String, List<PlanItem>>{};
       data.forEach((key, value) {
         if (value is List) {
@@ -68,7 +94,12 @@ class MobilePrepaidRepository {
               .toList();
         }
       });
-      return result;
+      return PrepaidPlansResponse(
+        plansByCategory: result,
+        validityFilters: validityFilters,
+        dataFilters: dataFilters,
+        filterTags: filterTags,
+      );
     } catch (e, stackTrace) {
       logger.error(
         'Failed to fetch plans',
@@ -135,6 +166,9 @@ class MobilePrepaidRepository {
     required String operatorName,
     required String desc,
     String? referenceId,
+    int useWallet = 0,
+    double? walletAmount,
+    double? razorpayAmount,
   }) async {
     try {
       final response = await _dio.post(
@@ -144,6 +178,11 @@ class MobilePrepaidRepository {
           'amount': amount.toString(),
           'operator': operatorName,
           'desc': desc,
+          'use_wallet': useWallet.toString(),
+          if (walletAmount != null)
+            'wallet_amount': walletAmount.toStringAsFixed(2),
+          if (razorpayAmount != null)
+            'razorpay_amount': razorpayAmount.toStringAsFixed(2),
           // if (referenceId != null && referenceId.isNotEmpty)
           'reference_id': referenceId,
         },
@@ -181,6 +220,86 @@ class MobilePrepaidRepository {
     } catch (e, stackTrace) {
       logger.error(
         'Failed to recharge',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  Future<RechargeOrderResult> createRechargeOrder({
+    required String mobile,
+    required int amount,
+    required String operatorName,
+    required String desc,
+    double walletAmount = 0,
+    double razorpayAmount = 0,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.rechargeCreateOrderEndpoint,
+        data: {
+          'mobile': mobile,
+          'amount': amount.toDouble().toStringAsFixed(2),
+          'operator': operatorName,
+          'wallet_amount': walletAmount.toStringAsFixed(2),
+          'razorpay_amount': razorpayAmount.toStringAsFixed(2),
+          'desc': desc,
+        },
+        options: Options(
+          contentType: Headers.formUrlEncodedContentType,
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+      final payload = response.data as Map<String, dynamic>? ?? {};
+      return RechargeOrderResult.fromJson(payload);
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to create recharge order',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  Future<PrepaidTransactionStatus> fetchTransactionStatus({
+    required String transactionId,
+  }) async {
+    try {
+      final response = await _dio.get(
+        ApiConstants.transactionStatusEndpoint(transactionId),
+        options: Options(
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+      final payload = response.data as Map<String, dynamic>? ?? {};
+      return PrepaidTransactionStatus.fromJson(payload);
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to fetch prepaid transaction status',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  Future<PrepaidTransactionStatus> fetchRechargeStatus({
+    required String transactionId,
+  }) async {
+    try {
+      final response = await _dio.get(
+        ApiConstants.rechargeStatusEndpoint(transactionId),
+        options: Options(
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+      final payload = response.data as Map<String, dynamic>? ?? {};
+      return PrepaidTransactionStatus.fromJson(payload);
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to fetch recharge status',
         error: e,
         stackTrace: stackTrace,
       );

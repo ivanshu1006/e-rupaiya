@@ -33,6 +33,7 @@ class TrackReferralsView extends HookWidget {
           children: [
             const ReferAndEarnAppBar(
               title: 'Track Your Referrals',
+              height: 200,
             ),
             Transform.translate(
               offset: Offset(0, -26.h),
@@ -48,13 +49,11 @@ class TrackReferralsView extends HookWidget {
                   child: Column(
                     children: [
                       _buildContent(context, snapshot),
-                      SizedBox(height: 70.h),
                     ],
                   ),
                 ),
               ),
             ),
-            SizedBox(height: 8.h),
           ],
         ),
       ),

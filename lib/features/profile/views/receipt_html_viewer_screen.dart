@@ -99,9 +99,12 @@ class _ReceiptHtmlViewerScreenState extends State<ReceiptHtmlViewerScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
-          'Receipts',
-          style: TextStyle(color: Colors.white),
+        title: Text(
+          'Receipt',
+          style: TextStyle(
+              color: Colors.white,
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w500),
         ),
         actions: [
           IconButton(
@@ -111,13 +114,13 @@ class _ReceiptHtmlViewerScreenState extends State<ReceiptHtmlViewerScreen> {
               color: _isBusy ? Colors.white54 : Colors.white,
             ),
           ),
-          IconButton(
-            onPressed: _isBusy ? null : _handleDownload,
-            icon: Icon(
-              Icons.download,
-              color: _isBusy ? Colors.white54 : Colors.white,
-            ),
-          ),
+          // IconButton(
+          //   onPressed: _isBusy ? null : _handleDownload,
+          //   icon: Icon(
+          //     Icons.download,
+          //     color: _isBusy ? Colors.white54 : Colors.white,
+          //   ),
+          // ),
           SizedBox(width: 4.w),
         ],
       ),

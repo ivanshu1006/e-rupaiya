@@ -5,6 +5,8 @@ import '../models/bill_pay_response_model.dart';
 import '../models/biller_detail_model.dart';
 import '../models/biller_detail_state.dart';
 import '../models/biller_model.dart';
+import '../models/recharge_status_result.dart';
+import '../models/service_payment_order_result.dart';
 import '../repositories/biller_repository.dart';
 
 final billerDetailControllerProvider =
@@ -127,29 +129,21 @@ class BillerDetailController extends StateNotifier<BillerDetailState> {
     }
   }
 
-  Future<bool> payBill({
+  // Deprecated: old API `api/bill/pay` is no longer used.
+  // Use `createPayAllServicesOrder(...)` + `verifyPayAllServicesStatus(...)`.
+
+  Future<ServicePaymentOrderResult?> createPayAllServicesOrder({
     required double amount,
-    String? referenceId,
+    required String paymentType,
+    double walletAmount = 0,
+    double razorpayAmount = 0,
     bool isCreditCardFlow = false,
-    String? paymentTypeOverride,
   }) async {
     final biller = state.selectedBiller;
     final detail = state.billerDetail;
     final bill = state.billResponse;
     final customerParams = state.customerParamsInput ?? {};
-    if (biller == null || detail == null || bill == null) return false;
-
-    final override = paymentTypeOverride?.trim() ?? '';
-    final paymentType = override.isNotEmpty
-        ? override
-        : (isCreditCardFlow
-            ? 'Credit card'
-            : (detail.billerCategoryName.trim().isNotEmpty
-                ? detail.billerCategoryName.trim()
-                : 'BILLPAY'));
-    logger.info(
-      'payBill: payment_type=$paymentType biller_name=${biller.billerName}',
-    );
+    if (biller == null || detail == null || bill == null) return null;
 
     state = state.copyWith(
       isPayingBill: true,
@@ -157,7 +151,7 @@ class BillerDetailController extends StateNotifier<BillerDetailState> {
       payResponse: null,
     );
     try {
-      final response = await _repository.payBill(
+      final order = await _repository.createPayAllServicesOrder(
         billerId: biller.billerId,
         customerParams: customerParams,
         maskedIdentifier: _resolveMaskedIdentifier(
@@ -167,33 +161,59 @@ class BillerDetailController extends StateNotifier<BillerDetailState> {
         ),
         amount: amount.toStringAsFixed(2),
         refId: bill.refId,
-        referenceId: referenceId,
         paymentModes: detail.paymentModes
             .map((mode) => mode.paymentMode)
             .where((mode) => mode.trim().isNotEmpty)
             .toList(),
         billerName: biller.billerName,
         paymentType: paymentType,
+        walletAmount: walletAmount,
+        razorpayAmount: razorpayAmount,
       );
-      final errorMessage =
-          response.isSuccess ? null : _resolvePayErrorMessage(response);
-      state = state.copyWith(
-        isPayingBill: false,
-        payResponse: response,
-        payErrorMessage: errorMessage,
-      );
-      return response.isSuccess;
+      state = state.copyWith(isPayingBill: false);
+      if (!order.isSuccess) {
+        state = state.copyWith(
+          payErrorMessage: order.message.isNotEmpty
+              ? order.message
+              : 'Failed to create order. Please try again.',
+        );
+        return null;
+      }
+      return order;
     } catch (e, stackTrace) {
       logger.error(
-        'Failed to pay bill',
+        'Failed to create pay-allservices order',
         error: e,
         stackTrace: stackTrace,
       );
       state = state.copyWith(
         isPayingBill: false,
-        payErrorMessage: 'Failed to pay bill. Please try again.',
+        payErrorMessage: 'Failed to create order. Please try again.',
       );
-      return false;
+      return null;
+    }
+  }
+
+  Future<RechargeStatusResult?> verifyPayAllServicesStatus({
+    required String transactionRef,
+  }) async {
+    state = state.copyWith(isPayingBill: true, payErrorMessage: null);
+    try {
+      final status =
+          await _repository.fetchRechargeStatus(transactionId: transactionRef);
+      state = state.copyWith(isPayingBill: false);
+      return status;
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to verify pay-allservices status',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      state = state.copyWith(
+        isPayingBill: false,
+        payErrorMessage: 'Unable to verify payment status. Please try again.',
+      );
+      return null;
     }
   }
 

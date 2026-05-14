@@ -146,8 +146,8 @@ class _HomeIconTileState extends State<HomeIconTile>
               ),
               if (widget.offer != null)
                 Positioned(
-                  top: -6.h,
-                  right: 11.5.w,
+                  top: -10,
+                  right: 13.5,
                   child: Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 5, vertical: 2),

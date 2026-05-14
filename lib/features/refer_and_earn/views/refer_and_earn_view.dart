@@ -4,15 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
+import '../../../constants/routes_constant.dart';
 import '../../../services/permission_service.dart';
 import '../../mobile_prepaid/controllers/contacts_cache_controller.dart';
 import '../components/refer_and_earn_app_bar.dart';
 import '../components/referral_share_actions.dart';
-import 'refer_and_earn_wallet_view.dart';
 import 'referral_works_view.dart';
 import 'track_referrals_view.dart';
 
@@ -79,7 +80,7 @@ class ReferAndEarnView extends HookConsumerWidget {
               ),
             ),
             Transform.translate(
-              offset: Offset(0, -90.h),
+              offset: Offset(0, -100.h),
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -131,14 +132,12 @@ class ReferAndEarnView extends HookConsumerWidget {
                       ),
                       SizedBox(height: 16.h),
                       _ReferForeverCard(),
-                      SizedBox(height: 16.h),
-                      SizedBox(height: 70.h),
+                      SizedBox(height: 2.h),
                     ],
                   ),
                 ),
               ),
             ),
-            SizedBox(height: 8.h),
           ],
         ),
       ),
@@ -175,11 +174,7 @@ class _ReferSummarySection extends HookWidget {
         _PrimaryPillButton(
           label: 'My Referral Earnings',
           onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const ReferAndEarnWalletView(),
-              ),
-            );
+            context.push(RouteConstants.referAndEarnWallet);
           },
         ),
       ],
@@ -425,7 +420,7 @@ class _ReferForeverCard extends HookWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 18.h),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
       decoration: BoxDecoration(
         color: const Color(0xFFFDEFE8),
         borderRadius: BorderRadius.circular(16.r),

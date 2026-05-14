@@ -1,12 +1,9 @@
 // ignore_for_file: deprecated_member_use
 
-import 'dart:developer';
-
 import 'package:e_rupaiya/widgets/app_divider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../constants/app_colors.dart';
@@ -152,7 +149,6 @@ class TransactionDetailScreen extends StatelessWidget {
                           showCopy: false,
                         ),
                       SizedBox(height: 10.h),
-
                       if (paymentMode.isNotEmpty || rrn.isNotEmpty)
                         _PaidFromRow(
                           iconUrl: tx.iconUrl,

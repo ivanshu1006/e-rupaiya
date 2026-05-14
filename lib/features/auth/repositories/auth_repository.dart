@@ -21,12 +21,15 @@ class AuthRepository {
 
   Future<AuthFlow> checkLogin({
     required String mobile,
+    String? appHash,
   }) async {
     try {
       final response = await _dio.post(
         ApiConstants.checkLoginEndpoint,
         data: {
           'mobile': mobile,
+          if (appHash != null && appHash.trim().isNotEmpty)
+            'appHash': appHash.trim(),
         },
       );
 
@@ -119,14 +122,21 @@ class AuthRepository {
     required String pin,
   }) async {
     try {
-      final deviceToken = PushNotificationService.latestToken;
+      final deviceToken =
+          (await PushNotificationService.ensureTokenReady())?.trim();
+      if (deviceToken == null ||
+          deviceToken.isEmpty ||
+          deviceToken.toLowerCase() == 'null') {
+        throw Exception(
+          'Unable to fetch device token. Please try again in a moment.',
+        );
+      }
       final response = await _dio.post(
         ApiConstants.loginEndpoint,
         data: {
           'mobile': mobile,
           'pin': pin,
-          if (deviceToken != null && deviceToken.isNotEmpty)
-            'device_token': deviceToken,
+          'device_token': deviceToken,
         },
       );
 
@@ -211,12 +221,15 @@ class AuthRepository {
 
   Future<String> requestForgotPinOtp({
     required String userId,
+    String? appHash,
   }) async {
     try {
       final response = await _dio.post(
         ApiConstants.requestForgotPinOtpEndpoint,
         data: {
           'user_id': userId,
+          if (appHash != null && appHash.trim().isNotEmpty)
+            'appHash': appHash.trim(),
         },
       );
 

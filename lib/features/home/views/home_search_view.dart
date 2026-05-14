@@ -9,14 +9,17 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
+import '../../../widgets/app_network_image.dart';
 import '../../../widgets/my_app_bar.dart';
 import '../../../widgets/search_textfield.dart';
 import '../components/home_icon_tile.dart';
-import '../components/home_section_header.dart';
 import '../components/service_utils.dart';
 import '../controllers/home_controller.dart';
+import '../models/banner_model.dart';
 import '../models/quick_action_model.dart';
+import '../utils/banner_redirect_mapper.dart';
 
 class HomeSearchView extends HookConsumerWidget {
   const HomeSearchView({super.key});
@@ -28,7 +31,41 @@ class HomeSearchView extends HookConsumerWidget {
     final isLoading = useState(false);
     final error = useState<String?>(null);
     final results = useState<List<QuickActionCategory>>([]);
+    final banners = useState<List<BannerModel>>([]);
+    final bannerError = useState<String?>(null);
+    final bannerPage = useState(0);
+    final bannerController = useMemoized(() => PageController(), const []);
     Timer? debounce;
+
+    useEffect(() {
+      Future<void> fetchBanners() async {
+        bannerError.value = null;
+        try {
+          banners.value = await ref
+              .read(homeRepositoryProvider)
+              .fetchExploreAllServicesBanners(lang: 'en');
+        } catch (_) {
+          bannerError.value = 'Failed to load banner.';
+        }
+      }
+
+      Future.microtask(fetchBanners);
+      return null;
+    }, const []);
+
+    useEffect(() {
+      if (banners.value.length < 2) return null;
+      final timer = Timer.periodic(const Duration(seconds: 3), (_) {
+        if (!bannerController.hasClients) return;
+        final next = (bannerPage.value + 1) % banners.value.length;
+        bannerController.animateToPage(
+          next,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
+      });
+      return timer.cancel;
+    }, [banners.value.length]);
 
     useEffect(() {
       void fetch() async {
@@ -59,21 +96,74 @@ class HomeSearchView extends HookConsumerWidget {
       body: Column(
         children: [
           MyAppBar(
-            title: 'Search Services',
+            title: 'All Services',
             showHelp: false,
             onBack: () => Navigator.of(context).pop(),
             onHelp: () {},
           ),
+          const SizedBox(height: 12),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: SearchTextfield(
-              hintText: 'Search Service',
+              hintText: 'Search Services',
               controller: searchController,
               onChange: (value) {
                 query.value = value;
               },
             ),
           ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: banners.value.isNotEmpty
+                  ? SizedBox(
+                      height: 84,
+                      width: double.infinity,
+                      child: PageView.builder(
+                        controller: bannerController,
+                        onPageChanged: (page) => bannerPage.value = page,
+                        itemCount: banners.value.length,
+                        itemBuilder: (_, index) {
+                          final banner = banners.value[index];
+                          return GestureDetector(
+                            onTap: () => BannerRedirectMapper.handle(
+                              context,
+                              banner.redirectUrl,
+                            ),
+                            child: AppNetworkImage(
+                              url: banner.image,
+                              height: 84,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          );
+                        },
+                      ),
+                    )
+                  : Image.asset(
+                      FileConstants.homeBanner1,
+                      height: 84,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+            ),
+          ),
+          if (bannerError.value != null) ...[
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                bannerError.value!,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.red.shade700,
+                    ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
           if (isLoading.value)
             const Center(
               child: SpinKitCircle(
@@ -103,28 +193,43 @@ class HomeSearchView extends HookConsumerWidget {
             )
           else
             Expanded(
-              child: ListView.builder(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                itemCount: results.value.length,
-                itemBuilder: (context, index) {
-                  final category = results.value[index];
-                  return _CategorySection(
-                    category: category,
-                    onServiceTap: (serviceName) {
-                      if (serviceName == 'Credit Card') {
-                        context.push(RouteConstants.creditCardMyCards);
-                      } else if (serviceName == 'Mobile Prepaid') {
-                        context.push(RouteConstants.mobilePrepaid);
-                      } else {
-                        context.push(
-                          RouteConstants.billerListing,
-                          extra: serviceName,
-                        );
-                      }
-                    },
-                  );
-                },
+              child: SafeArea(
+                top: false,
+                child: ListView.builder(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    8,
+                    16,
+                    12 + MediaQuery.of(context).padding.bottom,
+                  ),
+                  itemCount: results.value.length,
+                  itemBuilder: (context, index) {
+                    final category = results.value[index];
+                    return _CategorySection(
+                      category: category,
+                      onServiceTap: (serviceName) {
+                        final normalized = serviceName.trim().toLowerCase();
+                        if (normalized == 'credit card') {
+                          context.push(RouteConstants.creditCardMyCards);
+                        } else if (normalized == 'mobile prepaid') {
+                          context.push(RouteConstants.mobilePrepaid);
+                        } else if (normalized == 'digital gold') {
+                          context
+                              .push('${RouteConstants.digitalGold}?entry=home');
+                        } else if (normalized == 'digital silver') {
+                          context.push(
+                            '${RouteConstants.digitalGold}?metal=silver&entry=home',
+                          );
+                        } else {
+                          context.push(
+                            RouteConstants.billerListing,
+                            extra: serviceName,
+                          );
+                        }
+                      },
+                    );
+                  },
+                ),
               ),
             ),
         ],
@@ -133,7 +238,7 @@ class HomeSearchView extends HookConsumerWidget {
   }
 }
 
-class _CategorySection extends StatelessWidget {
+class _CategorySection extends HookWidget {
   const _CategorySection({
     required this.category,
     required this.onServiceTap,
@@ -144,42 +249,89 @@ class _CategorySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const int columns = 4;
+    const int initialRows = 2;
+    const maxCollapsedItems = columns * initialRows;
+    final canExpand = category.services.length > maxCollapsedItems;
+    final expanded = useState(false);
+
+    useEffect(() {
+      expanded.value = !canExpand;
+      return null;
+    }, [category.category, category.services.length]);
+
+    final visibleServices = canExpand && !expanded.value
+        ? category.services.take(maxCollapsedItems).toList()
+        : category.services;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          HomeSectionHeader(
-            title: category.category,
-            actionLabel: '',
-            onAction: () {},
-            padding: EdgeInsets.zero,
-          ),
-          const SizedBox(height: 12),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final double maxWidth = constraints.maxWidth;
-              const int columns = 4;
-              const double spacing = 12;
-              final double itemWidth =
-                  (maxWidth - (spacing * (columns - 1))) / columns;
-
-              return Wrap(
-                spacing: spacing,
-                runSpacing: 16,
-                children: List.generate(category.services.length, (index) {
-                  final service = category.services[index];
-                  return SizedBox(
-                    width: itemWidth,
-                    child: HomeIconTile(
-                      label: displayServiceName(service.name),
-                      iconUrl: service.icon,
-                      onTap: () => onServiceTap(service.name),
+          InkWell(
+            onTap: canExpand ? () => expanded.value = !expanded.value : null,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      category.category,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
                     ),
+                  ),
+                  if (canExpand)
+                    Icon(
+                      expanded.value
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      size: 26,
+                      color: AppColors.textPrimary,
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(14, 16, 14, 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.lightBorder),
+              ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final double maxWidth = constraints.maxWidth;
+                  const double spacing = 12;
+                  final double itemWidth =
+                      (maxWidth - (spacing * (columns - 1))) / columns;
+
+                  return Wrap(
+                    spacing: spacing,
+                    runSpacing: 18,
+                    children: List.generate(visibleServices.length, (index) {
+                      final service = visibleServices[index];
+                      return SizedBox(
+                        width: itemWidth,
+                        child: HomeIconTile(
+                          label: displayServiceName(service.name),
+                          iconUrl: service.icon,
+                          onTap: () => onServiceTap(service.name),
+                        ),
+                      );
+                    }),
                   );
-                }),
-              );
-            },
+                },
+              ),
+            ),
           ),
         ],
       ),

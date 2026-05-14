@@ -6,10 +6,14 @@ import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
+import '../constants/storage_keys.dart';
 import '../constants/routes_constant.dart';
+import '../firebase/explicit_firebase_options.dart';
 import '../features/profile/repositories/profile_repository.dart';
+import '../utils/utils.dart';
 import '../widgets/k_dialog.dart';
 import 'logger_service.dart';
 import 'notification_badge_service.dart';
@@ -23,7 +27,15 @@ final FlutterLocalNotificationsPlugin _localNotifications =
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  if (Firebase.apps.isEmpty) {
+    if (Platform.isAndroid) {
+      await Firebase.initializeApp(
+        options: ExplicitFirebaseOptions.androidErupiya,
+      );
+    } else {
+      await Firebase.initializeApp();
+    }
+  }
   logger.info('FCM background message: ${message.messageId}');
 }
 
@@ -31,7 +43,9 @@ class PushNotificationService {
   PushNotificationService._();
 
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  static const FlutterSecureStorage _storage = FlutterSecureStorage();
   static String? _latestToken;
+  static String? _lastSyncedToken;
   static bool _initialized = false;
   static bool _permissionsRequested = false;
   static bool _uiReady = false;
@@ -39,6 +53,70 @@ class PushNotificationService {
   static Object? _pendingExtra;
 
   static String? get latestToken => _latestToken;
+
+  static Future<void> _persistToken(String token) async {
+    try {
+      await _storage.write(key: StorageKeys.deviceToken, value: token);
+    } catch (_) {}
+  }
+
+  static bool _isValidToken(String? token) {
+    final t = token?.trim() ?? '';
+    if (t.isEmpty) return false;
+    if (t.toLowerCase() == 'null') return false;
+    if (t.toLowerCase() == 'undefined') return false;
+    return true;
+  }
+
+  /// Ensures FCM is initialized and returns a non-empty token when possible.
+  /// Some backend flows require `device_token`, so callers can await this
+  /// before making requests.
+  static Future<String?> ensureTokenReady({
+    Duration timeout = const Duration(seconds: 3),
+  }) async {
+    if (_isValidToken(_latestToken)) return _latestToken!.trim();
+
+    // Use cached token if available (common on second launch).
+    try {
+      final stored = await _storage.read(key: StorageKeys.deviceToken);
+      if (_isValidToken(stored)) {
+        _latestToken = stored!.trim();
+        unawaited(initialize(requestPermissions: false));
+        return _latestToken;
+      }
+    } catch (_) {}
+
+    try {
+      await initialize(requestPermissions: false);
+    } catch (e, stackTrace) {
+      logger.error(
+        'PushNotificationService.initialize failed while waiting for token',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
+
+    // Try fetching again directly.
+    try {
+      final token = await _messaging.getToken();
+      if (_isValidToken(token)) {
+        _latestToken = token!.trim();
+        await _persistToken(_latestToken!);
+        return _latestToken;
+      }
+    } catch (_) {}
+
+    final startedAt = DateTime.now();
+    while (DateTime.now().difference(startedAt) < timeout) {
+      final token = _latestToken;
+      if (_isValidToken(token)) return token!.trim();
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+    }
+    logger.error(
+      'FCM token unavailable after timeout (initialized=$_initialized)',
+    );
+    return _isValidToken(_latestToken) ? _latestToken!.trim() : null;
+  }
 
   /// Call this once the app's `MaterialApp.router` is mounted (i.e. routing is ready).
   static void markUiReady() {
@@ -54,7 +132,24 @@ class PushNotificationService {
       return;
     }
 
-    await Firebase.initializeApp();
+    try {
+      if (Firebase.apps.isEmpty) {
+        if (Platform.isAndroid) {
+          await Firebase.initializeApp(
+            options: ExplicitFirebaseOptions.androidErupiya,
+          );
+        } else {
+          await Firebase.initializeApp();
+        }
+      }
+    } catch (e, stackTrace) {
+      logger.error(
+        'Firebase.initializeApp failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
     await _initLocalNotifications();
@@ -67,18 +162,29 @@ class PushNotificationService {
       _handleMessageOpenedApp(initialMessage);
     }
 
-    final token = await _messaging.getToken();
+    String? token;
+    try {
+      token = await _messaging.getToken();
+    } catch (e, stackTrace) {
+      logger.error(
+        'FirebaseMessaging.getToken failed',
+        error: e,
+        stackTrace: stackTrace,
+      );
+    }
     final tokenMessage = 'FCM token: $token';
     developer.log(tokenMessage, name: 'PushNotificationService');
     logger.info(tokenMessage);
-    if (token != null && token.isNotEmpty) {
-      _latestToken = token;
-      await _sendTokenToServer(token);
+    if (_isValidToken(token)) {
+      _latestToken = token!.trim();
+      await _persistToken(_latestToken!);
     }
 
     _messaging.onTokenRefresh.listen((newToken) async {
-      _latestToken = newToken;
-      await _sendTokenToServer(newToken);
+      _latestToken = newToken.trim();
+      if (_isValidToken(_latestToken)) {
+        await _persistToken(_latestToken!);
+      }
     });
 
     _initialized = true;
@@ -202,9 +308,17 @@ class PushNotificationService {
 
   static Future<void> _sendTokenToServer(String token) async {
     try {
+      final accessToken = await Utils.getAccessToken();
+      if (accessToken == null || accessToken.trim().isEmpty) {
+        // Avoid calling auth-protected endpoint before login.
+        return;
+      }
+      final trimmed = token.trim();
+      if (trimmed.isEmpty || trimmed == _lastSyncedToken) return;
       final response = await ProfileRepository().updateDeviceToken(token);
       final message =
           'Device token update: ${response.success} - ${response.message}';
+      _lastSyncedToken = trimmed;
       logger.info(message);
       developer.log(message, name: 'PushNotificationService');
     } catch (e, stackTrace) {
@@ -220,6 +334,14 @@ class PushNotificationService {
         stackTrace: stackTrace,
       );
     }
+  }
+
+  /// Call this after login (e.g. on Home screen) to sync the latest device token
+  /// with backend.
+  static Future<void> syncTokenToServerIfLoggedIn() async {
+    final token = _latestToken;
+    if (!_isValidToken(token)) return;
+    await _sendTokenToServer(token!.trim());
   }
 
   static void _handleNotificationTap({

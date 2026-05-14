@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -30,13 +31,6 @@ class OtpVerificationView extends HookConsumerWidget {
     final otpController = useTextEditingController();
     final otpFocusNode = useFocusNode();
     final autoFilledCode = useState<String?>(null);
-
-    useEffect(() {
-      return () {
-        otpController.dispose();
-        otpFocusNode.dispose();
-      };
-    }, const []);
 
     useListenable(otpController);
 
@@ -112,7 +106,7 @@ class OtpVerificationView extends HookConsumerWidget {
     }
 
     void applyOtpCode(String code) {
-      final digits = code.replaceAll(RegExp(r'\\D'), '');
+      final digits = code.replaceAll(RegExp(r'\D'), '');
       if (digits.isEmpty) return;
       final trimmed = digits.length > 6 ? digits.substring(0, 6) : digits;
       debugPrint('OTP autofill received: $trimmed');
@@ -123,14 +117,39 @@ class OtpVerificationView extends HookConsumerWidget {
     }
 
     useEffect(() {
-      final sub = SmsAutoFill().code.listen((code) {
-        debugPrint('OTP SMS code stream: $code');
+      var isDisposed = false;
+      final autoFill = SmsAutoFill();
+      log('init SMS autofill', name: 'OtpVerificationView');
+      final sub = autoFill.code.listen((code) {
+        if (isDisposed) return;
+        log('OTP SMS code stream: $code', name: 'OtpVerificationView');
         applyOtpCode(code);
       });
-      SmsAutoFill().listenForCode();
+
+      () async {
+        try {
+          final signature = await autoFill.getAppSignature;
+          log(
+            'SMS Retriever app signature: ${signature.isEmpty ? "<empty>" : signature}',
+            name: 'OtpVerificationView',
+          );
+          await autoFill.listenForCode(smsCodeRegexPattern: r'\d{6}');
+          log('listenForCode started', name: 'OtpVerificationView');
+        } catch (e, st) {
+          log(
+            'OTP autofill init failed',
+            name: 'OtpVerificationView',
+            error: e,
+            stackTrace: st,
+          );
+        }
+      }();
+
       return () {
+        isDisposed = true;
         sub.cancel();
-        SmsAutoFill().unregisterListener();
+        autoFill.unregisterListener();
+        log('dispose SMS autofill', name: 'OtpVerificationView');
       };
     }, const []);
 

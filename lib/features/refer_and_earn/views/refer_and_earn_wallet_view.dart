@@ -30,7 +30,7 @@ class ReferAndEarnWalletView extends HookWidget {
       bottomNavigationBar: SafeArea(
         top: false,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
+          padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 12.h),
           child: const ReferralShareActions(),
         ),
       ),
@@ -40,9 +40,10 @@ class ReferAndEarnWalletView extends HookWidget {
             ReferAndEarnAppBar(
               title: 'Wallet',
               onHelp: () {},
-              height: 340,
+              height: 280,
               body: Column(
                 children: [
+                  SizedBox(height: 32.h),
                   _WalletHeaderBalance(snapshot: snapshot),
                   SizedBox(height: 14.h),
                   InkWell(
@@ -474,6 +475,7 @@ class _SegmentButton extends HookWidget {
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: active ? Colors.white : AppColors.textPrimary,
                     fontWeight: FontWeight.w700,
+                    fontSize: 12,
                   ),
             ),
           ],
@@ -665,9 +667,10 @@ class _WalletHeaderBalance extends HookWidget {
       children: [
         Text(
           'Total Balance',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 color: Colors.white.withOpacity(0.9),
                 fontWeight: FontWeight.w600,
+                fontSize: 18,
               ),
         ),
         SizedBox(height: 8.h),

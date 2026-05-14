@@ -1,15 +1,19 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:pinput/pinput.dart';
 
 import '../../../constants/app_colors.dart';
+import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
 import '../../../widgets/app_snackbar.dart';
+import '../../../widgets/blocking_loading_overlay.dart';
 import '../../../widgets/custom_elevated_button.dart';
-import '../components/pin_input_row.dart';
 import '../controllers/auth_controller.dart';
 
 class PinSetupView extends HookConsumerWidget {
@@ -18,36 +22,33 @@ class PinSetupView extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authControllerProvider);
-    final newPinControllers =
-        useMemoized(() => List.generate(4, (_) => TextEditingController()));
-    final confirmControllers =
-        useMemoized(() => List.generate(4, (_) => TextEditingController()));
-    final newPinFocus = useMemoized(() => List.generate(4, (_) => FocusNode()));
-    final confirmFocus =
-        useMemoized(() => List.generate(4, (_) => FocusNode()));
+    final newPinController = useTextEditingController();
+    final confirmPinController = useTextEditingController();
+    final newPinFocus = useFocusNode();
+    final confirmPinFocus = useFocusNode();
+    final errorText = useState<String?>(null);
 
     useEffect(() {
       return () {
-        for (final c in [...newPinControllers, ...confirmControllers]) {
-          c.dispose();
-        }
-        for (final f in [...newPinFocus, ...confirmFocus]) {
-          f.dispose();
-        }
+        newPinController.dispose();
+        confirmPinController.dispose();
+        newPinFocus.dispose();
+        confirmPinFocus.dispose();
       };
     }, const []);
 
     Future<void> handleSubmit() async {
-      final newPin = newPinControllers.map((c) => c.text).join();
-      final confirmPin = confirmControllers.map((c) => c.text).join();
+      final newPin = newPinController.text.trim();
+      final confirmPin = confirmPinController.text.trim();
       if (newPin.length != 4 || confirmPin.length != 4) {
-        AppSnackbar.show('Please enter a 4-digit pin');
+        errorText.value = 'Please enter a valid 4-digit MPIN.';
         return;
       }
       if (newPin != confirmPin) {
-        AppSnackbar.show('Pins do not match');
+        errorText.value = 'MPIN does not match.';
         return;
       }
+      errorText.value = null;
       final message =
           await ref.read(authControllerProvider.notifier).setPin(pin: newPin);
       if (message != null) {
@@ -65,66 +66,188 @@ class PinSetupView extends HookConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: AppColors.onboardingBackground,
-        ),
+      body: BlockingLoadingOverlay(
+        isLoading: authState.isSubmitting,
+        message: 'Setting your MPIN...',
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Add a 4-digit PIN',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w700,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(8.w, 6.h, 16.w, 0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      color: AppColors.textPrimary,
+                      onPressed: () => context.pop(),
+                    ),
+                    const Spacer(),
+                    Image.asset(
+                      FileConstants.bharatConnectColor,
+                      height: 18.h,
+                      fit: BoxFit.contain,
+                    ),
+                    SizedBox(width: 6.w),
+                    IconButton(
+                      icon: const Icon(Icons.help_outline),
+                      color: AppColors.textPrimary,
+                      onPressed: () {},
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 8.h),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 16.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Create MPIN',
+                        style:
+                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w800,
+                                ),
                       ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Enhance your security with a personal access code.\nUse this PIN for quick and safe access to your E-Rupaiya wallet.',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppColors.textPrimary.withOpacity(0.8),
+                      SizedBox(height: 8.h),
+                      Text(
+                        'Set a 4-digit MPIN to secure your E-Rupaiya wallet.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: AppColors.textPrimary.withOpacity(0.7),
+                              height: 1.4,
+                            ),
                       ),
-                ),
-                const SizedBox(height: 32),
-                Text(
-                  'Add New PIN',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+                      SizedBox(height: 18.h),
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(14.w),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16.r),
+                          border: Border.all(color: const Color(0xFFD6D6D6)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Add New PIN',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                            SizedBox(height: 10.h),
+                            Pinput(
+                              controller: newPinController,
+                              focusNode: newPinFocus,
+                              length: 4,
+                              obscureText: true,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly
+                              ],
+                              autofocus: true,
+                              onChanged: (_) => errorText.value = null,
+                              onCompleted: (_) =>
+                                  confirmPinFocus.requestFocus(),
+                              defaultPinTheme: PinTheme(
+                                width: 52.w,
+                                height: 52.w,
+                                textStyle: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  border: Border.all(
+                                    color: const Color(0xFFD6D6D6),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 16.h),
+                            Text(
+                              'Re-enter your MPIN to confirm.',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                            SizedBox(height: 10.h),
+                            Pinput(
+                              controller: confirmPinController,
+                              focusNode: confirmPinFocus,
+                              length: 4,
+                              obscureText: true,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly
+                              ],
+                              onChanged: (_) => errorText.value = null,
+                              onCompleted: (_) => handleSubmit(),
+                              defaultPinTheme: PinTheme(
+                                width: 52.w,
+                                height: 52.w,
+                                textStyle: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  border: Border.all(
+                                    color: const Color(0xFFD6D6D6),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            if (errorText.value != null &&
+                                errorText.value!.isNotEmpty) ...[
+                              SizedBox(height: 10.h),
+                              Text(
+                                errorText.value!,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
-                ),
-                const SizedBox(height: 12),
-                PinInputRow(
-                  controllers: newPinControllers,
-                  focusNodes: newPinFocus,
-                ),
-                const SizedBox(height: 28),
-                Text(
-                  'Confirm New PIN',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+                      SizedBox(height: 20.h),
+                      CustomElevatedButton(
+                        onPressed: authState.isSubmitting ? null : handleSubmit,
+                        label: 'Confirm',
+                        uppercaseLabel: false,
+                        showArrow: false,
+                        height: 44.h,
                       ),
+                      SizedBox(height: 8.h),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 12),
-                PinInputRow(
-                  controllers: confirmControllers,
-                  focusNodes: confirmFocus,
-                ),
-                const Spacer(),
-                CustomElevatedButton(
-                  onPressed: authState.isSubmitting ? null : handleSubmit,
-                  label: authState.isSubmitting ? 'Saving...' : 'Confirm',
-                  showArrow: false,
-                  uppercaseLabel: false,
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

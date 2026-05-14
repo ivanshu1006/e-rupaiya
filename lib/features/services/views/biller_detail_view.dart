@@ -7,6 +7,7 @@ import 'package:e_rupaiya/features/paymentgateway/razorpay_guard.dart';
 import 'package:e_rupaiya/features/paymentgateway/razorpay_service.dart';
 import 'package:e_rupaiya/features/services/models/biller_detail_state.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -26,6 +27,7 @@ import '../../../widgets/date_picker_field.dart';
 import '../../../widgets/k_dialog.dart';
 import '../../../widgets/my_app_bar.dart';
 import '../../../widgets/param_dropdown_field.dart';
+import '../../../widgets/payment_success_flow.dart';
 import '../../../widgets/search_textfield.dart';
 import '../../mobile_prepaid/components/payment_bottom_sheet.dart';
 import '../../mobile_prepaid/controllers/contacts_cache_controller.dart';
@@ -213,6 +215,19 @@ class BillerDetailView extends HookConsumerWidget {
                 },
               ),
             );
+          } else if (isOnInputForm) {
+            // Fetch-bill failures should be shown as a friendly popup instead
+            // of a snackbar since we support many billers/services.
+            KDialog.instance.openDialog(
+              barrierDismissible: true,
+              dialog: _BillFetchFailedDialog(
+                message: message,
+                onContinue: () {
+                  Navigator.of(context).pop();
+                  controller.clearBill();
+                },
+              ),
+            );
           } else {
             AppSnackbar.show(
               message,
@@ -226,6 +241,12 @@ class BillerDetailView extends HookConsumerWidget {
     final totalOutstanding =
         bill == null ? null : _resolveTotalOutstanding(bill);
     final minimumDue = bill == null ? null : _resolveMinimumDue(bill);
+    final isFastTag = (() {
+      bool hasFastTag(String? v) =>
+          (v ?? '').toLowerCase().replaceAll('-', '').contains('fastag') ||
+          (v ?? '').toLowerCase().replaceAll('-', '').contains('fasttag');
+      return hasFastTag(detail?.billerCategoryName) || hasFastTag(biller?.billerName);
+    })();
 
     // Set bill amount when fetched
     useEffect(() {
@@ -686,6 +707,7 @@ class BillerDetailView extends HookConsumerWidget {
                               totalOutstanding: totalOutstanding,
                               minimumDue: minimumDue,
                               isCreditCardFlow: isCreditCardFlow,
+                              allowCustomAmount: isFastTag,
                             ),
                           ]
 
@@ -758,7 +780,7 @@ class BillerDetailView extends HookConsumerWidget {
                               return CustomElevatedButton(
                                 onPressed: shouldDisablePay
                                     ? null
-                                    : () {
+                                    : () async {
                                         if (showSubscriptionSummary) {
                                           final amountToPay =
                                               subscriptionAmount ?? 0;
@@ -776,46 +798,193 @@ class BillerDetailView extends HookConsumerWidget {
                                           )) {
                                             return;
                                           }
-                                          RazorpayService.instance.openCheckout(
+                                          final paymentType =
+                                              (args?.paymentType ?? '')
+                                                      .trim()
+                                                      .isNotEmpty
+                                                  ? args!.paymentType!.trim()
+                                                  : 'Subscription';
+                                          final order = await controller
+                                              .createPayAllServicesOrder(
+                                            amount: amountToPay,
+                                            paymentType: paymentType,
+                                            walletAmount: 0,
+                                            razorpayAmount: amountToPay,
+                                            isCreditCardFlow: isCreditCardFlow,
+                                          );
+                                          if (!context.mounted) return;
+                                          if (order == null ||
+                                              order.orderId.isEmpty ||
+                                              order.key.isEmpty ||
+                                              order.transactionRef.isEmpty) {
+                                            AppSnackbar.show(
+                                              ref
+                                                      .read(
+                                                        billerDetailControllerProvider,
+                                                      )
+                                                      .payErrorMessage ??
+                                                  'Unable to start payment. Please try again.',
+                                              type: AppSnackbarType.error,
+                                            );
+                                            return;
+                                          }
+
+                                          Future<void> verifyAndShowResult({
+                                            required String fallbackMessage,
+                                          }) async {
+                                            if (!context.mounted) return;
+                                            showDialog<void>(
+                                              context: context,
+                                              barrierDismissible: false,
+                                              builder: (dialogContext) {
+                                                return const PopScope(
+                                                  canPop: false,
+                                                  child: Center(
+                                                    child:
+                                                        CircularProgressIndicator(),
+                                                  ),
+                                                );
+                                              },
+                                            );
+                                            final status = await controller
+                                                .verifyPayAllServicesStatus(
+                                              transactionRef:
+                                                  order.transactionRef,
+                                            );
+                                            if (context.mounted) {
+                                              Navigator.of(
+                                                context,
+                                                rootNavigator: true,
+                                              ).pop();
+                                            }
+                                            if (!context.mounted) return;
+                                            final normalized = (status?.status
+                                                    .trim()
+                                                    .toUpperCase() ??
+                                                '');
+                                            final isSuccess =
+                                                normalized == 'SUCCESS';
+                                            final isPending =
+                                                normalized == 'PENDING';
+                                            final title = isSuccess
+                                                ? 'Payment Successful!'
+                                                : (isPending
+                                                    ? 'Payment Pending'
+                                                    : 'Payment Failed!');
+                                            final subtitle = status?.message
+                                                        .trim()
+                                                        .isNotEmpty ==
+                                                    true
+                                                ? status!.message
+                                                : fallbackMessage;
+                                            final txId = status
+                                                    ?.transactionId
+                                                    .trim()
+                                                    .isNotEmpty ==
+                                                true
+                                                ? status!.transactionId.trim()
+                                                : order.transactionRef;
+
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    PaymentResultScreen(
+                                                  title: title,
+                                                  subtitle: subtitle,
+                                                  details: [
+                                                    PaymentDetailItem(
+                                                      label: 'Amount',
+                                                      value:
+                                                          '₹ ${amountToPay.toStringAsFixed(2)}',
+                                                    ),
+                                                    PaymentDetailItem(
+                                                      label: 'To',
+                                                      value: name,
+                                                    ),
+                                                    PaymentDetailItem(
+                                                      label: 'Transaction ID',
+                                                      value: '#$txId',
+                                                      copyable: true,
+                                                    ),
+                                                  ],
+                                                  continueText: 'Continue',
+                                                  onContinue: (c) =>
+                                                      Navigator.of(c).pop(),
+                                                  showFailureActions:
+                                                      !isSuccess,
+                                                  showBackButton: !isSuccess,
+                                                  statusIcon: isSuccess
+                                                      ? Icons.check
+                                                      : (isPending
+                                                          ? Icons
+                                                              .hourglass_top
+                                                          : Icons.close),
+                                                  statusIconColor:
+                                                      Colors.white,
+                                                  statusIconBorderColor:
+                                                      Colors.white,
+                                                  headerGradientColors:
+                                                      isSuccess
+                                                          ? const [
+                                                              Color(
+                                                                0xFF0D5C32,
+                                                              ),
+                                                              Color(
+                                                                0xFF0E7340,
+                                                              )
+                                                            ]
+                                                          : (isPending
+                                                              ? const [
+                                                                  Color(
+                                                                    0xFFF59E0B,
+                                                                  ),
+                                                                  Color(
+                                                                    0xFFD97706,
+                                                                  )
+                                                                ]
+                                                              : const [
+                                                                  Color(
+                                                                    0xFFB91C1C,
+                                                                  ),
+                                                                  Color(
+                                                                    0xFFDC2626,
+                                                                  )
+                                                                ]),
+                                                ),
+                                              ),
+                                            );
+                                          }
+
+                                          await RazorpayService.instance
+                                              .openCheckout(
                                             amount: amountToPay,
                                             name: name,
                                             description:
                                                 'Subscription bill payment',
+                                            orderId: order.orderId,
+                                            keyOverride: order.key,
                                             prefill: {
                                               if (mobile.isNotEmpty)
                                                 'contact': mobile,
                                             },
-                                            onSuccess: (paymentId) async {
-                                              if (paymentId.isEmpty) {
-                                                AppSnackbar.show(
-                                                  'Payment succeeded but payment id is missing. Please try again.',
-                                                  type: AppSnackbarType.error,
-                                                );
-                                                return;
-                                              }
-
-                                              // If the bill is available we can complete BBPS payment; otherwise
-                                              // we only allow Razorpay checkout for UI testing.
-                                              await controller.payBill(
-                                                amount: amountToPay,
-                                                referenceId: paymentId,
-                                                isCreditCardFlow:
-                                                    isCreditCardFlow,
-                                                paymentTypeOverride:
-                                                    args?.paymentType,
-                                              );
-
-                                              AppSnackbar.show(
-                                                'Payment successful',
-                                                type: AppSnackbarType.success,
+                                            onSuccess: (_) async {
+                                              await verifyAndShowResult(
+                                                fallbackMessage:
+                                                    'Your payment was completed successfully.',
                                               );
                                             },
-                                            onFailure: (message) {
-                                              AppSnackbar.show(
-                                                message.isEmpty
-                                                    ? 'Payment failed. Please try again.'
-                                                    : message,
-                                                type: AppSnackbarType.error,
+                                            onFailure: (message) async {
+                                              await verifyAndShowResult(
+                                                fallbackMessage:
+                                                    message.isEmpty
+                                                        ? 'Payment failed. Please try again.'
+                                                        : message,
+                                              );
+                                            },
+                                            onExternalWallet: (_) async {
+                                              await verifyAndShowResult(
+                                                fallbackMessage:
+                                                    'We are verifying your payment. Please wait a moment.',
                                               );
                                             },
                                           );
@@ -1355,7 +1524,92 @@ class _NoBillDueDialog extends StatelessWidget {
                   padding: EdgeInsets.symmetric(vertical: 14),
                   child: Text(
                     'Got it',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.white),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BillFetchFailedDialog extends StatelessWidget {
+  const _BillFetchFailedDialog({
+    required this.message,
+    required this.onContinue,
+  });
+
+  final String message;
+  final VoidCallback onContinue;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 65,
+              height: 65,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF1EB),
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFF2B9A6)),
+              ),
+              child: const Icon(
+                Icons.info_outline_rounded,
+                color: AppColors.primary,
+                size: 44,
+              ),
+            ),
+            // const SizedBox(height: 16),
+            // Text(
+            //   'Unable to fetch bill',
+            //   style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            //         fontWeight: FontWeight.bold,
+            //         color: AppColors.textPrimary,
+            //       ),
+            // ),
+            const SizedBox(height: 8),
+            Text(
+              message.trim().isEmpty
+                  ? 'We couldn\u2019t fetch your bill right now. Please recheck the details and try again in a moment.'
+                  : message.trim(),
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textPrimary.withOpacity(0.75),
+                  ),
+            ),
+            const SizedBox(height: 22),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: onContinue,
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 14),
+                  child: Text(
+                    'Got it',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.white,
+                    ),
                   ),
                 ),
               ),
@@ -1647,6 +1901,7 @@ class _CompactBillSection extends StatelessWidget {
     required this.totalOutstanding,
     required this.minimumDue,
     required this.isCreditCardFlow,
+    this.allowCustomAmount = false,
   });
 
   final BillResponse bill;
@@ -1658,6 +1913,7 @@ class _CompactBillSection extends StatelessWidget {
   final double? totalOutstanding;
   final double? minimumDue;
   final bool isCreditCardFlow;
+  final bool allowCustomAmount;
 
   @override
   Widget build(BuildContext context) {
@@ -1750,13 +2006,20 @@ class _CompactBillSection extends StatelessWidget {
         TextField(
           controller: billAmountController,
           keyboardType: TextInputType.number,
-          readOnly: !isCreditCardFlow,
+          readOnly: !(isCreditCardFlow || allowCustomAmount),
+          onTap: () {
+            // Make it easy to replace the prefilled amount (e.g. FASTag).
+            billAmountController.selection = TextSelection(
+              baseOffset: 0,
+              extentOffset: billAmountController.text.length,
+            );
+          },
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+          ],
           onChanged: (value) {
             if (selectedAmountType != _PaymentAmountType.custom) {
               onAmountTypeChanged(_PaymentAmountType.custom);
-            }
-            if (billAmountController.text != value) {
-              billAmountController.text = value;
             }
           },
           onEditingComplete: () {

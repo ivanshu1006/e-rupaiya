@@ -569,6 +569,8 @@ class HelpTopicDetailView extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
+    final selectedReaction = useState<_HelpfulnessReaction?>(null);
+
     Future<void> openVideo() async {
       final raw = topic.video?.trim();
       final key = topic.videoKey;
@@ -675,12 +677,19 @@ class HelpTopicDetailView extends HookWidget {
                     children: [
                       _ReactionButton(
                         icon: Icons.thumb_up_alt_outlined,
-                        onTap: () {},
+                        isSelected:
+                            selectedReaction.value == _HelpfulnessReaction.up,
+                        onTap: () {
+                          selectedReaction.value = _HelpfulnessReaction.up;
+                        },
                       ),
                       SizedBox(width: 16.w),
                       _ReactionButton(
                         icon: Icons.thumb_down_alt_outlined,
+                        isSelected:
+                            selectedReaction.value == _HelpfulnessReaction.down,
                         onTap: () {
+                          selectedReaction.value = _HelpfulnessReaction.down;
                           KDialog.instance.openSheet(
                             dialog: const _FeedbackSheet(),
                           );
@@ -698,13 +707,17 @@ class HelpTopicDetailView extends HookWidget {
   }
 }
 
+enum _HelpfulnessReaction { up, down }
+
 class _ReactionButton extends StatelessWidget {
   const _ReactionButton({
     required this.icon,
+    required this.isSelected,
     required this.onTap,
   });
 
   final IconData icon;
+  final bool isSelected;
   final VoidCallback onTap;
 
   @override
@@ -718,12 +731,16 @@ class _ReactionButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(19.r),
-          border: Border.all(color: AppColors.lightBorder),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.lightBorder,
+          ),
         ),
         child: Icon(
           icon,
           size: 18,
-          color: AppColors.textPrimary.withOpacity(0.7),
+          color: isSelected
+              ? AppColors.primary
+              : AppColors.textPrimary.withOpacity(0.7),
         ),
       ),
     );
@@ -736,13 +753,6 @@ class _FeedbackSheet extends HookWidget {
   @override
   Widget build(BuildContext context) {
     final controller = useTextEditingController();
-    final text = useState('');
-
-    useEffect(() {
-      void listener() => text.value = controller.text;
-      controller.addListener(listener);
-      return () => controller.removeListener(listener);
-    }, [controller]);
 
     return Padding(
       padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 16.h),
@@ -777,11 +787,11 @@ class _FeedbackSheet extends HookWidget {
           SizedBox(height: 6.h),
           TextField(
             controller: controller,
-            maxLength: 400,
-            maxLines: 4,
+            minLines: 4,
+            maxLines: null,
+            keyboardType: TextInputType.multiline,
             decoration: InputDecoration(
               hintText: 'Feedback',
-              counterText: '${text.value.length}/400',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12.r),
                 borderSide: const BorderSide(color: AppColors.lightBorder),

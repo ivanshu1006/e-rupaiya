@@ -22,19 +22,29 @@ class RecentRechargePayments extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(0.w, 8.h, 0.w, 8.h),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _Header(onViewAll: onViewAll),
-          SizedBox(height: 12.h),
-          recentPayments.when(
-            loading: () => const _RecentPaymentsShimmer(),
-            error: (_, __) => const SizedBox.shrink(),
-            data: (items) {
-              if (items.isEmpty) return const SizedBox.shrink();
-              return SizedBox(
+    return recentPayments.when(
+      loading: () => Container(
+        padding: EdgeInsets.fromLTRB(0.w, 8.h, 0.w, 8.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _Header(onViewAll: onViewAll),
+            SizedBox(height: 12.h),
+            const _RecentPaymentsShimmer(),
+          ],
+        ),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (items) {
+        if (items.isEmpty) return const SizedBox.shrink();
+        return Container(
+          padding: EdgeInsets.fromLTRB(0.w, 8.h, 0.w, 8.h),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _Header(onViewAll: onViewAll),
+              SizedBox(height: 12.h),
+              SizedBox(
                 height: 75,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
@@ -46,11 +56,11 @@ class RecentRechargePayments extends StatelessWidget {
                   separatorBuilder: (_, __) => SizedBox(width: 12.w),
                   itemCount: items.length,
                 ),
-              );
-            },
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

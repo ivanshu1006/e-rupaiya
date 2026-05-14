@@ -9,26 +9,33 @@ class HomeShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SliverToBoxAdapter(
-      child: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.cardShadow,
-                blurRadius: 20,
-                offset: Offset(0, -10),
+    return SliverFillRemaining(
+      hasScrollBody: false,
+      child: ColoredBox(
+        color: Colors.white,
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.cardShadow,
+                    blurRadius: 20,
+                    offset: Offset(0, -10),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: _ShimmerBody(),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: _ShimmerBody(),
+              ),
+            ),
           ),
         ),
       ),

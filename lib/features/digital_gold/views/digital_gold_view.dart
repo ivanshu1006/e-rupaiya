@@ -25,15 +25,26 @@ class DigitalGoldView extends HookConsumerWidget {
     super.key,
     this.mode = GoldTradeMode.buy,
     this.metal = DigitalMetal.gold,
+    this.validateRegistration = false,
   });
 
   final GoldTradeMode mode;
   final DigitalMetal metal;
+  final bool validateRegistration;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isSell = mode == GoldTradeMode.sell;
     final theme = DigitalMetalTheme.of(metal);
+    Future<bool> handleBack() async {
+      if (context.canPop()) {
+        context.pop();
+        return false;
+      }
+      context.go(RouteConstants.home);
+      return false;
+    }
+
     final isBuyingInRupees = useState<bool>(true);
     final amountController =
         useTextEditingController(text: isSell ? '2000' : '500');
@@ -64,6 +75,8 @@ class DigitalGoldView extends HookConsumerWidget {
     final error = useState<String?>(null);
     final pollTimer = useRef<Timer?>(null);
     final inFlight = useRef<bool>(false);
+    final didRedirectToDetails = useRef<bool>(false);
+    final isProceeding = useState<bool>(false);
 
     String formatAmount(String text) {
       final parsed = double.tryParse(text) ?? 0.0;
@@ -90,6 +103,17 @@ class DigitalGoldView extends HookConsumerWidget {
           quantity: quantityValue(amountText),
           metalType: metalType(),
         );
+        if (validateRegistration &&
+            !didRedirectToDetails.value &&
+            !response.isUserRegistered) {
+          didRedirectToDetails.value = true;
+          pollTimer.value?.cancel();
+          if (!context.mounted) return;
+          context.push(
+            '${RouteConstants.digitalGoldDetails}?metal=${theme.queryValue}&postRegToGold=1',
+          );
+          return;
+        }
         if (preview.value != response) {
           preview.value = response;
         }
@@ -125,175 +149,193 @@ class DigitalGoldView extends HookConsumerWidget {
         : '=₹${rupeeConversion.isNaN ? 0 : rupeeConversion.toStringAsFixed(2)}';
     final prefixText = isBuyingInRupees.value ? '₹' : '';
 
-    return Scaffold(
-      backgroundColor: theme.pageBackground,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: theme.buyGradient,
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        handleBack();
+      },
+      child: Scaffold(
+        backgroundColor: theme.pageBackground,
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: theme.buyGradient,
+                ),
               ),
             ),
-          ),
-          SafeArea(
-            bottom: false,
-            child: Container(
-              color: Colors.transparent,
-              child: Column(
-                children: [
-                  GoldHeader(
-                    title: isSell ? theme.sellTitle : theme.buyTitle,
-                    onBack: () => context.pop(),
-                    onHelp: () {},
-                  ),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(16.w, 6.h, 16.w, 0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          GestureDetector(
-                            onTap: () => context.push(
-                              '${RouteConstants.digitalGoldLocker}?metal=${theme.queryValue}',
+            SafeArea(
+              bottom: false,
+              child: Container(
+                color: Colors.transparent,
+                child: Column(
+                  children: [
+                    GoldHeader(
+                      title: isSell ? theme.sellTitle : theme.buyTitle,
+                      onBack: () {
+                        handleBack();
+                      },
+                      onHelp: () {},
+                    ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: EdgeInsets.fromLTRB(16.w, 6.h, 16.w, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            GestureDetector(
+                              onTap: () => context.push(
+                                '${RouteConstants.digitalGoldLocker}?metal=${theme.queryValue}',
+                              ),
+                              child: GoldBalanceCard(
+                                balance: '₹${balanceValue.toStringAsFixed(0)}',
+                                // changeText: '↑ ₹50(10%)',
+                                changeText: '',
+                                backgroundColor: theme.balanceCardColor,
+                                label: theme.balanceLabel,
+                                borderColor: metal == DigitalMetal.silver
+                                    ? Colors.white
+                                    : const Color(0xffFFBF2B),
+                              ),
                             ),
-                            child: GoldBalanceCard(
-                              balance: '₹${balanceValue.toStringAsFixed(0)}',
-                              // changeText: '↑ ₹50(10%)',
-                              changeText: '',
-                              backgroundColor: theme.balanceCardColor,
-                              label: theme.balanceLabel,
-                              borderColor: metal == DigitalMetal.silver
-                                  ? Colors.white
-                                  : const Color(0xffFFBF2B),
+                            SizedBox(height: 16.h),
+                            GoldProviderSection(
+                              title: isSell
+                                  ? 'Selling To MMTC-PAMP'
+                                  : 'Buying From MMTC-PAMP',
+                              subtitle: theme.providerSubtitle,
+                              showChevron: isSell,
                             ),
-                          ),
-                          SizedBox(height: 16.h),
-                          GoldProviderSection(
-                            title: isSell
-                                ? 'Selling To MMTC-PAMP'
-                                : 'Buying From MMTC-PAMP',
-                            subtitle: theme.providerSubtitle,
-                            showChevron: isSell,
-                          ),
-                          SizedBox(height: 16.h),
-                          GoldBuyCard(
-                            isBuyingInRupees: isBuyingInRupees.value,
-                            onUnitChanged: (value) {
-                              isBuyingInRupees.value = value;
-                              if (value) {
-                                amountController.text = '500';
-                              } else {
-                                amountController.text = '0.5';
-                              }
-                            },
-                            amountController: amountController,
-                            quickAmounts: quickAmounts,
-                            onAmountSelected: (value) {
-                              if (isSell) {
-                                amountController.text = value.toString();
+                            SizedBox(height: 16.h),
+                            GoldBuyCard(
+                              isBuyingInRupees: isBuyingInRupees.value,
+                              onUnitChanged: (value) {
+                                isBuyingInRupees.value = value;
+                                if (value) {
+                                  amountController.text = '500';
+                                } else {
+                                  amountController.text = '0.5';
+                                }
+                              },
+                              amountController: amountController,
+                              quickAmounts: quickAmounts,
+                              onAmountSelected: (value) {
+                                if (isSell) {
+                                  amountController.text = value.toString();
+                                  return;
+                                }
+                                if (isBuyingInRupees.value) {
+                                  amountController.text = value.toString();
+                                } else {
+                                  final grams = value * 0.5;
+                                  amountController.text =
+                                      grams.toStringAsFixed(1);
+                                }
+                              },
+                              leftToggleLabel:
+                                  isSell ? 'Sell In Rupees' : 'Buy In Rupees',
+                              rightToggleLabel:
+                                  isSell ? 'Sell In Grams' : 'Buy In Grams',
+                              priceText: isSell
+                                  ? 'Selling Price: ₹${priceValue.toStringAsFixed(2)}/G + 3% GST'
+                                  : 'Buy Price: ₹${priceValue.toStringAsFixed(2)}/G + 3% GST',
+                              trailingText: trailingText,
+                              cardColor: Colors.white,
+                              chipGradient: theme.quickChipGradient,
+                              toggleActiveColor: theme.toggleActiveColor,
+                              prefixText: prefixText,
+                            ),
+                            if (error.value != null) ...[
+                              SizedBox(height: 10.h),
+                              Text(
+                                error.value!.replaceFirst('Exception: ', ''),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ],
+                            SizedBox(height: 24.h),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
+                        child: GoldProceedButton(
+                          label: isSell ? 'Sell Now' : 'Proceed',
+                          isLoading: isProceeding.value,
+                          onPressed: () async {
+                            if (isProceeding.value) return;
+                            isProceeding.value = true;
+                            try {
+                              await fetchPreview(silent: false);
+                              final lastError =
+                                  error.value?.toLowerCase() ?? '';
+                              if (lastError.contains('kyc not completed')) {
+                                AppSnackbar.show(
+                                  'Please complete kyc first',
+                                  type: AppSnackbarType.error,
+                                );
+                                context.push(RouteConstants.kycVerification);
                                 return;
                               }
-                              if (isBuyingInRupees.value) {
-                                amountController.text = value.toString();
-                              } else {
-                                final grams = value * 0.5;
-                                amountController.text =
-                                    grams.toStringAsFixed(1);
+                              final data = preview.value;
+                              if (data == null) return;
+                              if (!data.kycStatus) {
+                                AppSnackbar.show(
+                                  'Please complete kyc first',
+                                  type: AppSnackbarType.error,
+                                );
+                                context.push(RouteConstants.kycVerification);
+                                return;
                               }
-                            },
-                            leftToggleLabel:
-                                isSell ? 'Sell In Rupees' : 'Buy In Rupees',
-                            rightToggleLabel:
-                                isSell ? 'Sell In Grams' : 'Buy In Grams',
-                            priceText: isSell
-                                ? 'Selling Price: ₹${priceValue.toStringAsFixed(2)}/G + 3% GST'
-                                : 'Buy Price: ₹${priceValue.toStringAsFixed(2)}/G + 3% GST',
-                            trailingText: trailingText,
-                            cardColor: Colors.white,
-                            chipGradient: theme.quickChipGradient,
-                            toggleActiveColor: theme.toggleActiveColor,
-                            prefixText: prefixText,
-                          ),
-                          if (error.value != null) ...[
-                            SizedBox(height: 10.h),
-                            Text(
-                              error.value!.replaceFirst('Exception: ', ''),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                            ),
-                          ],
-                          SizedBox(height: 24.h),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SafeArea(
-                    top: false,
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
-                      child: GoldProceedButton(
-                        label: isSell ? 'Sell Now' : 'Proceed',
-                        onPressed: () async {
-                          await fetchPreview(silent: false);
-                          final lastError = error.value?.toLowerCase() ?? '';
-                          if (lastError.contains('kyc not completed')) {
-                            AppSnackbar.show(
-                              'Please complete kyc first',
-                              type: AppSnackbarType.error,
-                            );
-                            context.push(RouteConstants.kycVerification);
-                            return;
-                          }
-                          final data = preview.value;
-                          if (data == null) return;
-                          if (!data.kycStatus) {
-                            AppSnackbar.show(
-                              'Please complete kyc first',
-                              type: AppSnackbarType.error,
-                            );
-                            context.push(RouteConstants.kycVerification);
-                            return;
-                          }
 
-                          if (data.isUserRegistered) {
-                            KDialog.instance.openSheet(
-                              dialog: GoldPaymentSummarySheet(
-                                amount: data.totalAmount,
-                                preview: data,
-                                metal: metal,
-                                onBuyNow: () {
-                                  context.push(
-                                    '${RouteConstants.digitalGoldSuccess}?metal=${theme.queryValue}',
-                                  );
+                              if (data.isUserRegistered) {
+                                KDialog.instance.openSheet(
+                                  dialog: GoldPaymentSummarySheet(
+                                    amount: data.totalAmount,
+                                    preview: data,
+                                    metal: metal,
+                                    onBuyNow: () {
+                                      context.push(
+                                        '${RouteConstants.digitalGoldSuccess}?metal=${theme.queryValue}',
+                                      );
+                                    },
+                                  ),
+                                );
+                                return;
+                              }
+                              final parsed =
+                                  int.tryParse(amountController.text.trim()) ??
+                                      0;
+                              context.push(
+                                '${RouteConstants.digitalGoldDetails}?metal=${theme.queryValue}',
+                                extra: {
+                                  'amount': parsed,
+                                  'preview': data,
                                 },
-                              ),
-                            );
-                            return;
-                          }
-                          final parsed =
-                              int.tryParse(amountController.text.trim()) ?? 0;
-                          context.push(
-                            '${RouteConstants.digitalGoldDetails}?metal=${theme.queryValue}',
-                            extra: {
-                              'amount': parsed,
-                              'preview': data,
-                            },
-                          );
-                        },
+                              );
+                            } finally {
+                              isProceeding.value = false;
+                            }
+                          },
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

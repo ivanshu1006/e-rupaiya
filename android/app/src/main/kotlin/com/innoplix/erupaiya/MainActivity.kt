@@ -14,15 +14,42 @@ import android.print.WriteResultCallbackProxy
 import android.view.WindowManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.gms.auth.api.identity.GetPhoneNumberHintIntentRequest
+import com.google.android.gms.auth.api.identity.Identity
+import com.google.android.gms.tasks.OnFailureListener
+import com.google.android.gms.tasks.OnSuccessListener
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import androidx.activity.result.IntentSenderRequest
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
 class MainActivity: FlutterFragmentActivity() {
     private val channel = "com.innoplix.erupaiya/screen_security"
     private val receiptChannel = "com.innoplix.erupaiya/receipt_print"
+    private val phoneHintChannel = "com.innoplix.erupaiya/phone_hint"
+    private var pendingPhoneHintResult: MethodChannel.Result? = null
+
+    private val phoneHintLauncher =
+        registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { activityResult ->
+            val result = pendingPhoneHintResult
+            pendingPhoneHintResult = null
+            if (result == null) return@registerForActivityResult
+
+            if (activityResult.resultCode == RESULT_OK && activityResult.data != null) {
+                try {
+                    val phoneNumber =
+                        Identity.getSignInClient(this).getPhoneNumberFromIntent(activityResult.data)
+                    result.success(phoneNumber)
+                } catch (e: Exception) {
+                    result.success(null)
+                }
+            } else {
+                result.success(null)
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,6 +95,41 @@ class MainActivity: FlutterFragmentActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, phoneHintChannel)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "getPhoneNumberHint" -> {
+                        requestPhoneNumberHint(result)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+    }
+
+    private fun requestPhoneNumberHint(result: MethodChannel.Result) {
+        if (pendingPhoneHintResult != null) {
+            result.error("in_progress", "Phone hint request already in progress", null)
+            return
+        }
+        pendingPhoneHintResult = result
+        val request = GetPhoneNumberHintIntentRequest.builder().build()
+        val client = Identity.getSignInClient(this)
+        client.getPhoneNumberHintIntent(request)
+            .addOnSuccessListener(OnSuccessListener { pendingIntent ->
+                try {
+                    val intentSenderRequest =
+                        IntentSenderRequest.Builder(pendingIntent.intentSender).build()
+                    phoneHintLauncher.launch(intentSenderRequest)
+                } catch (e: Exception) {
+                    pendingPhoneHintResult?.success(null)
+                    pendingPhoneHintResult = null
+                }
+            })
+            .addOnFailureListener(OnFailureListener { e ->
+                pendingPhoneHintResult?.success(null)
+                pendingPhoneHintResult = null
+            })
     }
 
     private fun printHtmlToPdf(

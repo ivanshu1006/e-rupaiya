@@ -4,6 +4,7 @@ class BannerModel {
   final int id;
   final String title;
   final String image;
+  final String? redirectUrl;
   final Color? colorStart;
   final Color? colorEnd;
 
@@ -11,6 +12,7 @@ class BannerModel {
     required this.id,
     required this.title,
     required this.image,
+    this.redirectUrl,
     this.colorStart,
     this.colorEnd,
   });
@@ -22,6 +24,7 @@ class BannerModel {
       id: json['id'] as int? ?? 0,
       title: json['title'] as String? ?? '',
       image: json['image'] as String? ?? '',
+      redirectUrl: json['redirect_url'] as String?,
       colorStart: _parseHexColor(colorStartHex),
       colorEnd: _parseHexColor(colorEndHex),
     );

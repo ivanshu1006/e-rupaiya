@@ -5,6 +5,8 @@ import '../models/latest_transaction.dart';
 import '../models/mobile_prepaid_state.dart';
 import '../models/plan_item.dart';
 import '../models/operator_info.dart';
+import '../models/prepaid_transaction_status.dart';
+import '../models/recharge_order_result.dart';
 import '../repositories/mobile_prepaid_repository.dart';
 
 final mobilePrepaidRepositoryProvider = Provider<MobilePrepaidRepository>(
@@ -63,6 +65,13 @@ class MobilePrepaidController extends StateNotifier<MobilePrepaidState> {
   }
 
   Future<void> fetchOperatorAndPlans(String mobileInput) async {
+    await fetchOperatorAndPlansWithFilters(mobileInput);
+  }
+
+  Future<void> fetchOperatorAndPlansWithFilters(
+    String mobileInput, {
+    List<String> filters = const [],
+  }) async {
     final mobile = _sanitizeMobile(mobileInput);
     if (mobile.length < 10) {
       state = state.copyWith(
@@ -77,22 +86,31 @@ class MobilePrepaidController extends StateNotifier<MobilePrepaidState> {
       mobile: mobile,
       operatorInfo: null,
       plansByCategory: const {},
+      validityFilters: const [],
+      dataFilters: const [],
+      filterTags: const [],
+      appliedFilters: filters,
       selectedCategory: '',
       selectedPlan: null,
       planSearchQuery: '',
     );
     try {
       final operatorInfo = await _repository.checkOperator(mobile: mobile);
-      final plans = await _repository.fetchPlans(
+      final result = await _repository.fetchPlans(
         mobile: mobile,
         operatorName: operatorInfo.operatorName,
         circleCode: operatorInfo.circleCode,
+        filters: filters,
       );
-      final categories = plans.keys.toList();
+      final categories = result.plansByCategory.keys.toList();
       state = state.copyWith(
         isFetching: false,
         operatorInfo: operatorInfo,
-        plansByCategory: plans,
+        plansByCategory: result.plansByCategory,
+        validityFilters: result.validityFilters,
+        dataFilters: result.dataFilters,
+        filterTags: result.filterTags,
+        appliedFilters: filters.isNotEmpty ? filters : result.filterTags,
         selectedCategory: categories.isNotEmpty ? categories.first : '',
       );
     } catch (e, stackTrace) {
@@ -114,6 +132,7 @@ class MobilePrepaidController extends StateNotifier<MobilePrepaidState> {
     required String circleName,
     required String circleCode,
     String? iconUrl,
+    List<String> filters = const [],
   }) async {
     final mobile = _sanitizeMobile(mobileInput);
     if (mobile.length < 10) {
@@ -134,20 +153,29 @@ class MobilePrepaidController extends StateNotifier<MobilePrepaidState> {
         iconUrl: iconUrl,
       ),
       plansByCategory: const {},
+      validityFilters: const [],
+      dataFilters: const [],
+      filterTags: const [],
+      appliedFilters: filters,
       selectedCategory: '',
       selectedPlan: null,
       planSearchQuery: '',
     );
     try {
-      final plans = await _repository.fetchPlans(
+      final result = await _repository.fetchPlans(
         mobile: mobile,
         operatorName: operatorName,
         circleCode: circleCode,
+        filters: filters,
       );
-      final categories = plans.keys.toList();
+      final categories = result.plansByCategory.keys.toList();
       state = state.copyWith(
         isFetching: false,
-        plansByCategory: plans,
+        plansByCategory: result.plansByCategory,
+        validityFilters: result.validityFilters,
+        dataFilters: result.dataFilters,
+        filterTags: result.filterTags,
+        appliedFilters: filters.isNotEmpty ? filters : result.filterTags,
         selectedCategory: categories.isNotEmpty ? categories.first : '',
       );
     } catch (e, stackTrace) {
@@ -163,7 +191,12 @@ class MobilePrepaidController extends StateNotifier<MobilePrepaidState> {
     }
   }
 
-  Future<void> recharge({String? referenceId}) async {
+  Future<void> recharge({
+    String? referenceId,
+    bool useWallet = false,
+    double walletAmount = 0,
+    double razorpayAmount = 0,
+  }) async {
     if (state.operatorInfo == null ||
         state.selectedPlan == null ||
         state.mobile.isEmpty) {
@@ -180,6 +213,7 @@ class MobilePrepaidController extends StateNotifier<MobilePrepaidState> {
       rechargeStatus: null,
       rechargeTransactionId: null,
       rechargeDateTime: null,
+      verifiedTransaction: null,
     );
     try {
       final result = await _repository.recharge(
@@ -188,16 +222,43 @@ class MobilePrepaidController extends StateNotifier<MobilePrepaidState> {
         desc: state.selectedPlan!.description,
         operatorName: state.operatorInfo!.operatorName,
         referenceId: referenceId ?? '',
+        useWallet: useWallet ? 1 : 0,
+        walletAmount: useWallet ? walletAmount : 0,
+        razorpayAmount: useWallet ? razorpayAmount : state.selectedPlan!.amount.toDouble(),
       );
+      final txId = result.transactionId.trim();
+      PrepaidTransactionStatus? verified;
+      if (txId.isNotEmpty) {
+        try {
+          verified = await _repository.fetchRechargeStatus(
+            transactionId: txId,
+          );
+        } catch (_) {
+          // If status endpoint fails, fallback to recharge response.
+        }
+      }
+
+      final effectiveSuccess = verified?.isSuccess ?? result.isSuccess;
+      final effectiveMessage = (verified?.message.trim().isNotEmpty == true)
+          ? verified!.message
+          : result.message;
       state = state.copyWith(
         isRecharging: false,
-        rechargeStatus: result.status,
-        rechargeTransactionId: result.transactionId,
-        rechargeDateTime: result.dateTime,
-        rechargeMessage: result.isSuccess ? result.message : null,
-        errorMessage: result.isSuccess
+        rechargeStatus: verified?.status.isNotEmpty == true
+            ? verified!.status
+            : result.status,
+        rechargeTransactionId:
+            (verified?.transactionId.trim().isNotEmpty == true)
+                ? verified!.transactionId
+                : result.transactionId,
+        rechargeDateTime: (verified?.updatedAt.trim().isNotEmpty == true)
+            ? verified!.updatedAt
+            : result.dateTime,
+        verifiedTransaction: verified,
+        rechargeMessage: effectiveSuccess ? effectiveMessage : null,
+        errorMessage: effectiveSuccess
             ? null
-            : (result.message.isEmpty ? null : result.message),
+            : (effectiveMessage.isEmpty ? null : effectiveMessage),
       );
     } catch (e, stackTrace) {
       logger.error(
@@ -216,6 +277,9 @@ class MobilePrepaidController extends StateNotifier<MobilePrepaidState> {
   Future<void> rechargeWithPlan({
     required PlanItem plan,
     String? referenceId,
+    bool useWallet = false,
+    double walletAmount = 0,
+    double razorpayAmount = 0,
   }) async {
     if (state.operatorInfo == null || state.mobile.isEmpty) {
       state = state.copyWith(
@@ -231,6 +295,7 @@ class MobilePrepaidController extends StateNotifier<MobilePrepaidState> {
       rechargeStatus: null,
       rechargeTransactionId: null,
       rechargeDateTime: null,
+      verifiedTransaction: null,
     );
     try {
       final result = await _repository.recharge(
@@ -239,16 +304,44 @@ class MobilePrepaidController extends StateNotifier<MobilePrepaidState> {
         desc: plan.description,
         operatorName: state.operatorInfo!.operatorName,
         referenceId: referenceId ?? '',
+        useWallet: useWallet ? 1 : 0,
+        walletAmount: useWallet ? walletAmount : 0,
+        razorpayAmount:
+            useWallet ? razorpayAmount : plan.amount.toDouble(),
       );
+      final txId = result.transactionId.trim();
+      PrepaidTransactionStatus? verified;
+      if (txId.isNotEmpty) {
+        try {
+          verified = await _repository.fetchRechargeStatus(
+            transactionId: txId,
+          );
+        } catch (_) {
+          // If status endpoint fails, fallback to recharge response.
+        }
+      }
+
+      final effectiveSuccess = verified?.isSuccess ?? result.isSuccess;
+      final effectiveMessage = (verified?.message.trim().isNotEmpty == true)
+          ? verified!.message
+          : result.message;
       state = state.copyWith(
         isRecharging: false,
-        rechargeStatus: result.status,
-        rechargeTransactionId: result.transactionId,
-        rechargeDateTime: result.dateTime,
-        rechargeMessage: result.isSuccess ? result.message : null,
-        errorMessage: result.isSuccess
+        rechargeStatus: verified?.status.isNotEmpty == true
+            ? verified!.status
+            : result.status,
+        rechargeTransactionId:
+            (verified?.transactionId.trim().isNotEmpty == true)
+                ? verified!.transactionId
+                : result.transactionId,
+        rechargeDateTime: (verified?.updatedAt.trim().isNotEmpty == true)
+            ? verified!.updatedAt
+            : result.dateTime,
+        verifiedTransaction: verified,
+        rechargeMessage: effectiveSuccess ? effectiveMessage : null,
+        errorMessage: effectiveSuccess
             ? null
-            : (result.message.isEmpty ? null : result.message),
+            : (effectiveMessage.isEmpty ? null : effectiveMessage),
       );
     } catch (e, stackTrace) {
       logger.error(
@@ -259,6 +352,102 @@ class MobilePrepaidController extends StateNotifier<MobilePrepaidState> {
       state = state.copyWith(
         isRecharging: false,
         rechargeStatus: null,
+        errorMessage: _errorMessageFromException(e),
+      );
+    }
+  }
+
+  Future<RechargeOrderResult?> createRechargeOrderWithPlan({
+    required PlanItem plan,
+    bool useWallet = false,
+    double walletAmount = 0,
+    double razorpayAmount = 0,
+  }) async {
+    if (state.operatorInfo == null || state.mobile.isEmpty) {
+      state = state.copyWith(
+        errorMessage: 'Please select an operator before proceeding.',
+      );
+      return null;
+    }
+
+    state = state.copyWith(
+      isRecharging: true,
+      errorMessage: null,
+      rechargeMessage: null,
+      rechargeStatus: null,
+      rechargeTransactionId: null,
+      rechargeDateTime: null,
+      verifiedTransaction: null,
+    );
+    try {
+      final order = await _repository.createRechargeOrder(
+        mobile: state.mobile,
+        amount: plan.amount,
+        desc: plan.description,
+        operatorName: state.operatorInfo!.operatorName,
+        walletAmount: useWallet ? walletAmount : 0,
+        razorpayAmount: useWallet ? razorpayAmount : plan.amount.toDouble(),
+      );
+      state = state.copyWith(isRecharging: false);
+      if (!order.isSuccess) {
+        state = state.copyWith(
+          errorMessage: order.message.isNotEmpty
+              ? order.message
+              : 'Failed to create order. Please try again.',
+        );
+        return null;
+      }
+      return order;
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to create recharge order',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      state = state.copyWith(
+        isRecharging: false,
+        errorMessage: _errorMessageFromException(e),
+      );
+      return null;
+    }
+  }
+
+  Future<void> verifyRechargeStatus({required String transactionRef}) async {
+    state = state.copyWith(
+      isRecharging: true,
+      errorMessage: null,
+      rechargeMessage: null,
+      rechargeStatus: null,
+      rechargeTransactionId: null,
+      rechargeDateTime: null,
+      verifiedTransaction: null,
+    );
+    try {
+      final verified =
+          await _repository.fetchRechargeStatus(transactionId: transactionRef);
+      final effectiveSuccess = verified.isSuccess;
+      final effectiveMessage = verified.message.trim();
+      state = state.copyWith(
+        isRecharging: false,
+        rechargeStatus: verified.status,
+        rechargeTransactionId: verified.transactionId.isNotEmpty
+            ? verified.transactionId
+            : transactionRef,
+        rechargeDateTime: verified.updatedAt,
+        verifiedTransaction: verified,
+        rechargeMessage: effectiveSuccess ? effectiveMessage : null,
+        errorMessage: effectiveSuccess
+            ? null
+            : (effectiveMessage.isEmpty ? null : effectiveMessage),
+      );
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to verify recharge status',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      state = state.copyWith(
+        isRecharging: false,
         errorMessage: _errorMessageFromException(e),
       );
     }

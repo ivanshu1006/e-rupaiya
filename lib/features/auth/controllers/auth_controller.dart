@@ -1,4 +1,5 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:sms_autofill/sms_autofill.dart';
 
 import '../../../utils/utils.dart';
 import '../../../constants/storage_keys.dart';
@@ -42,24 +43,48 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   Future<void> _checkInitialAuth() async {
-    final isAuthenticated = await Utils.checkAuthentication();
-    if (isAuthenticated) {
+    try {
+      final isAuthenticated = await Utils.checkAuthentication().timeout(
+        const Duration(seconds: 3),
+        onTimeout: () {
+          logger.error(
+            'checkAuthentication timed out (secure storage may be blocked)',
+          );
+          return false;
+        },
+      );
+      if (isAuthenticated) {
+        state = state.copyWith(
+          isAuthenticated: true,
+          isLoading: false,
+          isSubmitting: false,
+          errorMessage: null,
+        );
+        return;
+      }
+
+      final refreshed = await _repository.refreshSession().timeout(
+        const Duration(seconds: 12),
+        onTimeout: () {
+          logger.error('refreshSession timed out');
+          return false;
+        },
+      );
       state = state.copyWith(
-        isAuthenticated: true,
+        isAuthenticated: refreshed,
         isLoading: false,
         isSubmitting: false,
         errorMessage: null,
       );
-      return;
+    } catch (e) {
+      logger.error('Initial auth check failed: $e', error: e);
+      state = state.copyWith(
+        isAuthenticated: false,
+        isLoading: false,
+        isSubmitting: false,
+        errorMessage: null,
+      );
     }
-
-    final refreshed = await _repository.refreshSession();
-    state = state.copyWith(
-      isAuthenticated: refreshed,
-      isLoading: false,
-      isSubmitting: false,
-      errorMessage: null,
-    );
   }
 
   Future<AuthFlow?> checkLogin({
@@ -67,8 +92,14 @@ class AuthController extends StateNotifier<AuthState> {
   }) async {
     state = state.copyWith(isSubmitting: true, errorMessage: null);
     try {
+      String? appHash;
+      try {
+        final signature = await SmsAutoFill().getAppSignature;
+        if (signature.trim().isNotEmpty) appHash = signature.trim();
+      } catch (_) {}
       final flow = await _repository.checkLogin(
         mobile: mobile,
+        appHash: appHash,
       );
       state = state.copyWith(
         isSubmitting: false,
@@ -240,8 +271,14 @@ class AuthController extends StateNotifier<AuthState> {
 
     state = state.copyWith(isSubmitting: true, errorMessage: null);
     try {
+      String? appHash;
+      try {
+        final signature = await SmsAutoFill().getAppSignature;
+        if (signature.trim().isNotEmpty) appHash = signature.trim();
+      } catch (_) {}
       final message = await _repository.requestForgotPinOtp(
         userId: resolvedUserId,
+        appHash: appHash,
       );
       state = state.copyWith(isSubmitting: false, errorMessage: null);
       return message;

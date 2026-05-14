@@ -4,7 +4,7 @@ import 'dart:async';
 
 import 'package:e_rupaiya/constants/app_text_styles.dart';
 import 'package:e_rupaiya/features/home/components/home_shimmer.dart';
-import 'package:e_rupaiya/features/profile/views/my_wallet_view.dart';
+import 'package:e_rupaiya/features/home/models/banner_model.dart';
 import 'package:e_rupaiya/features/spinandear/views/spin_and_win_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -18,11 +18,13 @@ import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
+import '../../../services/location_access_service.dart';
 import '../../../services/location_service.dart';
 import '../../../services/notification_badge_service.dart';
 import '../../../services/push_notification_service.dart';
 import '../../../widgets/app_network_image.dart';
 import '../../../widgets/custom_elevated_button.dart';
+import '../../../widgets/complete_profile_dialog.dart';
 import '../../../widgets/k_dialog.dart';
 import '../../profile/controllers/profile_controller.dart';
 import '../../profile/views/offers_view.dart';
@@ -35,6 +37,7 @@ import '../components/home_icon_tile.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/home_tab_controller.dart';
 import '../models/quick_action_model.dart';
+import '../utils/banner_redirect_mapper.dart';
 import 'home_search_view.dart';
 import 'notifications_screen.dart';
 
@@ -51,35 +54,34 @@ class HomeView extends HookConsumerWidget {
       const _HomeContent(),
       const OffersView(),
       const SpinAndWinView(),
-      const TransactionHistoryScreen(),
       const NotificationsScreen(),
+      const TransactionHistoryScreen(),
     ];
 
     final navTextStyle = TextStyle(
       fontSize: 12.sp,
       fontWeight: FontWeight.w600,
       color: Colors.black,
-      height: 1,
+      height: 0.9,
     );
     final spinNavTextStyle = navTextStyle.copyWith(fontSize: 13.sp);
     final inactiveNavColor = AppColors.textPrimary.withOpacity(0.45);
     final navIconBoxSize = 25.r;
     final middleNavIconBoxSize = 40.r;
-    final spinCircleSize = middleNavIconBoxSize + 25.r;
+    final spinCircleSize = middleNavIconBoxSize + 30.r;
     final navItems = [
       PersistentBottomNavBarItem(
         contentPadding: 0,
         icon: _BottomIcon(
-          asset: FileConstants.paybills,
+          asset: FileConstants.paybillActive,
           size: 20.r,
-          color: AppColors.primary,
-          yOffset: 2.h,
+          yOffset: 0,
         ),
-        // inactiveIcon: _BottomIcon(
-        //   asset: FileConstants.erupaiyaLogo,
-        //   size: 20.r,
-        //   color: inactiveNavColor,
-        // ),
+        inactiveIcon: _BottomIcon(
+          asset: FileConstants.paybillInactive,
+          size: 20.r,
+          yOffset: 0,
+        ),
         title: 'Pay Bills',
         iconSize: navIconBoxSize,
         textStyle: navTextStyle,
@@ -89,16 +91,14 @@ class HomeView extends HookConsumerWidget {
       PersistentBottomNavBarItem(
         contentPadding: 0,
         icon: _BottomIcon(
-          asset: FileConstants.offers,
+          asset: FileConstants.offersActive,
           size: 20.r,
-          color: AppColors.primary,
-          yOffset: 2.h,
+          yOffset: 0,
         ),
         inactiveIcon: _BottomIcon(
-          asset: FileConstants.offers,
+          asset: FileConstants.offersInactive,
           size: 20.r,
-          color: inactiveNavColor,
-          yOffset: 2.h,
+          yOffset: 0,
         ),
         title: 'Offers',
         iconSize: navIconBoxSize,
@@ -110,18 +110,20 @@ class HomeView extends HookConsumerWidget {
         icon: _BottomCircleIcon(
           asset: FileConstants.homeSpin,
           circleSize: spinCircleSize,
-          iconSize: 54.r,
+          iconSize: 64.r,
           backgroundColor: AppColors.primary,
           iconColor: Colors.white,
           yOffset: 2.h,
+          scale: 1.15,
         ),
         inactiveIcon: _BottomCircleIcon(
           asset: FileConstants.homeSpin,
           circleSize: spinCircleSize,
-          iconSize: 52.r,
+          iconSize: 64.r,
           backgroundColor: AppColors.primary,
           iconColor: Colors.white,
           yOffset: 2.h,
+          scale: 1.15,
         ),
         title: 'Spin & Win',
         iconSize: spinCircleSize,
@@ -147,16 +149,14 @@ class HomeView extends HookConsumerWidget {
       PersistentBottomNavBarItem(
         contentPadding: 0,
         icon: _BottomIcon(
-          asset: FileConstants.homeAlerts,
+          asset: FileConstants.alertsActive,
           size: 20.r,
-          color: AppColors.primary,
-          yOffset: 2.h,
+          yOffset: 0,
         ),
         inactiveIcon: _BottomIcon(
-          asset: FileConstants.homeAlerts,
+          asset: FileConstants.alertsInactive,
           size: 20.r,
-          color: inactiveNavColor,
-          yOffset: 2.h,
+          yOffset: 0,
         ),
         title: 'Alerts',
         iconSize: navIconBoxSize,
@@ -167,16 +167,14 @@ class HomeView extends HookConsumerWidget {
       PersistentBottomNavBarItem(
         contentPadding: 0,
         icon: _BottomIcon(
-          asset: FileConstants.homeHistory,
+          asset: FileConstants.historyActive,
           size: 18.r,
-          color: AppColors.primary,
-          yOffset: 2.h,
+          yOffset: 0,
         ),
         inactiveIcon: _BottomIcon(
-          asset: FileConstants.homeHistory,
+          asset: FileConstants.historyInactive,
           size: 18.r,
-          color: inactiveNavColor,
-          yOffset: 2.h,
+          yOffset: 0,
         ),
         title: 'History',
         iconSize: navIconBoxSize,
@@ -187,10 +185,16 @@ class HomeView extends HookConsumerWidget {
     ];
     useEffect(() {
       NotificationBadgeService.refreshCount();
+      Future.microtask(() {
+        // Update device token only after user is logged in and Home is open.
+        PushNotificationService.syncTokenToServerIfLoggedIn();
+      });
       void listener() {
         final index = tabController.index;
         if (index == 0 && lastTabIndex.value != 0) {
-          ref.read(profileControllerProvider.notifier).fetchProfile();
+          ref
+              .read(profileControllerProvider.notifier)
+              .fetchProfileIfNeeded(ttl: const Duration(seconds: 30));
         }
         lastTabIndex.value = index;
       }
@@ -205,7 +209,8 @@ class HomeView extends HookConsumerWidget {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Future.microtask(() async {
           await PushNotificationService.ensurePermissionsRequested();
-          await LocationService.initialize();
+          final enabled = await LocationAccessService.isEnabledPreference();
+          await LocationService.initialize(requestPermission: enabled);
         });
       });
       return null;
@@ -247,8 +252,8 @@ class HomeView extends HookConsumerWidget {
           // color: Colors.white,
           colorBehindNavBar: Colors.white,
         ),
-        navBarHeight: 64.h,
-        padding: EdgeInsets.only(top: 2.h, bottom: 10.h),
+        navBarHeight: 53.h,
+        padding: const EdgeInsets.only(top: 4, bottom: 10),
         backgroundColor: Colors.white,
         hideNavigationBarWhenKeyboardAppears: true,
         confineToSafeArea: true,
@@ -436,15 +441,21 @@ class _BottomIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Transform.translate(
-      offset: Offset(0, yOffset),
-      child: Image.asset(
-        asset,
-        height: size,
-        width: size,
-        color: color ?? const Color.fromARGB(255, 248, 245, 244),
+    final icon = SizedBox(
+      height: size,
+      width: size,
+      child: Center(
+        child: Image.asset(
+          asset,
+          height: size,
+          width: size,
+          fit: BoxFit.contain,
+          color: color,
+        ),
       ),
     );
+    if (yOffset == 0) return icon;
+    return Transform.translate(offset: Offset(0, yOffset), child: icon);
   }
 }
 
@@ -456,6 +467,7 @@ class _BottomCircleIcon extends StatelessWidget {
     required this.backgroundColor,
     required this.iconColor,
     this.yOffset = 0,
+    this.scale = 1.0,
   });
 
   final String asset;
@@ -464,6 +476,7 @@ class _BottomCircleIcon extends StatelessWidget {
   final Color backgroundColor;
   final Color iconColor;
   final double yOffset;
+  final double scale;
 
   @override
   Widget build(BuildContext context) {
@@ -479,11 +492,14 @@ class _BottomCircleIcon extends StatelessWidget {
             color: backgroundColor,
           ),
           child: Center(
-            child: Image.asset(
-              asset,
-              height: iconSize,
-              width: iconSize,
-              color: iconColor,
+            child: Transform.scale(
+              scale: scale,
+              child: Image.asset(
+                asset,
+                height: iconSize,
+                width: iconSize,
+                color: iconColor,
+              ),
             ),
           ),
         ),
@@ -586,12 +602,7 @@ class _HomeTopBar extends StatelessWidget {
             ),
             GestureDetector(
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MyWalletView(),
-                  ),
-                );
+                context.push(RouteConstants.referAndEarnWallet);
               },
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
@@ -1336,31 +1347,69 @@ class _ImageBanner extends StatelessWidget {
 }
 
 class InsuranceBannerCarousel extends HookWidget {
-  const InsuranceBannerCarousel({super.key, required this.onApply});
+  const InsuranceBannerCarousel({
+    super.key,
+    required this.onApply,
+    this.banners = const [],
+    this.isLoading = false,
+    this.placeholderCount = 1,
+  });
 
   final VoidCallback onApply;
+  final List<BannerModel> banners;
+  final bool isLoading;
+  final int placeholderCount;
 
   @override
   Widget build(BuildContext context) {
     final controller = usePageController();
     final currentIndex = useState(0);
 
-    final banners = [
-      FileConstants.homeBanner10,
-      FileConstants.homeBanner10,
-      FileConstants.homeBanner10,
-    ];
+    final resolvedPlaceholderCount =
+        placeholderCount < 1 ? 1 : placeholderCount;
+    final total = (isLoading || banners.isEmpty)
+        ? resolvedPlaceholderCount
+        : banners.length;
 
     return Stack(
       children: [
         SizedBox(
-          height: 128.h,
+          // height: 128,
           child: PageView.builder(
             controller: controller,
-            itemCount: banners.length,
+            itemCount: total,
             onPageChanged: (index) => currentIndex.value = index,
             itemBuilder: (context, index) {
-              return _InsuranceBanner(onApply: onApply);
+              if (isLoading || banners.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: AppNetworkImage(
+                    url: '',
+                    // height: 128,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                );
+              }
+
+              final banner = banners[index];
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: GestureDetector(
+                  onTap: () => BannerRedirectMapper.handle(
+                    context,
+                    banner.redirectUrl,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12.r),
+                    child: AppNetworkImage(
+                      url: banner.image,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              );
             },
           ),
         ),
@@ -1371,7 +1420,7 @@ class InsuranceBannerCarousel extends HookWidget {
           bottom: 5.h, // just below button visually
           child: Row(
             children: List.generate(
-              banners.length,
+              total,
               (index) => AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 margin: EdgeInsets.only(right: 4.w),
@@ -1836,15 +1885,42 @@ class _HomeContent extends HookConsumerWidget {
     final screenWidth = MediaQuery.sizeOf(context).width;
     final bannerCacheWidth = (screenWidth * devicePixelRatio).round();
 
+    final didShowCompleteProfile = useRef(false);
+
     useEffect(() {
       Future.microtask(() {
-        ref.read(homeControllerProvider.notifier).fetchQuickActions();
-        ref.read(homeControllerProvider.notifier).fetchAllQuickActions();
+        ref.read(homeControllerProvider.notifier).fetchQuickActionsIfNeeded();
+        ref
+            .read(homeControllerProvider.notifier)
+            .fetchAllQuickActionsIfNeeded();
         ref.read(spinOptionsControllerProvider.notifier).fetchSpinOptions();
-        ref.read(profileControllerProvider.notifier).fetchProfile();
+        ref.read(profileControllerProvider.notifier).fetchProfileIfNeeded();
       });
       return null;
     }, const []);
+
+    useEffect(() {
+      final needsProfile =
+          homeState.isNameEmailExist == false && homeState.quickActions != null;
+      if (!needsProfile || didShowCompleteProfile.value) return null;
+      didShowCompleteProfile.value = true;
+      Future.microtask(() {
+        KDialog.instance.openDialog(
+          barrierDismissible: false,
+          dialog: CompleteProfileDialog(
+            onCompleted: () {
+              ref
+                  .read(profileControllerProvider.notifier)
+                  .fetchProfileIfNeeded(force: true);
+              ref
+                  .read(homeControllerProvider.notifier)
+                  .fetchQuickActionsIfNeeded(force: true);
+            },
+          ),
+        );
+      });
+      return null;
+    }, [homeState.isNameEmailExist, homeState.quickActions]);
 
     final topBanners = homeState.banners?['top'] ?? [];
     final middleBanners = homeState.banners?['middle'] ?? [];
@@ -1868,9 +1944,15 @@ class _HomeContent extends HookConsumerWidget {
       return timer.cancel;
     }, [topBanners.length]);
 
-    final showBannerPlaceholder = homeState.isFetching && topBanners.isEmpty;
-    final bannerAreaHeight =
-        (topBanners.isNotEmpty || showBannerPlaceholder) ? 100.h : 0.h;
+    final quickActions = homeState.quickActions;
+
+    final showBannerPlaceholder = topBanners.isEmpty &&
+        homeState.errorMessage == null &&
+        (homeState.isFetching || quickActions == null);
+    final topBannerHeight = 120.h;
+    final bannerAreaHeight = (topBanners.isNotEmpty || showBannerPlaceholder)
+        ? topBannerHeight
+        : 0.h;
 
     final middleBannerPage = useState(0);
     final middleBannerController =
@@ -1923,8 +2005,6 @@ class _HomeContent extends HookConsumerWidget {
       });
       return timer.cancel;
     }, [bankingInvestmentBanners.length]);
-
-    final quickActions = homeState.quickActions;
 
     QuickActionCategory? findCategory(
       List<QuickActionCategory> categories,
@@ -2032,14 +2112,15 @@ class _HomeContent extends HookConsumerWidget {
                       elevation: 0,
                       toolbarHeight: 54.h,
                       expandedHeight: MediaQuery.of(context).padding.top +
-                          40.h +
+                          30.h +
                           14.h +
                           bannerAreaHeight +
                           (topBanners.length > 1 ? 16.h : 0.h),
                       flexibleSpace: FlexibleSpaceBar(
                         collapseMode: CollapseMode.none,
                         background: Container(
-                          decoration: BoxDecoration(gradient: topBannerGradient),
+                          decoration:
+                              BoxDecoration(gradient: topBannerGradient),
                           child: Padding(
                             padding: EdgeInsets.only(
                               left: 16.w,
@@ -2059,13 +2140,13 @@ class _HomeContent extends HookConsumerWidget {
                                     child: AppNetworkImage(
                                       url: '',
                                       width: double.infinity,
-                                      height: 100.h,
+                                      height: topBannerHeight,
                                       borderRadius: BorderRadius.circular(14.r),
                                     ),
                                   )
                                 else if (topBanners.isNotEmpty)
                                   SizedBox(
-                                    height: 100.h,
+                                    height: topBannerHeight,
                                     child: PageView.builder(
                                       controller: topBannerController,
                                       onPageChanged: (page) =>
@@ -2078,11 +2159,10 @@ class _HomeContent extends HookConsumerWidget {
                                               horizontal: 4.w),
                                           child: GestureDetector(
                                             onTap: () {
-                                              if (index == 0) {
-                                                context.push(
-                                                  RouteConstants.referAndEarn,
-                                                );
-                                              }
+                                              BannerRedirectMapper.handle(
+                                                context,
+                                                banner.redirectUrl,
+                                              );
                                             },
                                             child: ClipRRect(
                                               borderRadius:
@@ -2091,12 +2171,12 @@ class _HomeContent extends HookConsumerWidget {
                                                 url: banner
                                                     .image, // Access API url
                                                 width: double.infinity,
-                                                height: 100.h,
+                                                height: topBannerHeight,
                                                 fit: BoxFit.contain,
                                                 placeholder: AppNetworkImage(
                                                   url: '',
                                                   width: double.infinity,
-                                                  height: 100.h,
+                                                  height: topBannerHeight,
                                                 ),
                                               ),
                                             ),
@@ -2155,7 +2235,7 @@ class _HomeContent extends HookConsumerWidget {
                         ),
                       ),
                     ),
-                    if (homeState.isFetching && quickActions == null)
+                    if (quickActions == null && homeState.errorMessage == null)
                       const HomeShimmer()
                     else if (homeState.errorMessage != null &&
                         quickActions == null)
@@ -2193,7 +2273,7 @@ class _HomeContent extends HookConsumerWidget {
                               children: [
                                 Padding(
                                   padding:
-                                      EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 0),
+                                      const EdgeInsets.fromLTRB(16, 16, 16, 2),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -2288,6 +2368,22 @@ class _HomeContent extends HookConsumerWidget {
                                   SizedBox(height: 18.h),
                                   InkWell(
                                     onTap: () {
+                                      final index = bankingBannerPage.value;
+                                      final banner = index >= 0 &&
+                                              index <
+                                                  bankingInvestmentBanners
+                                                      .length
+                                          ? bankingInvestmentBanners[index]
+                                          : null;
+                                      final redirectUrl = banner?.redirectUrl;
+                                      if (redirectUrl != null &&
+                                          redirectUrl.trim().isNotEmpty) {
+                                        BannerRedirectMapper.handle(
+                                          context,
+                                          redirectUrl,
+                                        );
+                                        return;
+                                      }
                                       context.push(
                                         '${RouteConstants.digitalGold}?entry=home',
                                       );
@@ -2334,7 +2430,11 @@ class _HomeContent extends HookConsumerWidget {
                                             const [],
                                         onTap: handleServiceTap,
                                       ),
-                                      SizedBox(height: 18.h),
+                                      SizedBox(
+                                        height: middleBanners.isNotEmpty
+                                            ? 0.h
+                                            : 18.h,
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -2344,9 +2444,11 @@ class _HomeContent extends HookConsumerWidget {
                                   child: Column(
                                     children: [
                                       if (middleBanners.isNotEmpty)
+                                        SizedBox(height: 18.h),
+                                      if (middleBanners.isNotEmpty)
                                         ClipRRect(
                                           borderRadius:
-                                              BorderRadius.circular(8.r),
+                                              BorderRadius.circular(12.r),
                                           child: SizedBox(
                                             height: 110.h,
                                             child: PageView.builder(
@@ -2356,15 +2458,24 @@ class _HomeContent extends HookConsumerWidget {
                                                   middleBannerPage.value = page,
                                               itemCount: middleBanners.length,
                                               itemBuilder: (_, index) =>
-                                                  AppNetworkImage(
-                                                url: middleBanners[index].image,
-                                                width: double.infinity,
-                                                height: 110.h,
-                                                fit: BoxFit.contain,
-                                                placeholder: AppNetworkImage(
-                                                  url: '',
+                                                  GestureDetector(
+                                                onTap: () =>
+                                                    BannerRedirectMapper.handle(
+                                                  context,
+                                                  middleBanners[index]
+                                                      .redirectUrl,
+                                                ),
+                                                child: AppNetworkImage(
+                                                  url: middleBanners[index]
+                                                      .image,
                                                   width: double.infinity,
                                                   height: 110.h,
+                                                  fit: BoxFit.contain,
+                                                  placeholder: AppNetworkImage(
+                                                    url: '',
+                                                    width: double.infinity,
+                                                    height: 110.h,
+                                                  ),
                                                 ),
                                               ),
                                             ),
@@ -2500,15 +2611,22 @@ class _HomeContent extends HookConsumerWidget {
                                           bottomBannerPage.value = page,
                                       itemCount: bottomBanners.length,
                                       itemBuilder: (_, index) =>
-                                          AppNetworkImage(
-                                        url: bottomBanners[index].image,
-                                        width: double.infinity,
-                                        height: 130.h,
-                                        fit: BoxFit.cover,
-                                        placeholder: AppNetworkImage(
-                                          url: '',
+                                          GestureDetector(
+                                        onTap: () =>
+                                            BannerRedirectMapper.handle(
+                                          context,
+                                          bottomBanners[index].redirectUrl,
+                                        ),
+                                        child: AppNetworkImage(
+                                          url: bottomBanners[index].image,
                                           width: double.infinity,
                                           height: 130.h,
+                                          fit: BoxFit.cover,
+                                          placeholder: AppNetworkImage(
+                                            url: '',
+                                            width: double.infinity,
+                                            height: 130.h,
+                                          ),
                                         ),
                                       ),
                                     ),

@@ -21,6 +21,8 @@ class RazorpayService {
     required double amount,
     required String name,
     String? description,
+    String? orderId,
+    String? keyOverride,
     RazorpaySuccessCallback? onSuccess,
     RazorpayFailureCallback? onFailure,
     RazorpayExternalWalletCallback? onExternalWallet,
@@ -30,7 +32,9 @@ class RazorpayService {
       await dotenv.load(fileName: '.env');
     }
 
-    final key = dotenv.env['RAZORPAY_KEY'] ?? '';
+    final key = (keyOverride ?? '').trim().isNotEmpty
+        ? keyOverride!.trim()
+        : (dotenv.env['RAZORPAY_KEY'] ?? '');
     if (key.isEmpty) {
       onFailure?.call('Razorpay key is missing.');
       return;
@@ -60,6 +64,8 @@ class RazorpayService {
 
     final options = <String, Object?>{
       'key': key,
+      if (orderId != null && orderId.trim().isNotEmpty)
+        'order_id': orderId.trim(),
       'amount': (amount * 100).round(),
       'name': name,
       if (description != null) 'description': description,

@@ -24,14 +24,44 @@ class HomeController extends StateNotifier<HomeState> {
 
   final HomeRepository _repository;
 
-  Future<void> fetchQuickActions() async {
-    state = state.copyWith(isFetching: true, errorMessage: null);
+  DateTime? _lastQuickActionsFetchedAt;
+  DateTime? _lastAllQuickActionsFetchedAt;
+  Future<void>? _quickActionsInFlight;
+  Future<void>? _allQuickActionsInFlight;
+
+  Future<void> fetchQuickActionsIfNeeded({
+    Duration ttl = const Duration(minutes: 5),
+    bool force = false,
+  }) async {
+    final now = DateTime.now();
+    final hasFreshCache = !force &&
+        state.quickActions != null &&
+        _lastQuickActionsFetchedAt != null &&
+        now.difference(_lastQuickActionsFetchedAt!) < ttl;
+    if (hasFreshCache) return;
+
+    if (_quickActionsInFlight != null) return _quickActionsInFlight!;
+    final shouldShowLoading = state.quickActions == null;
+    final future = _fetchQuickActions(showLoading: shouldShowLoading)
+        .whenComplete(() => _quickActionsInFlight = null);
+    _quickActionsInFlight = future;
+    return future;
+  }
+
+  Future<void> fetchQuickActions() => _fetchQuickActions(showLoading: true);
+
+  Future<void> _fetchQuickActions({required bool showLoading}) async {
+    if (showLoading) {
+      state = state.copyWith(isFetching: true, errorMessage: null);
+    }
     try {
       final result = await _repository.fetchQuickActions();
+      _lastQuickActionsFetchedAt = DateTime.now();
       state = state.copyWith(
-        isFetching: false,
+        isFetching: showLoading ? false : state.isFetching,
         quickActions: result.categories,
         banners: result.banners,
+        isNameEmailExist: result.isNameEmailExist,
         errorMessage: null,
       );
     } catch (e, stackTrace) {
@@ -40,20 +70,48 @@ class HomeController extends StateNotifier<HomeState> {
         error: e,
         stackTrace: stackTrace,
       );
-      state = state.copyWith(
-        isFetching: false,
-        errorMessage: 'Failed to fetch services. Please try again.',
-      );
+      if (showLoading || state.quickActions == null) {
+        state = state.copyWith(
+          isFetching: false,
+          errorMessage: 'Failed to fetch services. Please try again.',
+        );
+      } else {
+        state = state.copyWith(isFetching: state.isFetching);
+      }
     }
   }
 
-  Future<void> fetchAllQuickActions() async {
-    state = state.copyWith(isFetching: true, errorMessage: null);
+  Future<void> fetchAllQuickActionsIfNeeded({
+    Duration ttl = const Duration(minutes: 10),
+    bool force = false,
+  }) async {
+    final now = DateTime.now();
+    final hasFreshCache = !force &&
+        state.allQuickActions != null &&
+        _lastAllQuickActionsFetchedAt != null &&
+        now.difference(_lastAllQuickActionsFetchedAt!) < ttl;
+    if (hasFreshCache) return;
+
+    if (_allQuickActionsInFlight != null) return _allQuickActionsInFlight!;
+    final shouldShowLoading = state.allQuickActions == null;
+    final future = _fetchAllQuickActions(showLoading: shouldShowLoading)
+        .whenComplete(() => _allQuickActionsInFlight = null);
+    _allQuickActionsInFlight = future;
+    return future;
+  }
+
+  Future<void> fetchAllQuickActions() => _fetchAllQuickActions(showLoading: true);
+
+  Future<void> _fetchAllQuickActions({required bool showLoading}) async {
+    if (showLoading) {
+      state = state.copyWith(isFetching: true, errorMessage: null);
+    }
     try {
       final userId = await Utils.getUserId() ?? '';
       final data = await _repository.fetchAllQuickAction(userId);
+      _lastAllQuickActionsFetchedAt = DateTime.now();
       state = state.copyWith(
-        isFetching: false,
+        isFetching: showLoading ? false : state.isFetching,
         allQuickActions: data.data,
         errorMessage: null,
       );
@@ -63,10 +121,14 @@ class HomeController extends StateNotifier<HomeState> {
         error: e,
         stackTrace: stackTrace,
       );
-      state = state.copyWith(
-        isFetching: false,
-        errorMessage: 'Failed to fetch services. Please try again.',
-      );
+      if (showLoading || state.allQuickActions == null) {
+        state = state.copyWith(
+          isFetching: false,
+          errorMessage: 'Failed to fetch services. Please try again.',
+        );
+      } else {
+        state = state.copyWith(isFetching: state.isFetching);
+      }
     }
   }
 

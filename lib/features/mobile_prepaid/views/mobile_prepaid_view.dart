@@ -22,6 +22,7 @@ import '../../../widgets/k_dialog.dart';
 import '../../../widgets/my_app_bar.dart';
 import '../../../widgets/screen_wrapper.dart';
 import '../../../widgets/search_textfield.dart';
+import '../components/filter_plans_sheet.dart';
 import '../components/mobile_prepaid_shimmer.dart';
 import '../components/payment_bottom_sheet.dart';
 import '../components/plan_card.dart';
@@ -284,7 +285,6 @@ class MobilePrepaidView extends HookConsumerWidget {
             SizedBox(height: 12.h),
           ] else
             SizedBox(height: 12.h),
-          // Main content
           Expanded(
             child: state.isFetching
                 ? const MobilePrepaidContentShimmer()
@@ -338,10 +338,12 @@ class MobilePrepaidView extends HookConsumerWidget {
                                   RouteConstants.mobileRecentRecharges,
                                 ),
                                 manualMobileController: manualMobileController,
-                                onManualSubmit: () => controller
-                                    .fetchOperatorAndPlans(_normalizeMobile(
-                                  manualMobileController.text,
-                                )),
+                                onManualSubmit: () =>
+                                    controller.fetchOperatorAndPlans(
+                                  _normalizeMobile(
+                                    manualMobileController.text,
+                                  ),
+                                ),
                               ),
           ),
         ],
@@ -551,63 +553,220 @@ class _PlanSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const suggestedGradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        Color(0xFFFFDBCF),
+        Colors.white,
+        Color(0xFFFFDBCF),
+      ],
+      stops: [0.0, 0.5, 1.0],
+    );
+
+    final quickFilters = state.filterTags;
+    final applied = state.appliedFilters.map((e) => e.trim()).toSet();
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+      padding: EdgeInsets.fromLTRB(
+        0,
+        10,
+        0,
+        24 + MediaQuery.of(context).viewPadding.bottom,
+      ),
       children: [
-        SearchTextfield(
-          hintText: 'Search a plan, eg 299, 5g, etc.',
-          controller: planSearchController,
-          onChange: controller.updatePlanSearch,
-        ),
-        const SizedBox(height: 18),
-        Text(
-          'Suggested Plans',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-                fontSize: 14.sp,
-              ),
-        ),
-        const SizedBox(height: 14),
+        // Suggested plans block should be at the top (edge-to-edge gradient).
         if (!state.isFetching && state.currentPlans.isNotEmpty)
-          _SuggestedPlanCards(
-            plans: state.currentPlans,
-            onSelect: controller.selectPlan,
-          ),
-        if (!state.isFetching && state.currentPlans.isNotEmpty)
-          const SizedBox(height: 12),
-        _CategoryTabs(
-          categories: state.categories,
-          selected: state.selectedCategory,
-          onSelected: controller.selectCategory,
-        ),
-        SizedBox(height: 8.h),
-        if (state.isFetching)
-          const Center(
-            child: SpinKitCircle(
-              color: AppColors.primary,
-              size: 48,
-            ),
-          )
-        else if (state.filteredPlans.isEmpty)
-          _EmptyPlansState(query: state.planSearchQuery)
-        else
-          _PlanList(
-            plans: state.filteredPlans,
-            selectedPlan: state.selectedPlan,
-            onSelect: controller.selectPlan,
-            onPayNow: (plan) => KDialog.instance.openSheet(
-              dialog: PrepaidPaymentBottomSheet(
-                amount: plan.amount,
-                billerName:
-                    state.operatorInfo?.operatorName ?? 'Mobile Prepaid',
-                onRecharge: ({referenceId}) => controller.rechargeWithPlan(
-                  plan: plan,
-                  referenceId: referenceId,
+          Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(gradient: suggestedGradient),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Suggested Plans',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                        fontSize: 14.sp,
+                      ),
                 ),
-              ),
+                const SizedBox(height: 14),
+                _SuggestedPlanCards(
+                  plans: state.currentPlans,
+                  onSelect: controller.selectPlan,
+                ),
+              ],
             ),
           ),
+
+        // Search field
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+          child: SearchTextfield(
+            hintText: 'Search a plan, eg 299, 5g, etc.',
+            controller: planSearchController,
+            onChange: controller.updatePlanSearch,
+          ),
+        ),
+
+        // Filters row
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+          child: SizedBox(
+            height: 30.h,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: 1 + quickFilters.length,
+              separatorBuilder: (_, index) =>
+                  SizedBox(width: index == 0 ? 12.w : 6.w),
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return OutlinedButton.icon(
+                    onPressed: () => KDialog.instance.openSheet(
+                      dialog: FilterPlansSheet(
+                        validityOptions: state.validityFilters,
+                        dataOptions: state.dataFilters,
+                        initialValiditySelected: applied
+                            .where((t) => state.validityFilters.contains(t))
+                            .toSet(),
+                        initialDataSelected: applied
+                            .where((t) => state.dataFilters.contains(t))
+                            .toSet(),
+                        onApply: (validity, data) async {
+                          final selected = <String>[
+                            ...validity,
+                            ...data,
+                          ];
+                          final info = state.operatorInfo;
+                          if (info == null) return;
+                          await controller.fetchPlansForSelection(
+                            mobileInput: state.mobile,
+                            operatorName: info.operatorName,
+                            circleName: info.circle,
+                            circleCode: info.circleCode,
+                            iconUrl: info.iconUrl,
+                            filters: selected,
+                          );
+                        },
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppColors.textPrimary,
+                      side: BorderSide(
+                        color: AppColors.textPrimary.withOpacity(0.12),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                    ),
+                    icon: Icon(
+                      Icons.tune_rounded,
+                      size: 16.sp,
+                      color: AppColors.textPrimary,
+                    ),
+                    label: Text(
+                      'Filter',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12.sp,
+                      ),
+                    ),
+                  );
+                }
+                final label = quickFilters[index - 1];
+                return InkWell(
+                  onTap: () async {
+                    final info = state.operatorInfo;
+                    if (info == null) return;
+                    await controller.fetchPlansForSelection(
+                      mobileInput: state.mobile,
+                      operatorName: info.operatorName,
+                      circleName: info.circle,
+                      circleCode: info.circleCode,
+                      iconUrl: info.iconUrl,
+                      filters: [label],
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: applied.contains(label)
+                          ? AppColors.primary.withOpacity(0.1)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: applied.contains(label)
+                            ? AppColors.primary.withOpacity(0.35)
+                            : AppColors.textPrimary.withOpacity(0.08),
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: applied.contains(label)
+                                  ? AppColors.primary
+                                  : AppColors.textPrimary.withOpacity(0.85),
+                            ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+
+        // Categories + plan list content
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: _CategoryTabs(
+            categories: state.categories,
+            selected: state.selectedCategory,
+            onSelected: controller.selectCategory,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Builder(
+            builder: (context) {
+              if (state.isFetching) {
+                return const Center(
+                  child: SpinKitCircle(
+                    color: AppColors.primary,
+                    size: 48,
+                  ),
+                );
+              }
+              if (state.filteredPlans.isEmpty) {
+                return _EmptyPlansState(query: state.planSearchQuery);
+              }
+              return _PlanList(
+                plans: state.filteredPlans,
+                selectedPlan: state.selectedPlan,
+                onSelect: controller.selectPlan,
+                onPayNow: (plan) => KDialog.instance.openSheet(
+                  dialog: PrepaidPaymentBottomSheet(
+                    plan: plan,
+                    billerName:
+                        state.operatorInfo?.operatorName ?? 'Mobile Prepaid',
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
       ],
     );
   }
@@ -767,11 +926,9 @@ class _PayNowSection extends StatelessWidget {
                   ? null
                   : () => KDialog.instance.openSheet(
                         dialog: PrepaidPaymentBottomSheet(
-                          amount: plan.amount,
+                          plan: plan,
                           billerName: state.operatorInfo?.operatorName ??
                               'Mobile Prepaid',
-                          onRecharge: ({referenceId}) =>
-                              controller.recharge(referenceId: referenceId),
                         ),
                       ),
               style: ElevatedButton.styleFrom(
@@ -885,10 +1042,8 @@ class _PayNowSection extends StatelessWidget {
           plan: plan,
           onProceedToPay: () => KDialog.instance.openSheet(
             dialog: PrepaidPaymentBottomSheet(
-              amount: plan.amount,
+              plan: plan,
               billerName: state.operatorInfo?.operatorName ?? 'Mobile Prepaid',
-              onRecharge: ({referenceId}) =>
-                  controller.recharge(referenceId: referenceId),
             ),
           ),
         ),
@@ -1558,6 +1713,19 @@ class _SuggestedPlanCard extends StatelessWidget {
                             fontWeight: FontWeight.w400,
                             height: 1.4,
                             fontSize: 12,
+                          ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  InkWell(
+                    onTap: onTap,
+                    child: Text(
+                      'Details',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                            decoration: TextDecoration.underline,
+                            decorationColor: AppColors.primary,
                           ),
                     ),
                   ),

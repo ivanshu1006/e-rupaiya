@@ -6,8 +6,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../constants/app_colors.dart';
 import '../../../widgets/app_divider.dart';
 import '../../../widgets/k_dialog.dart';
-import 'plan_details_sheet.dart';
 import '../models/plan_item.dart';
+import 'plan_details_sheet.dart';
 
 class PlanCard extends StatelessWidget {
   const PlanCard({

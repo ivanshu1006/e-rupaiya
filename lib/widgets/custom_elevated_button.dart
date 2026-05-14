@@ -14,6 +14,7 @@ class CustomElevatedButton extends StatelessWidget {
     this.showArrow = false,
     this.uppercaseLabel = true,
     this.isBorder = false,
+    this.isLoading = false,
     this.backgroundColor,
     this.borderColor,
     this.labelColor,
@@ -26,6 +27,7 @@ class CustomElevatedButton extends StatelessWidget {
   final bool showArrow;
   final bool uppercaseLabel;
   final bool isBorder;
+  final bool isLoading;
   final Color? backgroundColor;
   final Color? borderColor;
   final Color? labelColor;
@@ -59,7 +61,7 @@ class CustomElevatedButton extends StatelessWidget {
               : null,
         ),
         child: ElevatedButton(
-          onPressed: onPressed,
+          onPressed: isLoading ? null : onPressed,
           style: ElevatedButton.styleFrom(
             padding: EdgeInsets.symmetric(
               horizontal: 12.w,
@@ -78,6 +80,19 @@ class CustomElevatedButton extends StatelessWidget {
                 ? MainAxisAlignment.spaceBetween
                 : MainAxisAlignment.center,
             children: [
+              if (isLoading && !showArrow) ...[
+                SizedBox(
+                  height: 16.h,
+                  width: 16.h,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      labelColor ?? Colors.white,
+                    ),
+                  ),
+                ),
+                SizedBox(width: 10.w),
+              ],
               Text(
                 uppercaseLabel ? label.toUpperCase() : label,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(

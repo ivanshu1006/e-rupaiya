@@ -54,7 +54,10 @@ class ApiConstants {
   static const String billerIconBaseUrl = '$baseUrl/storage/billers';
   static const String offersBannerBaseUrl = '$baseUrl/storage/offers';
   static const String fetchBillEndpoint = '$baseUrl/api/bill/fetch';
-  static const String payBillEndpoint = '$baseUrl/api/bill/pay';
+  // Deprecated: use `payBillAllServicesEndpoint` instead.
+  // static const String payBillEndpoint = '$baseUrl/api/bill/pay';
+  static const String payBillAllServicesEndpoint =
+      '$baseUrl/api/bill/pay-allservices';
   static const String prepaidCheckOperatorEndpoint =
       '$baseUrl/api/prepaid/checkOprators';
   static const String prepaidFetchOperatorsEndpoint =
@@ -64,13 +67,21 @@ class ApiConstants {
   static const String prepaidFetchPlansEndpoint =
       '$baseUrl/api/prepaid/fetchPlans';
   static const String prepaidRechargeEndpoint = '$baseUrl/api/prepaid/recharge';
+  static const String rechargeCreateOrderEndpoint =
+      '$baseUrl/api/recharge/create-order';
   static const String prepaidTransactionHistoryEndpoint =
       '$baseUrl/api/prepaid/transaction-history';
+  static String transactionStatusEndpoint(String transactionId) =>
+      '$baseUrl/api/transaction/status/$transactionId';
+  static String rechargeStatusEndpoint(String transactionId) =>
+      '$baseUrl/api/recharge/status/$transactionId';
   static const String ratingSubmitEndpoint = '$baseUrl/api/rating/submit';
   static const String spinEndpoint = '$baseUrl/api/spin';
   static const String spinOptionsEndpoint = '$baseUrl/api/spin/options';
   static const String offersEndpoint = '$baseUrl/api/offers';
   static const String notificationsEndpoint = '$baseUrl/api/notifications';
+  static const String notificationRemindMeLaterEndpoint =
+      '$baseUrl/api/notification/remind-me-later';
   static const String pushNotificationToggleEndpoint =
       '$baseUrl/api/user/push-notification-enable-disable';
   static const String sendDeleteAccountOtpEndpoint =

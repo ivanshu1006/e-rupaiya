@@ -58,6 +58,7 @@ class LoginForm extends HookWidget {
             onConsentChanged: (value) {
               allowConsent.value = value;
             },
+            isLoading: isLoading,
             helperText: null,
             showHelper: false,
             enabled: !isLoading,

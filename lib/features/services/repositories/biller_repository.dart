@@ -7,6 +7,8 @@ import '../../../services/dio_service.dart';
 import '../../../services/logger_service.dart';
 import '../models/bill_pay_response_model.dart';
 import '../models/bill_response_model.dart';
+import '../models/recharge_status_result.dart';
+import '../models/service_payment_order_result.dart';
 import '../models/biller_detail_model.dart';
 import '../models/biller_model.dart';
 
@@ -85,37 +87,35 @@ class BillerRepository {
     }
   }
 
-  Future<BillPayResponse> payBill({
+  // Deprecated: old API `api/bill/pay` is no longer used.
+  // Use `createPayAllServicesOrder(...)` + `fetchRechargeStatus(...)`.
+  // Future<BillPayResponse> payBill({...}) async { ... }
+
+  Future<ServicePaymentOrderResult> createPayAllServicesOrder({
     required String billerId,
     required Map<String, String> customerParams,
     required String maskedIdentifier,
     required String amount,
     required String refId,
-    String? referenceId,
     required List<String> paymentModes,
     required String billerName,
-    String? paymentType,
+    required String paymentType,
+    double walletAmount = 0,
+    double razorpayAmount = 0,
   }) async {
     try {
       final data = <String, dynamic>{
+        'payment_type': paymentType,
+        'biller_name': billerName,
         'billerid': billerId,
         'amount': amount,
         'ref_id': refId,
         'arr_bill_payment_modes': paymentModes.join(','),
-        'biller_name': billerName,
+        'masked_identifier': maskedIdentifier,
+        'wallet_amount': walletAmount.toStringAsFixed(2),
+        'razorpay_amount': razorpayAmount.toStringAsFixed(2),
       };
-      final trimmedReferenceId = referenceId?.trim() ?? '';
-      if (trimmedReferenceId.isNotEmpty) {
-        data['reference_id'] = trimmedReferenceId;
-      }
-      final trimmedMasked = maskedIdentifier.trim();
-      if (trimmedMasked.isNotEmpty) {
-        data['masked_identifier'] = trimmedMasked;
-      }
-      final trimmedPaymentType = paymentType?.trim() ?? '';
-      if (trimmedPaymentType.isNotEmpty) {
-        data['payment_type'] = trimmedPaymentType;
-      }
+
       for (final entry in customerParams.entries) {
         final key = _buildCustomerParamKey(entry.key);
         if (key.isNotEmpty) {
@@ -123,12 +123,10 @@ class BillerRepository {
         }
       }
 
-      logger.info('Bill payment request payload: $data');
-
-      log(data.toString(), name: 'Bill Payment Request Data');
+      logger.info('Pay-allservices order request payload: $data');
 
       final response = await _dio.post(
-        ApiConstants.payBillEndpoint,
+        ApiConstants.payBillAllServicesEndpoint,
         data: data,
         options: Options(
           contentType: Headers.formUrlEncodedContentType,
@@ -136,13 +134,35 @@ class BillerRepository {
         ),
       );
       final payload = response.data as Map<String, dynamic>? ?? {};
-      log(
-        'status=${response.statusCode} body=$payload',
-        name: 'Bill Payment Response Data',
-      );
-      return BillPayResponse.fromJson(payload);
+      return ServicePaymentOrderResult.fromJson(payload);
     } catch (e, stackTrace) {
-      logger.error('Failed to pay bill: $e', error: e, stackTrace: stackTrace);
+      logger.error(
+        'Failed to create pay-allservices order',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  Future<RechargeStatusResult> fetchRechargeStatus({
+    required String transactionId,
+  }) async {
+    try {
+      final response = await _dio.get(
+        ApiConstants.rechargeStatusEndpoint(transactionId),
+        options: Options(
+          validateStatus: (status) => status != null && status < 600,
+        ),
+      );
+      final payload = response.data as Map<String, dynamic>? ?? {};
+      return RechargeStatusResult.fromJson(payload);
+    } catch (e, stackTrace) {
+      logger.error(
+        'Failed to fetch recharge status',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }

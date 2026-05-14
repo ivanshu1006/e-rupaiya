@@ -46,6 +46,7 @@ import 'features/profile/views/support_ticket_detail_screen.dart';
 import 'features/profile/views/support_tickets_screen.dart';
 import 'features/profile/views/transaction_detail_screen.dart';
 import 'features/profile/views/transaction_history_screen.dart';
+import 'features/refer_and_earn/views/refer_and_earn_wallet_view.dart';
 import 'features/refer_and_earn/views/refer_and_earn_view.dart';
 import 'features/refer_and_earn/views/referral_deeplink_view.dart';
 import 'features/services/models/biller_detail_args.dart';
@@ -333,43 +334,24 @@ final routerProvider = Provider<GoRouter>(
           builder: (context, state) => const ReferAndEarnView(),
         ),
         GoRoute(
+          path: RouteConstants.referAndEarnWallet,
+          builder: (context, state) => const ReferAndEarnWalletView(),
+        ),
+        GoRoute(
           path: RouteConstants.digitalGold,
-          redirect: (context, state) async {
-            final entry = state.uri.queryParameters['entry'] ?? '';
-            if (entry != 'home') return null;
-
-            final metal =
-                DigitalMetalTheme.fromQuery(state.uri.queryParameters['metal']);
-            final metalType = metal == DigitalMetal.silver ? 'S' : 'G';
-            try {
-              final repo = ref.read(digitalGoldRepoProvider);
-              final preview = await repo.fetchProceedPreview(
-                calculationType: 'A',
-                amount: '1',
-                quantity: '1',
-                metalType: metalType,
-              );
-              if (!preview.isUserRegistered) {
-                return '${RouteConstants.digitalGoldDetails}?metal=${metal == DigitalMetal.silver ? 'silver' : 'gold'}&postRegToGold=1';
-              }
-            } catch (_) {
-              // If we can't verify registration, do not block navigation.
-              return null;
-            }
-
-            // Prevent re-checking by dropping the `entry` param once validated.
-            final params = Map<String, String>.from(state.uri.queryParameters);
-            params.remove('entry');
-            final newUri = state.uri.replace(queryParameters: params);
-            return newUri.toString();
-          },
           builder: (context, state) {
             final mode = state.uri.queryParameters['mode'] == 'sell'
                 ? GoldTradeMode.sell
                 : GoldTradeMode.buy;
             final metal =
                 DigitalMetalTheme.fromQuery(state.uri.queryParameters['metal']);
-            return DigitalGoldView(mode: mode, metal: metal);
+            final validateRegistration =
+                state.uri.queryParameters['entry'] == 'home';
+            return DigitalGoldView(
+              mode: mode,
+              metal: metal,
+              validateRegistration: validateRegistration,
+            );
           },
         ),
         GoRoute(

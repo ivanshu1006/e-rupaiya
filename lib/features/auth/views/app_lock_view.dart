@@ -436,42 +436,26 @@ class AppLockView extends HookConsumerWidget {
                                 ),
                               ],
                               SizedBox(height: 26.h),
-                              if (biometricAvailable.value &&
-                                  !showForgotPin.value) ...[
-                                GestureDetector(
-                                  onTap: handleBiometric,
-                                  child: Container(
-                                    width: 64.w,
-                                    height: 64.w,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.grey.shade100,
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: AppColors.cardShadow,
-                                          blurRadius: 10,
-                                          offset: Offset(0, 6),
-                                        ),
-                                      ],
+                              if (!showForgotPin.value) ...[
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    _LockOptionButton(
+                                      icon: Icons.dialpad_rounded,
+                                      label: 'Use PIN',
+                                      onTap: () {
+                                        pinFocusNode.requestFocus();
+                                      },
                                     ),
-                                    child: Icon(
-                                      Icons.fingerprint,
-                                      size: 30.sp,
-                                      color: AppColors.textPrimary
-                                          .withOpacity(0.7),
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(height: 8.h),
-                                Text(
-                                  'Use Fingerprint Instead',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: AppColors.textPrimary
-                                            .withOpacity(0.7),
+                                    if (biometricAvailable.value) ...[
+                                      SizedBox(width: 18.w),
+                                      _LockOptionButton(
+                                        icon: Icons.fingerprint,
+                                        label: 'Use Fingerprint',
+                                        onTap: handleBiometric,
                                       ),
+                                    ],
+                                  ],
                                 ),
                               ],
                               SizedBox(height: 12.h),
@@ -547,6 +531,56 @@ class AppLockView extends HookConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _LockOptionButton extends StatelessWidget {
+  const _LockOptionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 64.w,
+            height: 64.w,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.grey.shade100,
+              boxShadow: const [
+                BoxShadow(
+                  color: AppColors.cardShadow,
+                  blurRadius: 10,
+                  offset: Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Icon(
+              icon,
+              size: 30.sp,
+              color: AppColors.textPrimary.withOpacity(0.7),
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textPrimary.withOpacity(0.7),
+                ),
+          ),
+        ],
       ),
     );
   }

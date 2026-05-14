@@ -9,12 +9,14 @@ class GoldFormField extends StatelessWidget {
     super.key,
     required this.label,
     required this.controller,
+    this.enabled = true,
     this.keyboardType,
     this.labelBackgroundColor,
   });
 
   final String label;
   final TextEditingController controller;
+  final bool enabled;
   final TextInputType? keyboardType;
   final Color? labelBackgroundColor;
 
@@ -41,7 +43,7 @@ class GoldFormField extends StatelessWidget {
           ),
           child: CustomTextField(
             labelText: null,
-            enabled: true,
+            enabled: enabled,
             textEditingController: controller,
             keyboardType: keyboardType,
             showBorder: false,

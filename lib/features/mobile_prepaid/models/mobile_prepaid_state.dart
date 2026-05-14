@@ -1,5 +1,6 @@
 import 'operator_info.dart';
 import 'plan_item.dart';
+import 'prepaid_transaction_status.dart';
 
 class MobilePrepaidState {
   const MobilePrepaidState({
@@ -8,6 +9,10 @@ class MobilePrepaidState {
     this.mobile = '',
     this.operatorInfo,
     this.plansByCategory = const {},
+    this.validityFilters = const [],
+    this.dataFilters = const [],
+    this.filterTags = const [],
+    this.appliedFilters = const [],
     this.selectedCategory = '',
     this.planSearchQuery = '',
     this.selectedPlan,
@@ -16,6 +21,7 @@ class MobilePrepaidState {
     this.rechargeStatus,
     this.rechargeTransactionId,
     this.rechargeDateTime,
+    this.verifiedTransaction,
   });
 
   final bool isFetching;
@@ -23,6 +29,10 @@ class MobilePrepaidState {
   final String mobile;
   final OperatorInfo? operatorInfo;
   final Map<String, List<PlanItem>> plansByCategory;
+  final List<String> validityFilters;
+  final List<String> dataFilters;
+  final List<String> filterTags;
+  final List<String> appliedFilters;
   final String selectedCategory;
   final String planSearchQuery;
   final PlanItem? selectedPlan;
@@ -31,6 +41,7 @@ class MobilePrepaidState {
   final String? rechargeStatus;
   final String? rechargeTransactionId;
   final String? rechargeDateTime;
+  final PrepaidTransactionStatus? verifiedTransaction;
 
   List<String> get categories => plansByCategory.keys.toList();
 
@@ -55,6 +66,10 @@ class MobilePrepaidState {
     String? mobile,
     OperatorInfo? operatorInfo,
     Map<String, List<PlanItem>>? plansByCategory,
+    List<String>? validityFilters,
+    List<String>? dataFilters,
+    List<String>? filterTags,
+    List<String>? appliedFilters,
     String? selectedCategory,
     String? planSearchQuery,
     PlanItem? selectedPlan,
@@ -63,6 +78,7 @@ class MobilePrepaidState {
     Object? rechargeStatus = _sentinel,
     Object? rechargeTransactionId = _sentinel,
     Object? rechargeDateTime = _sentinel,
+    Object? verifiedTransaction = _sentinel,
   }) {
     return MobilePrepaidState(
       isFetching: isFetching ?? this.isFetching,
@@ -70,6 +86,10 @@ class MobilePrepaidState {
       mobile: mobile ?? this.mobile,
       operatorInfo: operatorInfo ?? this.operatorInfo,
       plansByCategory: plansByCategory ?? this.plansByCategory,
+      validityFilters: validityFilters ?? this.validityFilters,
+      dataFilters: dataFilters ?? this.dataFilters,
+      filterTags: filterTags ?? this.filterTags,
+      appliedFilters: appliedFilters ?? this.appliedFilters,
       selectedCategory: selectedCategory ?? this.selectedCategory,
       planSearchQuery: planSearchQuery ?? this.planSearchQuery,
       selectedPlan: selectedPlan ?? this.selectedPlan,
@@ -88,6 +108,9 @@ class MobilePrepaidState {
       rechargeDateTime: rechargeDateTime == _sentinel
           ? this.rechargeDateTime
           : rechargeDateTime as String?,
+      verifiedTransaction: verifiedTransaction == _sentinel
+          ? this.verifiedTransaction
+          : verifiedTransaction as PrepaidTransactionStatus?,
     );
   }
 }

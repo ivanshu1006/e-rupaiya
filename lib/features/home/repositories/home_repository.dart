@@ -15,10 +15,49 @@ class HomeRepository {
 
   final Dio _dio;
 
+  Future<List<BannerModel>> fetchExploreAllServicesBanners({
+    String lang = 'en',
+  }) async {
+    try {
+      final response = await _dio.get(
+        ApiConstants.pageEndpoint('explore-all-services'),
+        queryParameters: {'lang': lang},
+      );
+      final raw = response.data;
+      final Map<String, dynamic> payload;
+      if (raw is Map<String, dynamic>) {
+        payload = raw;
+      } else if (raw is String) {
+        payload = jsonDecode(raw) as Map<String, dynamic>;
+      } else {
+        payload = Map<String, dynamic>.from(raw as Map);
+      }
+
+      final ok = (payload['success'] == true) || (payload['status'] == true);
+      if (!ok) {
+        final message =
+            payload['message'] as String? ?? 'Failed to fetch banners';
+        throw Exception(message);
+      }
+
+      final dataMap = payload['data'] as Map<String, dynamic>? ?? {};
+      final list = dataMap['banners'];
+      if (list is! List) return const <BannerModel>[];
+      return list
+        .whereType<Map<String, dynamic>>()
+        .map(BannerModel.fromJson)
+        .toList();
+    } catch (e) {
+      logger.error('Failed to fetch explore all services banners: $e', error: e);
+      rethrow;
+    }
+  }
+
   Future<
       ({
         List<QuickActionCategory> categories,
-        Map<String, List<BannerModel>> banners
+        Map<String, List<BannerModel>> banners,
+        bool? isNameEmailExist,
       })> fetchQuickActions({String? search}) async {
     try {
       final response = await _dio.get(
@@ -36,6 +75,7 @@ class HomeRepository {
       final dataMap = payload?['data'] as Map<String, dynamic>? ?? {};
       final categories = <QuickActionCategory>[];
       final banners = <String, List<BannerModel>>{};
+      bool? isNameEmailExist;
 
       dataMap.forEach((key, value) {
         if (key == 'banners' && value is Map<String, dynamic>) {
@@ -46,12 +86,21 @@ class HomeRepository {
                   .toList();
             }
           });
+        } else if (key == 'is_name_email_exist') {
+          final normalized = (value ?? '').toString().trim().toLowerCase();
+          if (normalized.isEmpty) return;
+          isNameEmailExist =
+              normalized == '1' || normalized == 'true' || normalized == 'yes';
         } else if (key != 'banners' && value is Map<String, dynamic>) {
           categories.add(QuickActionCategory.fromJson(value));
         }
       });
 
-      return (categories: categories, banners: banners);
+      return (
+        categories: categories,
+        banners: banners,
+        isNameEmailExist: isNameEmailExist
+      );
     } catch (e) {
       logger.error('Failed to fetch quick actions: $e', error: e);
       rethrow;

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:developer';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:e_rupaiya/constants/api_constants.dart';
@@ -13,6 +15,42 @@ import '../widgets/app_snackbar.dart';
 class DioInterceptors extends InterceptorsWrapper {
   final FlutterSecureStorage secureStorage = const FlutterSecureStorage();
   static Completer<bool>? _refreshCompleter;
+
+  static const int _maxLogBodyChars = 6000;
+
+  Map<String, dynamic> _redactHeaders(Map<String, dynamic> headers) {
+    final redacted = <String, dynamic>{};
+    headers.forEach((key, value) {
+      final lower = key.toLowerCase();
+      if (lower == 'authorization' ||
+          lower == 'cookie' ||
+          lower == 'set-cookie' ||
+          lower == 'x-api-key') {
+        redacted[key] = '<redacted>';
+      } else {
+        redacted[key] = value;
+      }
+    });
+    return redacted;
+  }
+
+  String _stringify(Object? value) {
+    if (value == null) return '';
+    try {
+      if (value is String) return value;
+      if (value is Map || value is List) {
+        return const JsonEncoder.withIndent('  ').convert(value);
+      }
+      return value.toString();
+    } catch (_) {
+      return value.toString();
+    }
+  }
+
+  String _truncate(String value) {
+    if (value.length <= _maxLogBodyChars) return value;
+    return '${value.substring(0, _maxLogBodyChars)}…<truncated>';
+  }
 
   Future<void> _clearSession() async {
     await secureStorage.delete(key: 'accessToken');
@@ -139,11 +177,24 @@ class DioInterceptors extends InterceptorsWrapper {
           '${tokenType ?? 'Bearer'} $accessToken';
     }
 
-    logger.info('Request: ${options.method} ${options.headers}');
-    logger.info('Request payload: ${options.data}');
-    if (options.queryParameters.isNotEmpty) {
-      logger.info('Request query: ${options.queryParameters}');
-    }
+    final url = options.uri.toString();
+    final safeHeaders = _redactHeaders(options.headers);
+    final payload = _truncate(_stringify(options.data));
+    final query = options.queryParameters.isNotEmpty
+        ? _truncate(_stringify(options.queryParameters))
+        : '';
+
+    log(
+      '${options.method} $url\nheaders=${_truncate(_stringify(safeHeaders))}'
+      '${query.isNotEmpty ? '\nquery=$query' : ''}'
+      '${payload.isNotEmpty ? '\nbody=$payload' : ''}',
+      name: 'Dio',
+    );
+
+    logger.info('Request: ${options.method} $url');
+    logger.info('Request headers: $safeHeaders');
+    if (payload.isNotEmpty) logger.info('Request payload: $payload');
+    if (query.isNotEmpty) logger.info('Request query: $query');
     super.onRequest(options, handler);
   }
 
@@ -152,8 +203,14 @@ class DioInterceptors extends InterceptorsWrapper {
     Response response,
     ResponseInterceptorHandler handler,
   ) {
-    // Handle response
-    logger.info('Response: ${response.statusCode} ${response.data}');
+    final url = response.requestOptions.uri.toString();
+    final dataText = _truncate(_stringify(response.data));
+    log(
+      'RESPONSE ${response.statusCode} $url\n$dataText',
+      name: 'Dio',
+    );
+    logger.info('Response: ${response.statusCode} $url');
+    logger.info('Response payload: $dataText');
     super.onResponse(response, handler);
   }
 
@@ -162,6 +219,16 @@ class DioInterceptors extends InterceptorsWrapper {
     DioException err,
     ErrorInterceptorHandler handler,
   ) async {
+    final url = err.requestOptions.uri.toString();
+    final status = err.response?.statusCode;
+    final dataText = _truncate(_stringify(err.response?.data));
+    log(
+      'ERROR ${status ?? '-'} $url\n${err.message ?? ''}'
+      '${dataText.isNotEmpty ? '\n$dataText' : ''}',
+      name: 'Dio',
+      error: err,
+      stackTrace: err.stackTrace,
+    );
     logger.error(
       'Error: ${err.message}',
       error: err,

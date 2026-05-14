@@ -23,13 +23,39 @@ class ProfileController extends StateNotifier<ProfileState> {
         super(const ProfileState());
 
   final ProfileRepository _repository;
+  DateTime? _lastProfileFetchedAt;
+  Future<void>? _profileInFlight;
 
-  Future<void> fetchProfile() async {
-    state = state.copyWith(isFetching: true, errorMessage: null);
+  Future<void> fetchProfileIfNeeded({
+    Duration ttl = const Duration(minutes: 1),
+    bool force = false,
+  }) async {
+    final now = DateTime.now();
+    final hasFreshCache = !force &&
+        state.profile != null &&
+        _lastProfileFetchedAt != null &&
+        now.difference(_lastProfileFetchedAt!) < ttl;
+    if (hasFreshCache) return;
+
+    if (_profileInFlight != null) return _profileInFlight!;
+    final shouldShowLoading = state.profile == null;
+    final future = _fetchProfile(showLoading: shouldShowLoading)
+        .whenComplete(() => _profileInFlight = null);
+    _profileInFlight = future;
+    return future;
+  }
+
+  Future<void> fetchProfile() => _fetchProfile(showLoading: true);
+
+  Future<void> _fetchProfile({required bool showLoading}) async {
+    if (showLoading) {
+      state = state.copyWith(isFetching: true, errorMessage: null);
+    }
     try {
       final profile = await _repository.fetchProfile();
+      _lastProfileFetchedAt = DateTime.now();
       state = state.copyWith(
-        isFetching: false,
+        isFetching: showLoading ? false : state.isFetching,
         profile: profile,
         errorMessage: null,
       );
@@ -39,10 +65,14 @@ class ProfileController extends StateNotifier<ProfileState> {
         error: e,
         stackTrace: stackTrace,
       );
-      state = state.copyWith(
-        isFetching: false,
-        errorMessage: 'Failed to fetch profile. Please try again.',
-      );
+      if (showLoading || state.profile == null) {
+        state = state.copyWith(
+          isFetching: false,
+          errorMessage: 'Failed to fetch profile. Please try again.',
+        );
+      } else {
+        state = state.copyWith(isFetching: state.isFetching);
+      }
     }
   }
 
