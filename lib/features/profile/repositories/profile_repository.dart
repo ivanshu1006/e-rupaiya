@@ -218,4 +218,36 @@ class ProfileRepository {
 
     return ApiResponse.fromJson(response.data as Map<String, dynamic>);
   }
+
+  Future<ApiResponse> completeProfile({
+    required String name,
+    required String email,
+    String type = 'manual',
+  }) async {
+    final response = await _dio.post(
+      ApiConstants.completeProfileEndpoint,
+      data: {
+        'name': name,
+        'email': email,
+        'type': type,
+      },
+      options: Options(contentType: 'application/json'),
+    );
+
+    return ApiResponse.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<ApiResponse> verifyCompleteProfileOtp({
+    required String otp,
+  }) async {
+    final response = await _dio.post(
+      ApiConstants.completeProfileVerifyOtpEndpoint,
+      data: {
+        'otp': otp,
+      },
+      options: Options(contentType: 'application/json'),
+    );
+
+    return ApiResponse.fromJson(response.data as Map<String, dynamic>);
+  }
 }

@@ -339,7 +339,6 @@ class _ProfileHeaderCard extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w700,
-                      decoration: TextDecoration.underline,
                     ),
               ),
             ],

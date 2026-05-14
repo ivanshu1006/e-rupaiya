@@ -72,9 +72,15 @@ class _CompleteProfileDialogState extends State<CompleteProfileDialog> {
     });
     try {
       final repo = ProfileRepository();
-      final ApiResponse resp = await repo.updateEmail(email);
+      final ApiResponse resp = await repo.completeProfile(
+        name: name,
+        email: email,
+        type: 'manual',
+      );
       if (!resp.success) {
-        AppSnackbar.show(resp.message.isNotEmpty ? resp.message : 'Failed to send OTP');
+        AppSnackbar.show(
+          resp.message.isNotEmpty ? resp.message : 'Failed to send OTP',
+        );
         return;
       }
       setState(() => _step = _ProfileStep.otp);
@@ -95,29 +101,22 @@ class _CompleteProfileDialogState extends State<CompleteProfileDialog> {
   Future<void> _verifyOtp() async {
     if (_isSubmitting) return;
     final otp = _otpController.text.trim();
-    if (otp.length != 4) {
-      AppSnackbar.show('Please enter the 4-digit OTP');
+    if (otp.length != 6) {
+      AppSnackbar.show('Please enter the 6-digit OTP');
       return;
     }
 
     setState(() => _isSubmitting = true);
     try {
       final repo = ProfileRepository();
-      final ApiResponse resp = await repo.verifyEmailOtp(otp);
+      final ApiResponse resp = await repo.verifyCompleteProfileOtp(otp: otp);
       if (!resp.success) {
-        AppSnackbar.show(resp.message.isNotEmpty ? resp.message : 'OTP verification failed');
+        AppSnackbar.show(
+          resp.message.isNotEmpty ? resp.message : 'OTP verification failed',
+        );
         return;
       }
       setState(() => _otpVerified = true);
-
-      // Persist name/email (address optional).
-      try {
-        await repo.updateProfile(
-          name: _nameController.text.trim(),
-          email: _emailController.text.trim(),
-          address: '',
-        );
-      } catch (_) {}
 
       setState(() => _step = _ProfileStep.done);
     } catch (_) {
@@ -166,7 +165,8 @@ class _CompleteProfileDialogState extends State<CompleteProfileDialog> {
   Widget _dividerOr() {
     return Row(
       children: [
-        Expanded(child: Divider(color: AppColors.textPrimary.withOpacity(0.18))),
+        Expanded(
+            child: Divider(color: AppColors.textPrimary.withOpacity(0.18))),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 12.w),
           child: Text(
@@ -177,7 +177,8 @@ class _CompleteProfileDialogState extends State<CompleteProfileDialog> {
                 ),
           ),
         ),
-        Expanded(child: Divider(color: AppColors.textPrimary.withOpacity(0.18))),
+        Expanded(
+            child: Divider(color: AppColors.textPrimary.withOpacity(0.18))),
       ],
     );
   }
@@ -190,7 +191,8 @@ class _CompleteProfileDialogState extends State<CompleteProfileDialog> {
         onPressed: _isSubmitting ? null : () {},
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: AppColors.textPrimary.withOpacity(0.12)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -279,9 +281,9 @@ class _CompleteProfileDialogState extends State<CompleteProfileDialog> {
           height: 44.h,
         ),
         SizedBox(height: 14.h),
-        _dividerOr(),
-        SizedBox(height: 14.h),
-        _googleButton(),
+        // _dividerOr(),
+        // SizedBox(height: 14.h),
+        // _googleButton(),
       ],
     );
   }
@@ -313,7 +315,7 @@ class _CompleteProfileDialogState extends State<CompleteProfileDialog> {
         ),
         SizedBox(height: 8.h),
         Text(
-          'Enter the 4-digit OTP sent to $email\nemail ID.',
+          'Enter the 6-digit OTP sent to $email\nemail ID.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: AppColors.textPrimary.withOpacity(0.8),
                 height: 1.25,
@@ -323,7 +325,7 @@ class _CompleteProfileDialogState extends State<CompleteProfileDialog> {
         Pinput(
           controller: _otpController,
           focusNode: _otpFocus,
-          length: 4,
+          length: 6,
           enabled: !_isSubmitting,
           keyboardType: TextInputType.number,
           defaultPinTheme: pinTheme,
@@ -418,7 +420,8 @@ class _CompleteProfileDialogState extends State<CompleteProfileDialog> {
       onWillPop: () async => false,
       child: Dialog(
         insetPadding: EdgeInsets.symmetric(horizontal: 18.w),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22.r)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(22.r)),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(22.r),
           child: Container(
@@ -427,7 +430,12 @@ class _CompleteProfileDialogState extends State<CompleteProfileDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Align(alignment: Alignment.centerLeft, child: _headerIcon()),
+                Align(
+                  alignment: _step == _ProfileStep.done
+                      ? Alignment.center
+                      : Alignment.centerLeft,
+                  child: _headerIcon(),
+                ),
                 SizedBox(height: 12.h),
                 content,
               ],
@@ -471,14 +479,17 @@ class _InputBox extends StatelessWidget {
         hintText: hintText,
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: AppColors.textPrimary.withOpacity(0.12)),
+          borderSide:
+              BorderSide(color: AppColors.textPrimary.withOpacity(0.12)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: AppColors.textPrimary.withOpacity(0.12)),
+          borderSide:
+              BorderSide(color: AppColors.textPrimary.withOpacity(0.12)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),

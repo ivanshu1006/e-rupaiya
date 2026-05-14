@@ -17,8 +17,8 @@ import '../../../constants/app_colors.dart';
 import '../../../constants/file_constants.dart';
 import '../../../constants/routes_constant.dart';
 import '../../../services/notification_badge_service.dart';
-import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/app_network_image.dart';
+import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/my_app_bar.dart';
 import '../controllers/home_tab_controller.dart';
 import '../models/notification_item.dart';
@@ -152,18 +152,16 @@ class NotificationsScreen extends HookConsumerWidget {
                                           item.id,
                                         };
                                         final ok = await ref
-                                            .read(notificationsRepositoryProvider)
+                                            .read(
+                                                notificationsRepositoryProvider)
                                             .remindMeLater(item.id);
                                         final updated = Set<String>.from(
                                           remindingIds.value,
                                         )..remove(item.id);
                                         remindingIds.value = updated;
                                         if (ok) {
-                                          dismissedIds.value = {
-                                            ...dismissedIds.value,
-                                            item.id,
-                                          };
-                                          AppSnackbar.show('We will remind you later');
+                                          AppSnackbar.show(
+                                              'We will remind you later');
                                           ref.invalidate(notificationsProvider);
                                         } else {
                                           AppSnackbar.show(
@@ -172,11 +170,12 @@ class NotificationsScreen extends HookConsumerWidget {
                                         }
                                       }
                                     : null,
-                                secondaryLoading: remindingIds.value
-                                    .contains(item.id),
+                                secondaryLoading:
+                                    remindingIds.value.contains(item.id),
                                 primaryLabel: _primaryLabelFor(item),
-                                secondaryLabel:
-                                    item.showRemindButton ? 'Remind me Later' : null,
+                                secondaryLabel: item.showRemindButton
+                                    ? 'Remind me Later'
+                                    : null,
                                 isPrimaryFullWidth: !item.showRemindButton,
                               ),
                             ),
@@ -325,7 +324,8 @@ class _NotificationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ageText = _relativeAge(item.createdAt);
     final iconUrl = (item.iconUrl ?? '').trim();
-    final hasSecondary = onSecondary != null && (secondaryLabel ?? '').isNotEmpty;
+    final hasSecondary =
+        onSecondary != null && (secondaryLabel ?? '').isNotEmpty;
 
     return Container(
       padding: EdgeInsets.all(14.w),
@@ -421,7 +421,10 @@ class _NotificationCard extends StatelessWidget {
                         SizedBox(width: 4.w),
                         Text(
                           ageText,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
                                 color: AppColors.textPrimary.withOpacity(0.45),
                                 fontWeight: FontWeight.w600,
                               ),
@@ -436,7 +439,7 @@ class _NotificationCard extends StatelessWidget {
           if (isPrimaryFullWidth)
             SizedBox(
               width: double.infinity,
-              height: 42.h,
+              height: 30.h,
               child: ElevatedButton(
                 onPressed: onPrimary,
                 style: ElevatedButton.styleFrom(
@@ -461,10 +464,11 @@ class _NotificationCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: SizedBox(
-                    height: 42.h,
+                    height: 30.h,
                     child: OutlinedButton(
-                      onPressed:
-                          (hasSecondary && !secondaryLoading) ? onSecondary : null,
+                      onPressed: (hasSecondary && !secondaryLoading)
+                          ? onSecondary
+                          : null,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.primary,
                         side: BorderSide(
@@ -511,7 +515,7 @@ class _NotificationCard extends StatelessWidget {
                 SizedBox(width: 12.w),
                 Expanded(
                   child: SizedBox(
-                    height: 42.h,
+                    height: 30.h,
                     child: ElevatedButton(
                       onPressed: onPrimary,
                       style: ElevatedButton.styleFrom(
@@ -524,11 +528,10 @@ class _NotificationCard extends StatelessWidget {
                       ),
                       child: Text(
                         primaryLabel,
-                        style:
-                            Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                       ),
                     ),
                   ),
@@ -598,23 +601,23 @@ class _NotificationsEmptyState extends StatelessWidget {
               width: 140.w,
               height: 140.w,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
+                color: AppColors.primary.withOpacity(0.10),
                 shape: BoxShape.circle,
               ),
               child: Center(
-                child: Image.asset(
-                  FileConstants.appLogo,
-                  width: 60.w,
-                  fit: BoxFit.contain,
+                child: Icon(
+                  Icons.mark_email_unread_outlined,
+                  size: 56.r,
+                  color: AppColors.primary,
                 ),
               ),
             ),
             SizedBox(height: 18.h),
             Text(
               "You're All Caught Up!",
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
             ),
             SizedBox(height: 6.h),

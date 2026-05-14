@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:developer';
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:dio/dio.dart';
 import 'package:e_rupaiya/constants/api_constants.dart';
@@ -313,9 +313,10 @@ class DioInterceptors extends InterceptorsWrapper {
       );
     } else if (err.type == DioExceptionType.badResponse) {
       final path = err.requestOptions.path;
-      final suppressSnackbar = path.contains('/api/education/validate-amount') ||
-          path.contains('/api/education/check-mobile') ||
-          path.contains('/api/education/verify-bank');
+      final suppressSnackbar =
+          path.contains('/api/education/validate-amount') ||
+              path.contains('/api/education/check-mobile') ||
+              path.contains('/api/education/verify-bank');
       if (!suppressSnackbar) {
         final data = err.response?.data;
         final apiMessage = (data is Map ? data['message'] as String? : null) ??

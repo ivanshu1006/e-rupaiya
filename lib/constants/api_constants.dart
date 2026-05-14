@@ -23,6 +23,10 @@ class ApiConstants {
   static const String profileEndpoint = '$baseUrl/api/user/profile';
   static const String profileUpdateEndpoint =
       '$baseUrl/api/user/profile/update';
+  static const String completeProfileEndpoint =
+      '$baseUrl/api/user/complete-profile';
+  static const String completeProfileVerifyOtpEndpoint =
+      '$baseUrl/api/user/verify-otp';
   static const String profileUpdateDeliveryInfoEndpoint =
       '$baseUrl/api/user/profile/update-delivery-info';
   static const String profileUpdateDeviceTokenEndpoint =
