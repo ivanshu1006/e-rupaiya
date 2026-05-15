@@ -1,13 +1,18 @@
 // ignore_for_file: deprecated_member_use
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:pinput/pinput.dart';
 
 import '../constants/app_colors.dart';
 import '../features/profile/models/api_response_model.dart';
 import '../features/profile/repositories/profile_repository.dart';
+import '../firebase/explicit_firebase_options.dart';
 import 'app_snackbar.dart';
 import 'custom_elevated_button.dart';
 
@@ -36,6 +41,7 @@ class _CompleteProfileDialogState extends State<CompleteProfileDialog> {
   _ProfileStep _step = _ProfileStep.details;
   bool _isSubmitting = false;
   bool _otpVerified = false;
+  bool _googleInitialized = false;
 
   @override
   void dispose() {
@@ -51,6 +57,90 @@ class _CompleteProfileDialogState extends State<CompleteProfileDialog> {
     final trimmed = input.trim();
     if (trimmed.isEmpty) return false;
     return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(trimmed);
+  }
+
+  Future<void> _ensureFirebaseInitialized() async {
+    if (Firebase.apps.isNotEmpty) return;
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      await Firebase.initializeApp(
+        options: ExplicitFirebaseOptions.androidErupiya,
+      );
+      return;
+    }
+    await Firebase.initializeApp();
+  }
+
+  Future<void> _continueWithGoogle() async {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+    try {
+      await _ensureFirebaseInitialized();
+      if (!_googleInitialized) {
+        await GoogleSignIn.instance.initialize();
+        _googleInitialized = true;
+      }
+
+      final googleUser = await GoogleSignIn.instance.authenticate(
+        scopeHint: const ['email'],
+      );
+
+      final idToken = googleUser.authentication.idToken;
+      final authz = await googleUser.authorizationClient.authorizeScopes(
+        const ['email'],
+      );
+      final credential = GoogleAuthProvider.credential(
+        accessToken: authz.accessToken,
+        idToken: idToken,
+      );
+
+      final userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+      final user = userCredential.user;
+      final name = (user?.displayName ?? '').trim();
+      final email = (user?.email ?? '').trim();
+      final firebaseIdToken = await user?.getIdToken(true);
+
+      if (name.isEmpty || email.isEmpty) {
+        AppSnackbar.show(
+          'Unable to fetch name/email from Google. Please try again.',
+        );
+        return;
+      }
+      if (firebaseIdToken == null || firebaseIdToken.trim().isEmpty) {
+        AppSnackbar.show('Unable to fetch idToken. Please try again.');
+        return;
+      }
+
+      _nameController.text = name;
+      _emailController.text = email;
+
+      final repo = ProfileRepository();
+      final ApiResponse resp = await repo.completeProfile(
+        name: name,
+        email: email,
+        type: 'google',
+        googleToken: firebaseIdToken,
+      );
+      if (!resp.success) {
+        AppSnackbar.show(
+          resp.message.isNotEmpty ? resp.message : 'Google sign-in failed',
+        );
+        return;
+      }
+
+      setState(() => _step = _ProfileStep.done);
+      AppSnackbar.show(
+        resp.message.isNotEmpty
+            ? resp.message
+            : 'Profile completed successfully',
+        backgroundColor: AppColors.primary,
+        textColor: Colors.white,
+      );
+    } catch (_) {
+      AppSnackbar.show('Google sign-in failed. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   Future<void> _sendOtp() async {
@@ -188,7 +278,7 @@ class _CompleteProfileDialogState extends State<CompleteProfileDialog> {
       width: double.infinity,
       height: 44.h,
       child: OutlinedButton(
-        onPressed: _isSubmitting ? null : () {},
+        onPressed: _isSubmitting ? null : _continueWithGoogle,
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: AppColors.textPrimary.withOpacity(0.12)),
           shape:
@@ -281,9 +371,9 @@ class _CompleteProfileDialogState extends State<CompleteProfileDialog> {
           height: 44.h,
         ),
         SizedBox(height: 14.h),
-        // _dividerOr(),
-        // SizedBox(height: 14.h),
-        // _googleButton(),
+        _dividerOr(),
+        SizedBox(height: 14.h),
+        _googleButton(),
       ],
     );
   }

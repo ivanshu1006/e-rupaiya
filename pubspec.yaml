@@ -48,6 +48,8 @@ dependencies:
   webview_flutter: ^4.10.0
   firebase_core:
   firebase_messaging:
+  firebase_auth:
+  google_sign_in:
   flutter_local_notifications:
   # qr_code_scanner:
   image_picker: ^1.1.2

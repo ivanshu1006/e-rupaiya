@@ -223,13 +223,18 @@ class ProfileRepository {
     required String name,
     required String email,
     String type = 'manual',
+    String? googleToken,
+    @Deprecated('Use googleToken (maps to google_token).') String? idToken,
   }) async {
+    final resolvedGoogleToken = (googleToken ?? idToken)?.trim();
     final response = await _dio.post(
       ApiConstants.completeProfileEndpoint,
       data: {
         'name': name,
         'email': email,
         'type': type,
+        if (resolvedGoogleToken != null && resolvedGoogleToken.isNotEmpty)
+          'google_token': resolvedGoogleToken,
       },
       options: Options(contentType: 'application/json'),
     );
